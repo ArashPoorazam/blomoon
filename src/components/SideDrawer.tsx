@@ -2,7 +2,7 @@
 
 import { ExternalLink, Search, X } from "lucide-react";
 import type { DataSourceInfo, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-import { formatCoordinate, formatDateTime } from "@/lib/geo";
+import { formatDateTime } from "@/lib/geo";
 
 type SideDrawerProps = {
   collapsed: boolean;
@@ -84,10 +84,11 @@ function ListView({
     <>
       <div className="drawer-header">
         <div>
-          <div className="drawer-kicker">Earthquakes</div>
-          <h1 className="drawer-title">Latest activity</h1>
+          <div className="drawer-kicker">Terravue</div>
+          <h1 className="drawer-title">Earthquakes</h1>
           <p className="drawer-subtitle">
-            {source?.attribution ?? "USGS earthquake data"} {error ? error : ""}
+            {points.length} visible events · {source?.name ?? "USGS"} {source?.isFallback ? "fallback" : "live"}
+            {error ? ` · ${error}` : ""}
           </p>
         </div>
       </div>
@@ -114,11 +115,10 @@ function ListView({
               type="button"
               onClick={() => onPointSelect(point)}
             >
-              <span>
+              <span className="point-copy">
                 <span className="point-name">{point.name}</span>
                 <span className="point-meta">
-                  {formatDateTime(point.timestamp)} · {formatCoordinate(point.latitude, "N", "S")},{" "}
-                  {formatCoordinate(point.longitude, "E", "W")}
+                  {point.summary} · {formatDateTime(point.timestamp)}
                 </span>
               </span>
               <span className="magnitude">M {point.metrics?.Magnitude ?? "?"}</span>
@@ -141,7 +141,7 @@ function DetailView({
     <>
       <div className="drawer-header">
         <div>
-          <div className="drawer-kicker">Selected point</div>
+          <div className="drawer-kicker">Terravue · Earthquakes</div>
           <h1 className="drawer-title">{detail?.name ?? "Loading"}</h1>
           <p className="drawer-subtitle">{detail?.summary ?? ""}</p>
         </div>

@@ -4,6 +4,8 @@ const USGS_ALL_DAY_FEED =
   "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
 
 const CACHE_TTL_MS = 10 * 60 * 1000;
+const EARTHQUAKE_MAGNITUDE_MIN = -1;
+const EARTHQUAKE_MAGNITUDE_MAX = 9.5;
 
 type UsgsFeature = {
   id: string;
@@ -133,24 +135,43 @@ function normalizeFeature(feature: UsgsFeature): TerraPoint | null {
 
   const magnitude = feature.properties.mag;
   const title = feature.properties.title ?? feature.properties.place ?? "Earthquake";
+  const place = normalizePlace(feature.properties.place ?? title);
   const timestamp = feature.properties.time ? new Date(feature.properties.time).toISOString() : undefined;
 
   return {
     id: feature.id,
     modeId: "earthquakes",
-    name: title,
+    name: place.name,
     latitude,
     longitude,
     severity: normalizeMagnitude(magnitude),
     timestamp,
-    summary: feature.properties.place ?? title,
+    summary: place.context,
     metrics: {
       Magnitude: magnitude === null ? "Unknown" : magnitude.toFixed(1),
       Depth: `${depthKm.toFixed(1)} km`,
+      Distance: place.context,
       Status: feature.properties.status ?? "Unknown",
       Tsunami: feature.properties.tsunami ? "Yes" : "No",
       SourceUrl: feature.properties.url
     }
+  };
+}
+
+function normalizePlace(value: string) {
+  const withoutMagnitude = value.replace(/^M\s*-?\d+(?:\.\d+)?\s*-\s*/i, "").trim();
+  const distanceMatch = withoutMagnitude.match(/^(.+?\bkm\s+[NSEW]{1,3})\s+of\s+(.+)$/i);
+
+  if (distanceMatch) {
+    return {
+      name: distanceMatch[2].trim(),
+      context: distanceMatch[1].trim()
+    };
+  }
+
+  return {
+    name: withoutMagnitude || "Unknown location",
+    context: "Reported region"
   };
 }
 
@@ -159,7 +180,10 @@ function normalizeMagnitude(magnitude: number | null) {
     return 0.25;
   }
 
-  return Math.min(1, Math.max(0.12, magnitude / 7));
+  const range = EARTHQUAKE_MAGNITUDE_MAX - EARTHQUAKE_MAGNITUDE_MIN;
+  const normalized = (magnitude - EARTHQUAKE_MAGNITUDE_MIN) / range;
+
+  return Math.min(1, Math.max(0.05, normalized));
 }
 
 function getMetric(point: TerraPoint, key: string) {
@@ -173,15 +197,16 @@ function getFallbackDataset(): TerraDataset {
     {
       id: "fallback-california",
       modeId: "earthquakes",
-      name: "M 3.8 - Central California",
+      name: "Central California",
       latitude: 36.7783,
       longitude: -119.4179,
-      severity: 0.54,
+      severity: normalizeMagnitude(3.8),
       timestamp: now,
-      summary: "Central California",
+      summary: "Reported region",
       metrics: {
         Magnitude: "3.8",
         Depth: "8.2 km",
+        Distance: "Reported region",
         Status: "Fallback",
         Tsunami: "No"
       }
@@ -189,15 +214,16 @@ function getFallbackDataset(): TerraDataset {
     {
       id: "fallback-japan",
       modeId: "earthquakes",
-      name: "M 4.6 - Near Honshu, Japan",
+      name: "Honshu, Japan",
       latitude: 38.2682,
       longitude: 140.8694,
-      severity: 0.66,
+      severity: normalizeMagnitude(4.6),
       timestamp: now,
-      summary: "Near Honshu, Japan",
+      summary: "Near",
       metrics: {
         Magnitude: "4.6",
         Depth: "42.0 km",
+        Distance: "Near",
         Status: "Fallback",
         Tsunami: "No"
       }
@@ -205,15 +231,16 @@ function getFallbackDataset(): TerraDataset {
     {
       id: "fallback-chile",
       modeId: "earthquakes",
-      name: "M 5.1 - Offshore Chile",
+      name: "Chile",
       latitude: -33.4489,
       longitude: -70.6693,
-      severity: 0.73,
+      severity: normalizeMagnitude(5.1),
       timestamp: now,
-      summary: "Offshore Chile",
+      summary: "Offshore",
       metrics: {
         Magnitude: "5.1",
         Depth: "31.4 km",
+        Distance: "Offshore",
         Status: "Fallback",
         Tsunami: "No"
       }

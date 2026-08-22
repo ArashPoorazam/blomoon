@@ -1,16 +1,18 @@
 :root {
-  --background: #050505;
-  --panel: rgba(18, 18, 18, 0.92);
-  --panel-border: rgba(255, 255, 255, 0.12);
-  --text: #f4f4f1;
-  --muted: #a4a4a0;
-  --muted-strong: #d3d1ca;
-  --line: rgba(255, 255, 255, 0.14);
-  --accent: #f2c14e;
-  --accent-strong: #ffda73;
-  --danger: #ff7a59;
-  --control: rgba(255, 255, 255, 0.08);
-  --control-hover: rgba(255, 255, 255, 0.14);
+  --background: #050509;
+  --panel: rgba(22, 22, 30, 0.94);
+  --panel-border: rgba(122, 162, 247, 0.18);
+  --text: #c0caf5;
+  --muted: #787c99;
+  --muted-strong: #a9b1d6;
+  --line: rgba(192, 202, 245, 0.12);
+  --accent: #7aa2f7;
+  --accent-strong: #7dcfff;
+  --danger: #f7768e;
+  --quake: #e0af68;
+  --control: rgba(122, 162, 247, 0.08);
+  --control-hover: rgba(122, 162, 247, 0.16);
+  --drawer-width: min(390px, 88vw);
 }
 
 * {
@@ -44,94 +46,17 @@ button {
   height: 100vh;
   min-height: 620px;
   overflow: hidden;
-  background:
-    radial-gradient(circle at 42% 48%, rgba(255, 255, 255, 0.08), transparent 34%),
-    #050505;
+  background: var(--background);
 }
 
 .globe-stage {
   position: absolute;
   inset: 0;
+  transition: transform 260ms ease;
 }
 
-.brand-bar {
-  position: absolute;
-  top: 22px;
-  left: 24px;
-  z-index: 5;
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 9px 12px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: rgba(8, 8, 8, 0.62);
-  backdrop-filter: blur(16px);
-}
-
-.brand-mark {
-  width: 24px;
-  height: 24px;
-  border: 1px solid rgba(255, 255, 255, 0.42);
-  border-radius: 50%;
-  background:
-    linear-gradient(90deg, transparent 48%, rgba(255, 255, 255, 0.28) 49%, transparent 52%),
-    linear-gradient(0deg, transparent 48%, rgba(255, 255, 255, 0.22) 49%, transparent 52%);
-}
-
-.brand-copy {
-  display: grid;
-  gap: 1px;
-}
-
-.brand-title {
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1;
-}
-
-.brand-mode {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.mode-bar {
-  position: absolute;
-  left: 24px;
-  bottom: 24px;
-  z-index: 5;
-  display: flex;
-  gap: 8px;
-}
-
-.mode-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
-  min-height: 38px;
-  padding: 0 13px;
-  border: 1px solid rgba(242, 193, 78, 0.46);
-  border-radius: 8px;
-  background: rgba(242, 193, 78, 0.12);
-  color: var(--accent-strong);
-  cursor: default;
-}
-
-.source-pill {
-  position: absolute;
-  right: 412px;
-  bottom: 24px;
-  z-index: 5;
-  max-width: min(360px, calc(100vw - 48px));
-  padding: 9px 11px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: rgba(8, 8, 8, 0.58);
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.4;
-  backdrop-filter: blur(16px);
+.terravue-shell.drawer-open .globe-stage {
+  transform: translateX(calc(var(--drawer-width) / -2));
 }
 
 .drawer {
@@ -139,11 +64,11 @@ button {
   top: 0;
   right: 0;
   z-index: 10;
-  width: min(390px, 88vw);
+  width: var(--drawer-width);
   height: 100%;
   border-left: 1px solid var(--panel-border);
   background: var(--panel);
-  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.34);
+  box-shadow: -24px 0 60px rgba(0, 0, 0, 0.42);
   backdrop-filter: blur(20px);
   transition: transform 240ms ease;
 }
@@ -163,14 +88,14 @@ button {
   border: 1px solid var(--panel-border);
   border-right: 0;
   border-radius: 8px 0 0 8px;
-  background: rgba(18, 18, 18, 0.92);
+  background: var(--panel);
   color: var(--muted-strong);
   cursor: pointer;
   transform: translateY(-50%);
 }
 
 .drawer-toggle:hover {
-  background: rgba(34, 34, 34, 0.96);
+  background: #1a1b26;
   color: var(--text);
 }
 
@@ -255,7 +180,7 @@ button {
 }
 
 .search-input:focus {
-  border-color: rgba(242, 193, 78, 0.7);
+  border-color: rgba(122, 162, 247, 0.72);
 }
 
 .point-list {
@@ -268,8 +193,8 @@ button {
 .point-row {
   display: grid;
   width: 100%;
-  grid-template-columns: 1fr auto;
-  gap: 10px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
   margin: 0;
   padding: 12px 10px;
   border: 0;
@@ -282,10 +207,16 @@ button {
 
 .point-row:hover,
 .point-row.selected {
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(122, 162, 247, 0.08);
+}
+
+.point-copy {
+  display: block;
+  min-width: 0;
 }
 
 .point-name {
+  display: block;
   overflow: hidden;
   font-size: 14px;
   font-weight: 590;
@@ -295,20 +226,25 @@ button {
 }
 
 .point-meta {
+  display: block;
+  overflow: hidden;
   margin-top: 5px;
   color: var(--muted);
   font-size: 12px;
   line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .magnitude {
   display: inline-grid;
   min-width: 48px;
   height: 30px;
+  flex: 0 0 auto;
   place-items: center;
-  border: 1px solid rgba(242, 193, 78, 0.34);
+  border: 1px solid rgba(224, 175, 104, 0.42);
   border-radius: 8px;
-  color: var(--accent-strong);
+  color: var(--quake);
   font-size: 13px;
   font-weight: 700;
 }
@@ -357,6 +293,37 @@ button {
   text-decoration: none;
 }
 
+.point-tooltip {
+  position: fixed;
+  top: 0;
+  left: 0;
+  z-index: 20;
+  max-width: 240px;
+  padding: 9px 10px;
+  border: 1px solid rgba(122, 162, 247, 0.28);
+  border-radius: 8px;
+  background: rgba(22, 22, 30, 0.94);
+  box-shadow: 0 12px 34px rgba(0, 0, 0, 0.34);
+  pointer-events: none;
+}
+
+.point-tooltip-name {
+  overflow: hidden;
+  color: var(--text);
+  font-size: 13px;
+  font-weight: 650;
+  line-height: 1.2;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.point-tooltip-meta {
+  margin-top: 5px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .empty-state {
   padding: 28px 12px;
   color: var(--muted);
@@ -385,20 +352,6 @@ button {
 @media (max-width: 760px) {
   .terravue-shell {
     min-height: 100svh;
-  }
-
-  .brand-bar {
-    top: 14px;
-    left: 14px;
-  }
-
-  .mode-bar {
-    left: 14px;
-    bottom: 14px;
-  }
-
-  .source-pill {
-    display: none;
   }
 
   .drawer {
