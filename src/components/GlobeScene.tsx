@@ -14,13 +14,18 @@ import type { TerraPoint } from "@/lib/modes/types";
 type GlobeSceneProps = {
   focusKey: string | null;
   markerColor?: string;
-  markerColorMode: "severity" | "single";
+  markerColorMode: MarkerColorMode;
   points: TerraPoint[];
   selectedPoint: TerraPoint | null;
   onPointHover: (point: TerraPoint | null) => void;
   onPointSelect: (point: TerraPoint) => void;
 };
 
+type MarkerColorMode = "severity" | "single";
+type MarkerBatch = {
+  color: string;
+  points: TerraPoint[];
+};
 type RingCoordinates = number[][];
 type PolygonCoordinates = RingCoordinates[];
 type MultiPolygonCoordinates = PolygonCoordinates[];
@@ -61,10 +66,14 @@ const TOKYO = {
   selectedRing: "#ffffff"
 };
 
-const MARKER_COLOR_STOPS = [
-  new THREE.Color(TOKYO.markerLow),
-  new THREE.Color(TOKYO.markerMid),
-  new THREE.Color(TOKYO.markerHigh)
+const MARKER_SEVERITY_COLORS = [
+  TOKYO.markerLow,
+  "#929ff7",
+  "#aa9cf7",
+  TOKYO.markerMid,
+  "#cf91ce",
+  "#e687ae",
+  TOKYO.markerHigh
 ] as const;
 
 export function GlobeScene({
@@ -119,66 +128,91 @@ function PointMarkers({
   onSelect
 }: {
   markerColor?: string;
-  markerColorMode: "severity" | "single";
+  markerColorMode: MarkerColorMode;
   points: TerraPoint[];
   selectedPoint: TerraPoint | null;
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 }) {
-  const visualRef = useRef<THREE.InstancedMesh>(null);
-  const hitRef = useRef<THREE.InstancedMesh>(null);
-  const hoveredPointId = useRef<string | null>(null);
-  const pointsByInstance = useRef<TerraPoint[]>([]);
   const instancedPoints = useMemo(
     () => points.filter((point) => point.id !== selectedPoint?.id),
     [points, selectedPoint?.id]
   );
-  const singleColor = useMemo(() => new THREE.Color(markerColor ?? "#ffffff"), [markerColor]);
+  const visualBatches = useMemo(
+    () => getMarkerBatches(instancedPoints, markerColorMode, markerColor ?? "#ffffff"),
+    [instancedPoints, markerColor, markerColorMode]
+  );
+
+  return (
+    <>
+      {visualBatches.map((batch) => (
+        <MarkerVisualInstances
+          key={batch.color}
+          color={batch.color}
+          points={batch.points}
+        />
+      ))}
+      <MarkerHitInstances
+        points={instancedPoints}
+        onHover={onHover}
+        onSelect={onSelect}
+      />
+      {selectedPoint ? (
+        <SelectedPointMarker
+          point={selectedPoint}
+          onHover={onHover}
+          onSelect={onSelect}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function MarkerVisualInstances({ color, points }: { color: string; points: TerraPoint[] }) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const instanceCapacity = useMemo(() => getInstanceCapacity(points.length), [points.length]);
 
   useLayoutEffect(() => {
-    const visualMesh = visualRef.current;
-    const hitMesh = hitRef.current;
+    writeMarkerInstances(meshRef.current, points);
+  }, [points]);
 
-    if (!visualMesh || !hitMesh) {
-      return;
-    }
+  if (points.length === 0) {
+    return null;
+  }
 
-    pointsByInstance.current = instancedPoints;
-    const temp = new THREE.Object3D();
-    const normal = new THREE.Vector3();
-    const color = new THREE.Color();
-    const quaternion = new THREE.Quaternion();
-    const markerPosition = new THREE.Vector3();
-    const outward = new THREE.Vector3(0, 0, 1);
+  return (
+    <instancedMesh
+      key={instanceCapacity}
+      ref={meshRef}
+      args={[undefined, undefined, instanceCapacity]}
+      frustumCulled={false}
+    >
+      <circleGeometry args={[MARKER_RADIUS, 18]} />
+      <meshBasicMaterial color={color} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+    </instancedMesh>
+  );
+}
 
-    instancedPoints.forEach((point, index) => {
-      normal.copy(latLonToVector3(point.latitude, point.longitude, 1)).normalize();
-      markerPosition.copy(normal).multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE);
-      quaternion.setFromUnitVectors(outward, normal);
+function MarkerHitInstances({
+  points,
+  onHover,
+  onSelect
+}: {
+  points: TerraPoint[];
+  onHover: (point: TerraPoint | null) => void;
+  onSelect: (point: TerraPoint) => void;
+}) {
+  const meshRef = useRef<THREE.InstancedMesh>(null);
+  const hoveredPointId = useRef<string | null>(null);
+  const instanceCapacity = useMemo(() => getInstanceCapacity(points.length), [points.length]);
 
-      temp.position.copy(markerPosition);
-      temp.quaternion.copy(quaternion);
-      temp.scale.setScalar(1);
-      temp.updateMatrix();
-
-      visualMesh.setMatrixAt(index, temp.matrix);
-      hitMesh.setMatrixAt(index, temp.matrix);
-      visualMesh.setColorAt(index, writePointColor(point, markerColorMode, singleColor, color));
-    });
-
-    visualMesh.count = instancedPoints.length;
-    hitMesh.count = instancedPoints.length;
-    visualMesh.instanceMatrix.needsUpdate = true;
-    hitMesh.instanceMatrix.needsUpdate = true;
-
-    if (visualMesh.instanceColor) {
-      visualMesh.instanceColor.needsUpdate = true;
-    }
-  }, [instancedPoints, markerColorMode, singleColor]);
+  useLayoutEffect(() => {
+    writeMarkerInstances(meshRef.current, points);
+  }, [points]);
 
   function getPointFromEvent(event: ThreeEvent<PointerEvent | MouseEvent>) {
     const instanceId = event.instanceId;
-    return typeof instanceId === "number" ? pointsByInstance.current[instanceId] ?? null : null;
+    return typeof instanceId === "number" ? points[instanceId] ?? null : null;
   }
 
   function handlePointerMove(event: ThreeEvent<PointerEvent>) {
@@ -211,31 +245,23 @@ function PointMarkers({
     onSelect(point);
   }
 
+  if (points.length === 0) {
+    return null;
+  }
+
   return (
-    <>
-      <instancedMesh ref={visualRef} args={[undefined, undefined, instancedPoints.length]} frustumCulled={false}>
-        <circleGeometry args={[MARKER_RADIUS, 18]} />
-        <meshBasicMaterial depthWrite={false} side={THREE.DoubleSide} toneMapped={false} vertexColors />
-      </instancedMesh>
-      <instancedMesh
-        ref={hitRef}
-        args={[undefined, undefined, instancedPoints.length]}
-        frustumCulled={false}
-        onClick={handleClick}
-        onPointerMove={handlePointerMove}
-        onPointerOut={handlePointerOut}
-      >
-        <circleGeometry args={[MARKER_RADIUS * 4.5, 12]} />
-        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
-      </instancedMesh>
-      {selectedPoint ? (
-        <SelectedPointMarker
-          point={selectedPoint}
-          onHover={onHover}
-          onSelect={onSelect}
-        />
-      ) : null}
-    </>
+    <instancedMesh
+      key={instanceCapacity}
+      ref={meshRef}
+      args={[undefined, undefined, instanceCapacity]}
+      frustumCulled={false}
+      onClick={handleClick}
+      onPointerMove={handlePointerMove}
+      onPointerOut={handlePointerOut}
+    >
+      <circleGeometry args={[MARKER_RADIUS * 4.5, 12]} />
+      <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+    </instancedMesh>
   );
 }
 
@@ -432,27 +458,71 @@ function getCountryBorderMesh() {
   return borderMesh;
 }
 
-function writeMarkerColor(severity: number, target: THREE.Color) {
-  const value = THREE.MathUtils.clamp(severity, 0, 1);
-
-  if (value < 0.5) {
-    return target.copy(MARKER_COLOR_STOPS[0]).lerp(MARKER_COLOR_STOPS[1], value / 0.5);
+function writeMarkerInstances(mesh: THREE.InstancedMesh | null, points: TerraPoint[]) {
+  if (!mesh) {
+    return;
   }
 
-  return target.copy(MARKER_COLOR_STOPS[1]).lerp(MARKER_COLOR_STOPS[2], (value - 0.5) / 0.5);
+  const temp = new THREE.Object3D();
+  const normal = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const markerPosition = new THREE.Vector3();
+  const outward = new THREE.Vector3(0, 0, 1);
+
+  points.forEach((point, index) => {
+    normal.copy(latLonToVector3(point.latitude, point.longitude, 1)).normalize();
+    markerPosition.copy(normal).multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE);
+    quaternion.setFromUnitVectors(outward, normal);
+
+    temp.position.copy(markerPosition);
+    temp.quaternion.copy(quaternion);
+    temp.scale.setScalar(1);
+    temp.updateMatrix();
+
+    mesh.setMatrixAt(index, temp.matrix);
+  });
+
+  mesh.count = points.length;
+  mesh.instanceMatrix.needsUpdate = true;
 }
 
-function writePointColor(
-  point: TerraPoint,
-  markerColorMode: "severity" | "single",
-  singleColor: THREE.Color,
-  target: THREE.Color
-) {
+function getMarkerBatches(points: TerraPoint[], markerColorMode: MarkerColorMode, singleColor: string) {
+  const batches = new Map<string, TerraPoint[]>();
+
+  points.forEach((point) => {
+    const color = getMarkerColor(point, markerColorMode, singleColor);
+    const batch = batches.get(color);
+
+    if (batch) {
+      batch.push(point);
+      return;
+    }
+
+    batches.set(color, [point]);
+  });
+
+  return Array.from(batches, ([color, batchPoints]) => ({
+    color,
+    points: batchPoints
+  } satisfies MarkerBatch));
+}
+
+function getMarkerColor(point: TerraPoint, markerColorMode: MarkerColorMode, singleColor: string) {
   if (markerColorMode === "single") {
-    return target.copy(singleColor);
+    return singleColor;
   }
 
-  return writeMarkerColor(point.severity ?? 0.3, target);
+  const value = THREE.MathUtils.clamp(point.severity ?? 0.3, 0, 1);
+  const bucketIndex = Math.round(value * (MARKER_SEVERITY_COLORS.length - 1));
+  return MARKER_SEVERITY_COLORS[bucketIndex];
+}
+
+function getInstanceCapacity(count: number) {
+  if (count <= 1) {
+    return 1;
+  }
+
+  return 2 ** Math.ceil(Math.log2(count));
 }
 
 function getRotateSpeed(cameraDistance: number) {
