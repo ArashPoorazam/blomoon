@@ -38,5 +38,14 @@ export type TerraDataset = {
 export type TerraMode = {
   id: TerraModeId;
   label: string;
-  sourceName: string;
+  dataEndpoint: string;
+  detailEndpoint: (id: string) => string;
+  loadingLabel: string;
+  emptyLabel: string;
+  searchPlaceholder: string;
+  markerMetricLabel: string;
+  fallbackNotice: string;
+  formatPointMetric: (point: TerraPoint) => string;
+  matchPoint: (point: TerraPoint, query: string) => boolean;
+  sortPoints: (points: TerraPoint[]) => TerraPoint[];
 };

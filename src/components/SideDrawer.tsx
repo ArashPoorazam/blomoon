@@ -1,32 +1,44 @@
 "use client";
 
-import { ExternalLink, Search, X } from "lucide-react";
-import type { DataSourceInfo, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
+import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
+import type { DataSourceInfo, TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import { formatDateTime } from "@/lib/geo";
 
 type SideDrawerProps = {
+  activeMode: TerraMode;
+  activeModeId: TerraModeId;
   collapsed: boolean;
   detail: TerraPointDetail | null;
-  error: string | null;
+  loading: boolean;
+  modes: TerraMode[];
   points: TerraPoint[];
+  providerError: string | null;
   query: string;
   selectedId: string | null;
   source: DataSourceInfo | null;
+  totalPoints: number;
   onClearSelection: () => void;
+  onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onToggleCollapsed: () => void;
 };
 
 export function SideDrawer({
+  activeMode,
+  activeModeId,
   collapsed,
   detail,
-  error,
+  loading,
+  modes,
   points,
+  providerError,
   query,
   selectedId,
   source,
+  totalPoints,
   onClearSelection,
+  onModeChange,
   onPointSelect,
   onQueryChange,
   onToggleCollapsed
@@ -34,26 +46,32 @@ export function SideDrawer({
   const isDetail = Boolean(selectedId);
 
   return (
-    <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label="Earthquake data">
+    <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label={`${activeMode.label} data`}>
       <button
         aria-label={collapsed ? "Open drawer" : "Close drawer"}
         className="drawer-toggle"
         type="button"
         onClick={onToggleCollapsed}
       >
-        {collapsed ? "<<" : ">>"}
+        {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
       </button>
 
       <div className="drawer-inner">
         {isDetail ? (
-          <DetailView detail={detail} onClearSelection={onClearSelection} />
+          <DetailView activeMode={activeMode} detail={detail} onClearSelection={onClearSelection} />
         ) : (
           <ListView
-            error={error}
+            activeMode={activeMode}
+            activeModeId={activeModeId}
+            loading={loading}
+            modes={modes}
             points={points}
+            providerError={providerError}
             query={query}
             selectedId={selectedId}
             source={source}
+            totalPoints={totalPoints}
+            onModeChange={onModeChange}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
           />
@@ -64,19 +82,31 @@ export function SideDrawer({
 }
 
 function ListView({
-  error,
+  activeMode,
+  activeModeId,
+  loading,
+  modes,
   points,
+  providerError,
   query,
   selectedId,
   source,
+  totalPoints,
+  onModeChange,
   onPointSelect,
   onQueryChange
 }: {
-  error: string | null;
+  activeMode: TerraMode;
+  activeModeId: TerraModeId;
+  loading: boolean;
+  modes: TerraMode[];
   points: TerraPoint[];
+  providerError: string | null;
   query: string;
   selectedId: string | null;
   source: DataSourceInfo | null;
+  totalPoints: number;
+  onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
 }) {
@@ -85,10 +115,14 @@ function ListView({
       <div className="drawer-header">
         <div>
           <div className="drawer-kicker">Terravue</div>
-          <h1 className="drawer-title">Earthquakes</h1>
+          <h1 className="drawer-title">{activeMode.label}</h1>
+          <ModeSwitcher
+            activeModeId={activeModeId}
+            modes={modes}
+            onModeChange={onModeChange}
+          />
           <p className="drawer-subtitle">
-            {points.length} visible events · {source?.name ?? "USGS"} {source?.isFallback ? "fallback" : "live"}
-            {error ? ` · ${error}` : ""}
+            {loading ? activeMode.loadingLabel : `${points.length} visible of ${totalPoints} points`}
           </p>
         </div>
       </div>
@@ -97,16 +131,18 @@ function ListView({
         <Search size={16} aria-hidden="true" />
         <input
           className="search-input"
-          placeholder="Filter by place or magnitude"
+          placeholder={activeMode.searchPlaceholder}
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
         />
       </div>
 
+      <SourceMeta providerError={providerError} source={source} />
+
       <div className="point-list">
         {points.length === 0 ? (
-          <div className="empty-state">No matching earthquakes.</div>
+          <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
         ) : (
           points.map((point) => (
             <button
@@ -121,7 +157,9 @@ function ListView({
                   {point.summary} · {formatDateTime(point.timestamp)}
                 </span>
               </span>
-              <span className="magnitude">M {point.metrics?.Magnitude ?? "?"}</span>
+              <span className="point-metric">
+                {activeMode.formatPointMetric(point)}
+              </span>
             </button>
           ))
         )}
@@ -131,9 +169,11 @@ function ListView({
 }
 
 function DetailView({
+  activeMode,
   detail,
   onClearSelection
 }: {
+  activeMode: TerraMode;
   detail: TerraPointDetail | null;
   onClearSelection: () => void;
 }) {
@@ -141,7 +181,7 @@ function DetailView({
     <>
       <div className="drawer-header">
         <div>
-          <div className="drawer-kicker">Terravue · Earthquakes</div>
+          <div className="drawer-kicker">Terravue · {activeMode.label}</div>
           <h1 className="drawer-title">{detail?.name ?? "Loading"}</h1>
           <p className="drawer-subtitle">{detail?.summary ?? ""}</p>
         </div>
@@ -152,7 +192,7 @@ function DetailView({
 
       <div className="detail-body">
         <div className="detail-grid">
-          {(detail?.fields.length ? detail.fields : fallbackFields(detail)).map((field) => (
+          {(detail?.fields.length ? detail.fields : fallbackFields(detail, activeMode)).map((field) => (
             <div className="detail-stat" key={field.label}>
               <div className="detail-label">{field.label}</div>
               <div className="detail-value">{field.value}</div>
@@ -162,7 +202,7 @@ function DetailView({
 
         {detail?.sourceUrl ? (
           <a className="detail-link" href={detail.sourceUrl} target="_blank" rel="noreferrer">
-            USGS event
+            Source record
             <ExternalLink size={14} aria-hidden="true" />
           </a>
         ) : null}
@@ -171,18 +211,82 @@ function DetailView({
   );
 }
 
-function fallbackFields(detail: TerraPointDetail | null) {
+function ModeSwitcher({
+  activeModeId,
+  modes,
+  onModeChange
+}: {
+  activeModeId: TerraModeId;
+  modes: TerraMode[];
+  onModeChange: (modeId: TerraModeId) => void;
+}) {
+  return (
+    <div className="mode-switcher" aria-label="Data mode">
+      {modes.map((mode) => (
+        <button
+          aria-pressed={activeModeId === mode.id}
+          className={activeModeId === mode.id ? "active" : ""}
+          key={mode.id}
+          type="button"
+          onClick={() => onModeChange(mode.id)}
+        >
+          {mode.label}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function SourceMeta({
+  providerError,
+  source
+}: {
+  providerError: string | null;
+  source: DataSourceInfo | null;
+}) {
+  if (!source && !providerError) {
+    return null;
+  }
+
+  return (
+    <div className="source-meta">
+      {source ? (
+        <>
+          <div className="source-row">
+            <span>Provider</span>
+            <a href={source.url} target="_blank" rel="noreferrer">
+              {source.name}
+            </a>
+          </div>
+          <div className="source-row">
+            <span>Updated</span>
+            <strong>{formatDateTime(source.lastUpdated)}</strong>
+          </div>
+          <p>{source.attribution}</p>
+        </>
+      ) : null}
+      {providerError ? <div className="source-warning">{providerError}</div> : null}
+    </div>
+  );
+}
+
+function fallbackFields(detail: TerraPointDetail | null, activeMode: TerraMode) {
   if (!detail) {
     return [
-      { label: "Magnitude", value: "Loading" },
+      { label: activeMode.markerMetricLabel, value: "Loading" },
       { label: "Time", value: "Loading" }
     ];
   }
 
   return [
-    { label: "Magnitude", value: String(detail.metrics?.Magnitude ?? "Unknown") },
+    { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
     { label: "Latitude", value: detail.latitude.toFixed(3) },
     { label: "Longitude", value: detail.longitude.toFixed(3) },
     { label: "Time", value: formatDateTime(detail.timestamp) }
   ];
+}
+
+function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
+  const value = point.metrics?.[label];
+  return value === undefined || value === null ? fallback : String(value);
 }

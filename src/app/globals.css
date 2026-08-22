@@ -130,6 +130,34 @@ button {
   line-height: 1.1;
 }
 
+.mode-switcher {
+  display: inline-flex;
+  gap: 3px;
+  margin-top: 12px;
+  padding: 3px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.04);
+}
+
+.mode-switcher button {
+  min-height: 28px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.mode-switcher button:hover,
+.mode-switcher button.active {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
 .drawer-subtitle {
   margin: 8px 0 0;
   color: var(--muted);
@@ -181,6 +209,48 @@ button {
 
 .search-input:focus {
   border-color: rgba(122, 162, 247, 0.72);
+}
+
+.source-meta {
+  margin: 0 22px 12px;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.035);
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.source-row {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.source-row + .source-row {
+  margin-top: 6px;
+}
+
+.source-row a,
+.source-row strong {
+  overflow: hidden;
+  color: var(--muted-strong);
+  font-weight: 600;
+  text-align: right;
+  text-decoration: none;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.source-meta p {
+  margin: 9px 0 0;
+}
+
+.source-warning {
+  margin-top: 9px;
+  color: var(--quake);
 }
 
 .point-list {
@@ -236,11 +306,12 @@ button {
   white-space: nowrap;
 }
 
-.magnitude {
+.point-metric {
   display: inline-grid;
   min-width: 48px;
   height: 30px;
   flex: 0 0 auto;
+  padding: 0 8px;
   place-items: center;
   border: 1px solid rgba(224, 175, 104, 0.42);
   border-radius: 8px;

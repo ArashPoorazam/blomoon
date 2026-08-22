@@ -1,4 +1,5 @@
 import type { TerraDataset, TerraPoint, TerraPointDetail } from "./types";
+import { EARTHQUAKE_FIXTURE_POINTS, EARTHQUAKE_FIXTURE_SOURCE } from "./fixtures/earthquakes";
 
 const USGS_ALL_DAY_FEED =
   "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
@@ -192,70 +193,9 @@ function getMetric(point: TerraPoint, key: string) {
 }
 
 function getFallbackDataset(): TerraDataset {
-  const now = new Date().toISOString();
-  const points: TerraPoint[] = [
-    {
-      id: "fallback-california",
-      modeId: "earthquakes",
-      name: "Central California",
-      latitude: 36.7783,
-      longitude: -119.4179,
-      severity: normalizeMagnitude(3.8),
-      timestamp: now,
-      summary: "Reported region",
-      metrics: {
-        Magnitude: "3.8",
-        Depth: "8.2 km",
-        Distance: "Reported region",
-        Status: "Fallback",
-        Tsunami: "No"
-      }
-    },
-    {
-      id: "fallback-japan",
-      modeId: "earthquakes",
-      name: "Honshu, Japan",
-      latitude: 38.2682,
-      longitude: 140.8694,
-      severity: normalizeMagnitude(4.6),
-      timestamp: now,
-      summary: "Near",
-      metrics: {
-        Magnitude: "4.6",
-        Depth: "42.0 km",
-        Distance: "Near",
-        Status: "Fallback",
-        Tsunami: "No"
-      }
-    },
-    {
-      id: "fallback-chile",
-      modeId: "earthquakes",
-      name: "Chile",
-      latitude: -33.4489,
-      longitude: -70.6693,
-      severity: normalizeMagnitude(5.1),
-      timestamp: now,
-      summary: "Offshore",
-      metrics: {
-        Magnitude: "5.1",
-        Depth: "31.4 km",
-        Distance: "Offshore",
-        Status: "Fallback",
-        Tsunami: "No"
-      }
-    }
-  ];
-
   return {
     modeId: "earthquakes",
-    source: {
-      name: "USGS Earthquake Hazards Program",
-      url: USGS_ALL_DAY_FEED,
-      attribution: "Fallback sample data shown because the live USGS feed is unavailable.",
-      lastUpdated: now,
-      isFallback: true
-    },
-    points
+    source: EARTHQUAKE_FIXTURE_SOURCE,
+    points: EARTHQUAKE_FIXTURE_POINTS
   };
 }

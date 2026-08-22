@@ -6,6 +6,7 @@ import { geoEquirectangular, geoPath } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import { useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
+import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import countries from "world-atlas/countries-110m.json";
 import { GLOBE_RADIUS } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
@@ -39,6 +40,12 @@ type CountryFeature = {
 };
 
 const DEG_TO_RAD = Math.PI / 180;
+const MIN_CAMERA_DISTANCE = 2.15;
+const DEFAULT_CAMERA_DISTANCE = 5.2;
+const MAX_CAMERA_DISTANCE = 10;
+const MIN_ROTATE_SPEED = 0.18;
+const DEFAULT_ROTATE_SPEED = 0.55;
+const MAX_ROTATE_SPEED = 0.7;
 const TOKYO = {
   ocean: "#050509",
   land: "#3b4261",
@@ -75,7 +82,7 @@ export function GlobeScene({ focusKey, points, selectedPoint, onPointHover, onPo
       ))}
 
       <CameraFocus focusKey={focusKey} selectedPoint={selectedPoint} />
-      <OrbitControls enableDamping enablePan={false} maxDistance={10} minDistance={2.15} rotateSpeed={0.55} />
+      <AdaptiveOrbitControls />
     </Canvas>
   );
 }
@@ -190,6 +197,29 @@ function CameraFocus({ focusKey, selectedPoint }: { focusKey: string | null; sel
   return null;
 }
 
+function AdaptiveOrbitControls() {
+  const controlsRef = useRef<OrbitControlsImpl>(null);
+
+  useFrame(({ camera }) => {
+    if (!controlsRef.current) {
+      return;
+    }
+
+    controlsRef.current.rotateSpeed = getRotateSpeed(camera.position.length());
+  });
+
+  return (
+    <OrbitControls
+      ref={controlsRef}
+      enableDamping
+      enablePan={false}
+      maxDistance={MAX_CAMERA_DISTANCE}
+      minDistance={MIN_CAMERA_DISTANCE}
+      rotateSpeed={DEFAULT_ROTATE_SPEED}
+    />
+  );
+}
+
 function createEarthTexture() {
   const width = 4096;
   const height = 2048;
@@ -276,6 +306,21 @@ function getMarkerColor(severity: number) {
   }
 
   return MARKER_COLOR_STOPS[1].clone().lerp(MARKER_COLOR_STOPS[2], (value - 0.5) / 0.5);
+}
+
+function getRotateSpeed(cameraDistance: number) {
+  if (cameraDistance <= DEFAULT_CAMERA_DISTANCE) {
+    const value = smoothProgress(MIN_CAMERA_DISTANCE, DEFAULT_CAMERA_DISTANCE, cameraDistance);
+    return THREE.MathUtils.lerp(MIN_ROTATE_SPEED, DEFAULT_ROTATE_SPEED, value);
+  }
+
+  const value = smoothProgress(DEFAULT_CAMERA_DISTANCE, MAX_CAMERA_DISTANCE, cameraDistance);
+  return THREE.MathUtils.lerp(DEFAULT_ROTATE_SPEED, MAX_ROTATE_SPEED, value);
+}
+
+function smoothProgress(minimum: number, maximum: number, value: number) {
+  const progress = THREE.MathUtils.clamp((value - minimum) / (maximum - minimum), 0, 1);
+  return progress * progress * (3 - 2 * progress);
 }
 
 function latLonToVector3(latitude: number, longitude: number, radius = GLOBE_RADIUS) {

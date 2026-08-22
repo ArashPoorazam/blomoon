@@ -1,126 +1,31 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { formatCoordinate } from "@/lib/geo";
-import type { DataSourceInfo, TerraDataset, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
+import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
+import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
+import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { GlobeScene } from "./GlobeScene";
 import { SideDrawer } from "./SideDrawer";
 
 export function TerravueApp() {
-  const [points, setPoints] = useState<TerraPoint[]>([]);
-  const [source, setSource] = useState<DataSourceInfo | null>(null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
-  const [detail, setDetail] = useState<TerraPointDetail | null>(null);
-  const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadPoints() {
-      try {
-        setLoading(true);
-        const response = await fetch("/api/modes/earthquakes/points");
-
-        if (!response.ok) {
-          throw new Error(`Request failed with ${response.status}`);
-        }
-
-        const dataset = (await response.json()) as TerraDataset;
-
-        if (!cancelled) {
-          setPoints(dataset.points);
-          setSource(dataset.source);
-          setError(null);
-        }
-      } catch {
-        if (!cancelled) {
-          setError("Earthquake data is unavailable.");
-        }
-      } finally {
-        if (!cancelled) {
-          setLoading(false);
-        }
-      }
-    }
-
-    void loadPoints();
-
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function loadDetail() {
-      if (!selectedId) {
-        setDetail(null);
-        return;
-      }
-
-      const localPoint = points.find((point) => point.id === selectedId) ?? null;
-
-      if (localPoint) {
-        setDetail({
-          ...localPoint,
-          fields: []
-        });
-      }
-
-      try {
-        const response = await fetch(`/api/modes/earthquakes/points/${encodeURIComponent(selectedId)}`);
-
-        if (!response.ok) {
-          throw new Error(`Request failed with ${response.status}`);
-        }
-
-        const nextDetail = (await response.json()) as TerraPointDetail;
-
-        if (!cancelled) {
-          setDetail(nextDetail);
-        }
-      } catch {
-        if (!cancelled && localPoint) {
-          setDetail({
-            ...localPoint,
-            fields: []
-          });
-        }
-      }
-    }
-
-    void loadDetail();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [points, selectedId]);
-
-  const filteredPoints = useMemo(() => {
-    const value = query.trim().toLowerCase();
-
-    if (!value) {
-      return points;
-    }
-
-    return points.filter((point) => {
-      const haystack = `${point.name} ${point.summary} ${Object.values(point.metrics ?? {}).join(" ")}`.toLowerCase();
-      return haystack.includes(value);
-    });
-  }, [points, query]);
-
-  const selectedPoint = points.find((point) => point.id === selectedId) ?? null;
+  const activeMode = getTerraMode(activeModeId);
+  const modeState = useModeDataset(activeMode);
   const drawerOpen = !drawerCollapsed;
 
   function selectPoint(point: TerraPoint) {
-    setSelectedId(point.id);
+    modeState.selectPoint(point);
     setDrawerCollapsed(false);
+  }
+
+  function selectMode(modeId: TerraModeId) {
+    setActiveModeId(modeId);
+    setDrawerCollapsed(false);
+    setHoveredPoint(null);
   }
 
   return (
@@ -134,17 +39,17 @@ export function TerravueApp() {
     >
       <div className="globe-stage">
         <GlobeScene
-          focusKey={selectedId}
-          points={filteredPoints}
-          selectedPoint={selectedPoint}
+          focusKey={modeState.selectedId}
+          points={modeState.visiblePoints}
+          selectedPoint={modeState.selectedPoint}
           onPointHover={setHoveredPoint}
           onPointSelect={selectPoint}
         />
       </div>
 
-      {loading ? (
+      {modeState.loading ? (
         <div className="loading-layer">
-          <div className="loading-pill">Loading earthquakes</div>
+          <div className="loading-pill">{activeMode.loadingLabel}</div>
         </div>
       ) : null}
 
@@ -162,16 +67,22 @@ export function TerravueApp() {
       ) : null}
 
       <SideDrawer
+        activeMode={activeMode}
+        activeModeId={activeModeId}
         collapsed={drawerCollapsed}
-        detail={detail}
-        error={error}
-        points={filteredPoints}
-        query={query}
-        selectedId={selectedId}
-        source={source}
-        onClearSelection={() => setSelectedId(null)}
+        detail={modeState.detail}
+        loading={modeState.loading}
+        modes={terraModes}
+        points={modeState.visiblePoints}
+        providerError={modeState.providerError}
+        query={modeState.query}
+        selectedId={modeState.selectedId}
+        source={modeState.source}
+        totalPoints={modeState.points.length}
+        onClearSelection={modeState.clearSelection}
+        onModeChange={selectMode}
         onPointSelect={selectPoint}
-        onQueryChange={setQuery}
+        onQueryChange={modeState.setQuery}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
       />
     </main>
