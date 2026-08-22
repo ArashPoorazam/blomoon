@@ -5,7 +5,9 @@ import { formatCoordinate } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
+import { useRadioPlayback } from "@/lib/modes/useRadioPlayback";
 import { GlobeScene } from "./GlobeScene";
+import { RadioPlaybackPanel } from "./RadioPlaybackPanel";
 import { SideDrawer } from "./SideDrawer";
 
 export function TerravueApp() {
@@ -15,7 +17,12 @@ export function TerravueApp() {
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const modeState = useModeDataset(activeMode);
+  const radioPlayback = useRadioPlayback(activeModeId === "radio" ? modeState.selectedId : null);
   const drawerOpen = !drawerCollapsed;
+  const detailAccessory =
+    activeModeId === "radio" && modeState.detail?.modeId === "radio" ? (
+      <RadioPlaybackPanel detail={modeState.detail} playback={radioPlayback} />
+    ) : null;
 
   function selectPoint(point: TerraPoint) {
     modeState.selectPoint(point);
@@ -71,6 +78,7 @@ export function TerravueApp() {
         activeModeId={activeModeId}
         collapsed={drawerCollapsed}
         detail={modeState.detail}
+        detailAccessory={detailAccessory}
         loading={modeState.loading}
         modes={terraModes}
         points={modeState.visiblePoints}

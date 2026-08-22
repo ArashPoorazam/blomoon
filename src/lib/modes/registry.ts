@@ -14,6 +14,20 @@ export const terraModes = [
     formatPointMetric: formatMagnitudeMetric,
     matchPoint: matchTextPoint,
     sortPoints: sortNewestFirst
+  },
+  {
+    id: "radio",
+    label: "Radio",
+    dataEndpoint: "/api/modes/radio/points",
+    detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
+    loadingLabel: "Loading radio stations",
+    emptyLabel: "No matching radio stations.",
+    searchPlaceholder: "Filter by station, country, language, or tag",
+    markerMetricLabel: "Listeners",
+    fallbackNotice: "Radio Browser is unavailable.",
+    formatPointMetric: formatRadioMetric,
+    matchPoint: matchTextPoint,
+    sortPoints: sortRadioStations
   }
 ] satisfies TerraMode[];
 
@@ -44,6 +58,34 @@ function formatMagnitudeMetric(point: TerraPoint) {
   return `M ${value === undefined || value === null ? "?" : value}`;
 }
 
+function formatRadioMetric(point: TerraPoint) {
+  const codec = point.metrics?.Codec;
+  const bitrate = point.metrics?.Bitrate;
+
+  if (codec && codec !== "Unknown") {
+    return String(codec);
+  }
+
+  return bitrate === undefined || bitrate === null ? "Live" : String(bitrate);
+}
+
+function sortRadioStations(points: TerraPoint[]) {
+  return [...points].sort((a, b) => {
+    const popularityDiff = getNumericMetric(b, "Clicks") - getNumericMetric(a, "Clicks");
+
+    if (popularityDiff !== 0) {
+      return popularityDiff;
+    }
+
+    return a.name.localeCompare(b.name);
+  });
+}
+
 function getPointTime(point: TerraPoint) {
   return point.timestamp ? new Date(point.timestamp).getTime() : 0;
+}
+
+function getNumericMetric(point: TerraPoint, key: string) {
+  const value = point.metrics?.[key];
+  return typeof value === "number" ? value : 0;
 }

@@ -9,6 +9,7 @@ type SideDrawerProps = {
   activeModeId: TerraModeId;
   collapsed: boolean;
   detail: TerraPointDetail | null;
+  detailAccessory?: React.ReactNode;
   loading: boolean;
   modes: TerraMode[];
   points: TerraPoint[];
@@ -29,6 +30,7 @@ export function SideDrawer({
   activeModeId,
   collapsed,
   detail,
+  detailAccessory,
   loading,
   modes,
   points,
@@ -58,7 +60,12 @@ export function SideDrawer({
 
       <div className="drawer-inner">
         {isDetail ? (
-          <DetailView activeMode={activeMode} detail={detail} onClearSelection={onClearSelection} />
+          <DetailView
+            activeMode={activeMode}
+            detail={detail}
+            detailAccessory={detailAccessory}
+            onClearSelection={onClearSelection}
+          />
         ) : (
           <ListView
             activeMode={activeMode}
@@ -171,10 +178,12 @@ function ListView({
 function DetailView({
   activeMode,
   detail,
+  detailAccessory,
   onClearSelection
 }: {
   activeMode: TerraMode;
   detail: TerraPointDetail | null;
+  detailAccessory?: React.ReactNode;
   onClearSelection: () => void;
 }) {
   return (
@@ -191,6 +200,8 @@ function DetailView({
       </div>
 
       <div className="detail-body">
+        {detailAccessory ? <div className="detail-accessory">{detailAccessory}</div> : null}
+
         <div className="detail-grid">
           {(detail?.fields.length ? detail.fields : fallbackFields(detail, activeMode)).map((field) => (
             <div className="detail-stat" key={field.label}>
