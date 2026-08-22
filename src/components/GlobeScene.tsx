@@ -10,6 +10,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import countries from "world-atlas/countries-110m.json";
 import { GLOBE_RADIUS } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
+import { globeTheme, type MarkerColorMode } from "@/lib/theme/globe";
 
 type GlobeSceneProps = {
   focusKey: string | null;
@@ -21,7 +22,6 @@ type GlobeSceneProps = {
   onPointSelect: (point: TerraPoint) => void;
 };
 
-type MarkerColorMode = "severity" | "single";
 type MarkerBatch = {
   color: string;
   points: TerraPoint[];
@@ -55,26 +55,6 @@ const DEFAULT_ROTATE_SPEED = 0.55;
 const MAX_ROTATE_SPEED = 0.7;
 const MARKER_RADIUS = 0.0072;
 const MARKER_ALTITUDE = 1.001;
-const TOKYO = {
-  ocean: "#050509",
-  land: "#3b4261",
-  border: "#c0caf5",
-  markerLow: "#7aa2f7",
-  markerMid: "#bb9af7",
-  markerHigh: "#f7768e",
-  selectedMarker: "#ff9e64",
-  selectedRing: "#ffffff"
-};
-
-const MARKER_SEVERITY_COLORS = [
-  TOKYO.markerLow,
-  "#929ff7",
-  "#aa9cf7",
-  TOKYO.markerMid,
-  "#cf91ce",
-  "#e687ae",
-  TOKYO.markerHigh
-] as const;
 
 export function GlobeScene({
   focusKey,
@@ -87,7 +67,7 @@ export function GlobeScene({
 }: GlobeSceneProps) {
   return (
     <Canvas camera={{ position: [0, 0.35, 5.2], fov: 42 }} dpr={[1, 2]}>
-      <color attach="background" args={[TOKYO.ocean]} />
+      <color attach="background" args={[globeTheme.ocean]} />
       <ambientLight intensity={1.7} />
       <directionalLight intensity={2.4} position={[3, 2, 4]} />
       <directionalLight intensity={0.45} position={[-4, -1, -3]} />
@@ -139,7 +119,7 @@ function PointMarkers({
     [points, selectedPoint?.id]
   );
   const visualBatches = useMemo(
-    () => getMarkerBatches(instancedPoints, markerColorMode, markerColor ?? "#ffffff"),
+    () => getMarkerBatches(instancedPoints, markerColorMode, markerColor ?? globeTheme.markers.defaultSingle),
     [instancedPoints, markerColor, markerColorMode]
   );
 
@@ -304,12 +284,12 @@ function SelectedPointMarker({
     >
       <mesh>
         <circleGeometry args={[MARKER_RADIUS * 1.15, 24]} />
-        <meshBasicMaterial color={TOKYO.selectedMarker} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial color={globeTheme.markers.selected} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>
       <mesh>
         <ringGeometry args={[MARKER_RADIUS * 2.05, MARKER_RADIUS * 3.05, 32]} />
         <meshBasicMaterial
-          color={TOKYO.selectedRing}
+          color={globeTheme.markers.selectedRing}
           depthWrite={false}
           opacity={0.86}
           side={THREE.DoubleSide}
@@ -398,7 +378,7 @@ function createEarthTexture() {
     return new THREE.CanvasTexture(canvas);
   }
 
-  context.fillStyle = TOKYO.ocean;
+  context.fillStyle = globeTheme.ocean;
   context.fillRect(0, 0, width, height);
 
   const projection = geoEquirectangular()
@@ -407,7 +387,7 @@ function createEarthTexture() {
     .precision(0.2);
   const path = geoPath(projection, context);
 
-  context.fillStyle = TOKYO.land;
+  context.fillStyle = globeTheme.land;
   context.beginPath();
   path(getCountryCollection() as never);
   context.fill("evenodd");
@@ -421,7 +401,7 @@ function createEarthTexture() {
 }
 
 function drawCountryBorders(context: CanvasRenderingContext2D, path: ReturnType<typeof geoPath>) {
-  context.strokeStyle = TOKYO.border;
+  context.strokeStyle = globeTheme.border;
   context.lineWidth = 1.45;
   context.lineCap = "round";
   context.lineJoin = "round";
@@ -513,8 +493,8 @@ function getMarkerColor(point: TerraPoint, markerColorMode: MarkerColorMode, sin
   }
 
   const value = THREE.MathUtils.clamp(point.severity ?? 0.3, 0, 1);
-  const bucketIndex = Math.round(value * (MARKER_SEVERITY_COLORS.length - 1));
-  return MARKER_SEVERITY_COLORS[bucketIndex];
+  const bucketIndex = Math.round(value * (globeTheme.markers.severity.length - 1));
+  return globeTheme.markers.severity[bucketIndex];
 }
 
 function getInstanceCapacity(count: number) {

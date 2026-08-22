@@ -1,3 +1,4 @@
+import { globeTheme } from "@/lib/theme/globe";
 import type { TerraMode, TerraPoint } from "./types";
 
 export const terraModes = [
@@ -26,7 +27,7 @@ export const terraModes = [
     searchPlaceholder: "Filter by station, country, language, or tag",
     markerMetricLabel: "Listeners",
     markerColorMode: "single",
-    markerColor: "#ffffff",
+    markerColor: globeTheme.markers.radio,
     fallbackNotice: "Radio Browser is unavailable.",
     formatPointMetric: formatRadioMetric,
     matchPoint: matchTextPoint,

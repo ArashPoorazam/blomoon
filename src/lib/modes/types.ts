@@ -1,3 +1,5 @@
+import type { MarkerColorMode } from "@/lib/theme/globe";
+
 export type TerraModeId = "earthquakes" | "radio" | "weather" | (string & {});
 
 export type TerraPoint = {
@@ -44,7 +46,7 @@ export type TerraMode = {
   emptyLabel: string;
   searchPlaceholder: string;
   markerMetricLabel: string;
-  markerColorMode: "severity" | "single";
+  markerColorMode: MarkerColorMode;
   markerColor?: string;
   fallbackNotice: string;
   formatPointMetric: (point: TerraPoint) => string;
