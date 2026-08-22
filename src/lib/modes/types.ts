@@ -44,6 +44,8 @@ export type TerraMode = {
   emptyLabel: string;
   searchPlaceholder: string;
   markerMetricLabel: string;
+  markerColorMode: "severity" | "single";
+  markerColor?: string;
   fallbackNotice: string;
   formatPointMetric: (point: TerraPoint) => string;
   matchPoint: (point: TerraPoint, query: string) => boolean;

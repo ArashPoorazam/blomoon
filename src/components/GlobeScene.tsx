@@ -4,7 +4,7 @@ import { OrbitControls } from "@react-three/drei";
 import { Canvas, ThreeEvent, useFrame } from "@react-three/fiber";
 import { geoEquirectangular, geoPath } from "d3-geo";
 import { feature, mesh } from "topojson-client";
-import { useEffect, useMemo, useRef } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import countries from "world-atlas/countries-110m.json";
@@ -13,6 +13,8 @@ import type { TerraPoint } from "@/lib/modes/types";
 
 type GlobeSceneProps = {
   focusKey: string | null;
+  markerColor?: string;
+  markerColorMode: "severity" | "single";
   points: TerraPoint[];
   selectedPoint: TerraPoint | null;
   onPointHover: (point: TerraPoint | null) => void;
@@ -46,6 +48,8 @@ const MAX_CAMERA_DISTANCE = 10;
 const MIN_ROTATE_SPEED = 0.18;
 const DEFAULT_ROTATE_SPEED = 0.55;
 const MAX_ROTATE_SPEED = 0.7;
+const MARKER_RADIUS = 0.0072;
+const MARKER_ALTITUDE = 1.001;
 const TOKYO = {
   ocean: "#050509",
   land: "#3b4261",
@@ -53,7 +57,8 @@ const TOKYO = {
   markerLow: "#7aa2f7",
   markerMid: "#bb9af7",
   markerHigh: "#f7768e",
-  selectedMarker: "#ff9e64"
+  selectedMarker: "#ff9e64",
+  selectedRing: "#ffffff"
 };
 
 const MARKER_COLOR_STOPS = [
@@ -62,7 +67,15 @@ const MARKER_COLOR_STOPS = [
   new THREE.Color(TOKYO.markerHigh)
 ] as const;
 
-export function GlobeScene({ focusKey, points, selectedPoint, onPointHover, onPointSelect }: GlobeSceneProps) {
+export function GlobeScene({
+  focusKey,
+  markerColor,
+  markerColorMode,
+  points,
+  selectedPoint,
+  onPointHover,
+  onPointSelect
+}: GlobeSceneProps) {
   return (
     <Canvas camera={{ position: [0, 0.35, 5.2], fov: 42 }} dpr={[1, 2]}>
       <color attach="background" args={[TOKYO.ocean]} />
@@ -71,15 +84,14 @@ export function GlobeScene({ focusKey, points, selectedPoint, onPointHover, onPo
       <directionalLight intensity={0.45} position={[-4, -1, -3]} />
 
       <Earth />
-      {points.map((point) => (
-        <PointMarker
-          key={point.id}
-          point={point}
-          selected={selectedPoint?.id === point.id}
-          onHover={onPointHover}
-          onSelect={onPointSelect}
-        />
-      ))}
+      <PointMarkers
+        markerColor={markerColor}
+        markerColorMode={markerColorMode}
+        points={points}
+        selectedPoint={selectedPoint}
+        onHover={onPointHover}
+        onSelect={onPointSelect}
+      />
 
       <CameraFocus focusKey={focusKey} selectedPoint={selectedPoint} />
       <AdaptiveOrbitControls />
@@ -98,39 +110,151 @@ function Earth() {
   );
 }
 
-function PointMarker({
+function PointMarkers({
+  markerColor,
+  markerColorMode,
+  points,
+  selectedPoint,
+  onHover,
+  onSelect
+}: {
+  markerColor?: string;
+  markerColorMode: "severity" | "single";
+  points: TerraPoint[];
+  selectedPoint: TerraPoint | null;
+  onHover: (point: TerraPoint | null) => void;
+  onSelect: (point: TerraPoint) => void;
+}) {
+  const visualRef = useRef<THREE.InstancedMesh>(null);
+  const hitRef = useRef<THREE.InstancedMesh>(null);
+  const hoveredPointId = useRef<string | null>(null);
+  const pointsByInstance = useRef<TerraPoint[]>([]);
+  const instancedPoints = useMemo(
+    () => points.filter((point) => point.id !== selectedPoint?.id),
+    [points, selectedPoint?.id]
+  );
+  const singleColor = useMemo(() => new THREE.Color(markerColor ?? "#ffffff"), [markerColor]);
+
+  useLayoutEffect(() => {
+    const visualMesh = visualRef.current;
+    const hitMesh = hitRef.current;
+
+    if (!visualMesh || !hitMesh) {
+      return;
+    }
+
+    pointsByInstance.current = instancedPoints;
+    const temp = new THREE.Object3D();
+    const normal = new THREE.Vector3();
+    const color = new THREE.Color();
+    const quaternion = new THREE.Quaternion();
+    const markerPosition = new THREE.Vector3();
+    const outward = new THREE.Vector3(0, 0, 1);
+
+    instancedPoints.forEach((point, index) => {
+      normal.copy(latLonToVector3(point.latitude, point.longitude, 1)).normalize();
+      markerPosition.copy(normal).multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE);
+      quaternion.setFromUnitVectors(outward, normal);
+
+      temp.position.copy(markerPosition);
+      temp.quaternion.copy(quaternion);
+      temp.scale.setScalar(1);
+      temp.updateMatrix();
+
+      visualMesh.setMatrixAt(index, temp.matrix);
+      hitMesh.setMatrixAt(index, temp.matrix);
+      visualMesh.setColorAt(index, writePointColor(point, markerColorMode, singleColor, color));
+    });
+
+    visualMesh.count = instancedPoints.length;
+    hitMesh.count = instancedPoints.length;
+    visualMesh.instanceMatrix.needsUpdate = true;
+    hitMesh.instanceMatrix.needsUpdate = true;
+
+    if (visualMesh.instanceColor) {
+      visualMesh.instanceColor.needsUpdate = true;
+    }
+  }, [instancedPoints, markerColorMode, singleColor]);
+
+  function getPointFromEvent(event: ThreeEvent<PointerEvent | MouseEvent>) {
+    const instanceId = event.instanceId;
+    return typeof instanceId === "number" ? pointsByInstance.current[instanceId] ?? null : null;
+  }
+
+  function handlePointerMove(event: ThreeEvent<PointerEvent>) {
+    const point = getPointFromEvent(event);
+
+    if (!point || hoveredPointId.current === point.id) {
+      return;
+    }
+
+    event.stopPropagation();
+    hoveredPointId.current = point.id;
+    document.body.style.cursor = "pointer";
+    onHover(point);
+  }
+
+  function handlePointerOut() {
+    hoveredPointId.current = null;
+    document.body.style.cursor = "";
+    onHover(null);
+  }
+
+  function handleClick(event: ThreeEvent<MouseEvent>) {
+    const point = getPointFromEvent(event);
+
+    if (!point) {
+      return;
+    }
+
+    event.stopPropagation();
+    onSelect(point);
+  }
+
+  return (
+    <>
+      <instancedMesh ref={visualRef} args={[undefined, undefined, instancedPoints.length]} frustumCulled={false}>
+        <circleGeometry args={[MARKER_RADIUS, 18]} />
+        <meshBasicMaterial depthWrite={false} side={THREE.DoubleSide} toneMapped={false} vertexColors />
+      </instancedMesh>
+      <instancedMesh
+        ref={hitRef}
+        args={[undefined, undefined, instancedPoints.length]}
+        frustumCulled={false}
+        onClick={handleClick}
+        onPointerMove={handlePointerMove}
+        onPointerOut={handlePointerOut}
+      >
+        <circleGeometry args={[MARKER_RADIUS * 4.5, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
+      </instancedMesh>
+      {selectedPoint ? (
+        <SelectedPointMarker
+          point={selectedPoint}
+          onHover={onHover}
+          onSelect={onSelect}
+        />
+      ) : null}
+    </>
+  );
+}
+
+function SelectedPointMarker({
   point,
-  selected,
   onHover,
   onSelect
 }: {
   point: TerraPoint;
-  selected: boolean;
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 }) {
-  const markerRef = useRef<THREE.Group>(null);
-  const severity = point.severity ?? 0.3;
-
-  const radius = 0.012 + severity * 0.012;
-  const markerColor = useMemo(() => getMarkerColor(severity), [severity]);
   const { position, quaternion } = useMemo(() => {
     const normal = latLonToVector3(point.latitude, point.longitude, 1).normalize();
     return {
-      position: normal.clone().multiplyScalar(GLOBE_RADIUS * 1.003),
+      position: normal.clone().multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE),
       quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
     };
   }, [point.latitude, point.longitude]);
-
-  useFrame(({ camera }) => {
-    if (!markerRef.current) {
-      return;
-    }
-
-    const cameraDistance = camera.position.length();
-    const zoomScale = THREE.MathUtils.clamp(Math.pow(cameraDistance / 5.2, 2), 0.42, 1.65);
-    markerRef.current.scale.setScalar(selected ? zoomScale * 1.2 : zoomScale);
-  });
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     event.stopPropagation();
@@ -139,7 +263,6 @@ function PointMarker({
 
   return (
     <group
-      ref={markerRef}
       position={position}
       quaternion={quaternion}
       onClick={handleClick}
@@ -154,12 +277,23 @@ function PointMarker({
       }}
     >
       <mesh>
-        <circleGeometry args={[radius, 24]} />
-        <meshBasicMaterial color={selected ? TOKYO.selectedMarker : markerColor} depthWrite={false} />
+        <circleGeometry args={[MARKER_RADIUS * 1.15, 24]} />
+        <meshBasicMaterial color={TOKYO.selectedMarker} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
       </mesh>
       <mesh>
-        <circleGeometry args={[radius * 4, 24]} />
-        <meshBasicMaterial color={markerColor} transparent opacity={0} depthWrite={false} />
+        <ringGeometry args={[MARKER_RADIUS * 2.05, MARKER_RADIUS * 3.05, 32]} />
+        <meshBasicMaterial
+          color={TOKYO.selectedRing}
+          depthWrite={false}
+          opacity={0.86}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+          transparent
+        />
+      </mesh>
+      <mesh>
+        <circleGeometry args={[MARKER_RADIUS * 4.5, 12]} />
+        <meshBasicMaterial transparent opacity={0} depthWrite={false} side={THREE.DoubleSide} />
       </mesh>
     </group>
   );
@@ -298,14 +432,27 @@ function getCountryBorderMesh() {
   return borderMesh;
 }
 
-function getMarkerColor(severity: number) {
+function writeMarkerColor(severity: number, target: THREE.Color) {
   const value = THREE.MathUtils.clamp(severity, 0, 1);
 
   if (value < 0.5) {
-    return MARKER_COLOR_STOPS[0].clone().lerp(MARKER_COLOR_STOPS[1], value / 0.5);
+    return target.copy(MARKER_COLOR_STOPS[0]).lerp(MARKER_COLOR_STOPS[1], value / 0.5);
   }
 
-  return MARKER_COLOR_STOPS[1].clone().lerp(MARKER_COLOR_STOPS[2], (value - 0.5) / 0.5);
+  return target.copy(MARKER_COLOR_STOPS[1]).lerp(MARKER_COLOR_STOPS[2], (value - 0.5) / 0.5);
+}
+
+function writePointColor(
+  point: TerraPoint,
+  markerColorMode: "severity" | "single",
+  singleColor: THREE.Color,
+  target: THREE.Color
+) {
+  if (markerColorMode === "single") {
+    return target.copy(singleColor);
+  }
+
+  return writeMarkerColor(point.severity ?? 0.3, target);
 }
 
 function getRotateSpeed(cameraDistance: number) {

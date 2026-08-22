@@ -47,6 +47,8 @@ export function TerravueApp() {
       <div className="globe-stage">
         <GlobeScene
           focusKey={modeState.selectedId}
+          markerColor={activeMode.markerColor}
+          markerColorMode={activeMode.markerColorMode}
           points={modeState.visiblePoints}
           selectedPoint={modeState.selectedPoint}
           onPointHover={setHoveredPoint}

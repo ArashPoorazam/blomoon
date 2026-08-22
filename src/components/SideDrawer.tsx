@@ -1,8 +1,11 @@
 "use client";
 
 import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
 import type { DataSourceInfo, TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import { formatDateTime } from "@/lib/geo";
+
+const LIST_PAGE_SIZE = 50;
 
 type SideDrawerProps = {
   activeMode: TerraMode;
@@ -117,6 +120,14 @@ function ListView({
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
 }) {
+  const [visibleLimit, setVisibleLimit] = useState(LIST_PAGE_SIZE);
+  const listedPoints = useMemo(() => points.slice(0, visibleLimit), [points, visibleLimit]);
+  const hasMorePoints = listedPoints.length < points.length;
+
+  useEffect(() => {
+    setVisibleLimit(LIST_PAGE_SIZE);
+  }, [activeModeId, query]);
+
   return (
     <>
       <div className="drawer-header">
@@ -129,7 +140,7 @@ function ListView({
             onModeChange={onModeChange}
           />
           <p className="drawer-subtitle">
-            {loading ? activeMode.loadingLabel : `${points.length} visible of ${totalPoints} points`}
+            {loading ? activeMode.loadingLabel : formatVisibleCount(listedPoints.length, points.length, totalPoints)}
           </p>
         </div>
       </div>
@@ -151,7 +162,7 @@ function ListView({
         {points.length === 0 ? (
           <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
         ) : (
-          points.map((point) => (
+          listedPoints.map((point) => (
             <button
               className={`point-row ${selectedId === point.id ? "selected" : ""}`}
               key={point.id}
@@ -170,6 +181,15 @@ function ListView({
             </button>
           ))
         )}
+        {hasMorePoints ? (
+          <button
+            className="point-list-more"
+            type="button"
+            onClick={() => setVisibleLimit((value) => value + LIST_PAGE_SIZE)}
+          >
+            Show 50 more
+          </button>
+        ) : null}
       </div>
     </>
   );
@@ -300,4 +320,16 @@ function fallbackFields(detail: TerraPointDetail | null, activeMode: TerraMode) 
 function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
   const value = point.metrics?.[label];
   return value === undefined || value === null ? fallback : String(value);
+}
+
+function formatVisibleCount(listedCount: number, matchingCount: number, totalCount: number) {
+  if (matchingCount === 0) {
+    return "0 visible points";
+  }
+
+  if (matchingCount === totalCount) {
+    return `${listedCount} listed of ${totalCount} points`;
+  }
+
+  return `${listedCount} listed of ${matchingCount} matching points`;
 }

@@ -280,6 +280,26 @@ button {
   background: rgba(122, 162, 247, 0.08);
 }
 
+.point-list-more {
+  display: grid;
+  width: calc(100% - 20px);
+  min-height: 38px;
+  margin: 12px 10px 2px;
+  place-items: center;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--control);
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.point-list-more:hover {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
 .point-copy {
   display: block;
   min-width: 0;
