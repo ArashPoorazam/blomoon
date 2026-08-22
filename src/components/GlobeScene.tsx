@@ -5,6 +5,7 @@ import { Canvas, ThreeEvent, useFrame } from "@react-three/fiber";
 import { geoEquirectangular, geoPath } from "d3-geo";
 import { feature, mesh } from "topojson-client";
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import type { RefObject } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import countries from "world-atlas/countries-110m.json";
@@ -55,6 +56,8 @@ const DEFAULT_ROTATE_SPEED = 0.55;
 const MAX_ROTATE_SPEED = 0.7;
 const MARKER_RADIUS = 0.0072;
 const MARKER_ALTITUDE = 1.001;
+const MIN_MARKER_SCALE = 0.50;
+const MAX_MARKER_SCALE = 3.00;
 
 export function GlobeScene({
   focusKey,
@@ -152,9 +155,7 @@ function MarkerVisualInstances({ color, points }: { color: string; points: Terra
   const meshRef = useRef<THREE.InstancedMesh>(null);
   const instanceCapacity = useMemo(() => getInstanceCapacity(points.length), [points.length]);
 
-  useLayoutEffect(() => {
-    writeMarkerInstances(meshRef.current, points);
-  }, [points]);
+  useScaledMarkerInstances(meshRef, points);
 
   if (points.length === 0) {
     return null;
@@ -186,9 +187,7 @@ function MarkerHitInstances({
   const hoveredPointId = useRef<string | null>(null);
   const instanceCapacity = useMemo(() => getInstanceCapacity(points.length), [points.length]);
 
-  useLayoutEffect(() => {
-    writeMarkerInstances(meshRef.current, points);
-  }, [points]);
+  useScaledMarkerInstances(meshRef, points);
 
   function getPointFromEvent(event: ThreeEvent<PointerEvent | MouseEvent>) {
     const instanceId = event.instanceId;
@@ -254,6 +253,7 @@ function SelectedPointMarker({
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 }) {
+  const groupRef = useRef<THREE.Group>(null);
   const { position, quaternion } = useMemo(() => {
     const normal = latLonToVector3(point.latitude, point.longitude, 1).normalize();
     return {
@@ -262,6 +262,8 @@ function SelectedPointMarker({
     };
   }, [point.latitude, point.longitude]);
 
+  useScaledMarkerGroup(groupRef);
+
   function handleClick(event: ThreeEvent<MouseEvent>) {
     event.stopPropagation();
     onSelect(point);
@@ -269,6 +271,7 @@ function SelectedPointMarker({
 
   return (
     <group
+      ref={groupRef}
       position={position}
       quaternion={quaternion}
       onClick={handleClick}
@@ -438,7 +441,45 @@ function getCountryBorderMesh() {
   return borderMesh;
 }
 
-function writeMarkerInstances(mesh: THREE.InstancedMesh | null, points: TerraPoint[]) {
+function useScaledMarkerInstances(meshRef: RefObject<THREE.InstancedMesh | null>, points: TerraPoint[]) {
+  const markerScale = useRef(getMarkerScale(DEFAULT_CAMERA_DISTANCE));
+
+  useLayoutEffect(() => {
+    writeMarkerInstances(meshRef.current, points, markerScale.current);
+  }, [meshRef, points]);
+
+  useFrame(({ camera }) => {
+    const nextScale = getMarkerScale(camera.position.length());
+
+    if (Math.abs(nextScale - markerScale.current) < 0.005) {
+      return;
+    }
+
+    markerScale.current = nextScale;
+    writeMarkerInstances(meshRef.current, points, markerScale.current);
+  });
+}
+
+function useScaledMarkerGroup(groupRef: RefObject<THREE.Group | null>) {
+  const markerScale = useRef(getMarkerScale(DEFAULT_CAMERA_DISTANCE));
+
+  useLayoutEffect(() => {
+    groupRef.current?.scale.setScalar(markerScale.current);
+  }, [groupRef]);
+
+  useFrame(({ camera }) => {
+    const nextScale = getMarkerScale(camera.position.length());
+
+    if (Math.abs(nextScale - markerScale.current) < 0.005) {
+      return;
+    }
+
+    markerScale.current = nextScale;
+    groupRef.current?.scale.setScalar(markerScale.current);
+  });
+}
+
+function writeMarkerInstances(mesh: THREE.InstancedMesh | null, points: TerraPoint[], markerScale: number) {
   if (!mesh) {
     return;
   }
@@ -456,7 +497,7 @@ function writeMarkerInstances(mesh: THREE.InstancedMesh | null, points: TerraPoi
 
     temp.position.copy(markerPosition);
     temp.quaternion.copy(quaternion);
-    temp.scale.setScalar(1);
+    temp.scale.setScalar(markerScale);
     temp.updateMatrix();
 
     mesh.setMatrixAt(index, temp.matrix);
@@ -513,6 +554,16 @@ function getRotateSpeed(cameraDistance: number) {
 
   const value = smoothProgress(DEFAULT_CAMERA_DISTANCE, MAX_CAMERA_DISTANCE, cameraDistance);
   return THREE.MathUtils.lerp(DEFAULT_ROTATE_SPEED, MAX_ROTATE_SPEED, value);
+}
+
+function getMarkerScale(cameraDistance: number) {
+  if (cameraDistance <= DEFAULT_CAMERA_DISTANCE) {
+    const value = smoothProgress(MIN_CAMERA_DISTANCE, DEFAULT_CAMERA_DISTANCE, cameraDistance);
+    return THREE.MathUtils.lerp(MIN_MARKER_SCALE, 1, value);
+  }
+
+  const value = smoothProgress(DEFAULT_CAMERA_DISTANCE, MAX_CAMERA_DISTANCE, cameraDistance);
+  return THREE.MathUtils.lerp(1, MAX_MARKER_SCALE, value);
 }
 
 function smoothProgress(minimum: number, maximum: number, value: number) {
