@@ -8,6 +8,7 @@ export type TerraPoint = {
   name: string;
   latitude: number;
   longitude: number;
+  locationPrecision?: "station" | "country";
   /** ISO 3166-1 numeric country code, or a documented atlas-only X-* code. */
   countryCode?: string;
   prominence?: number;
@@ -38,6 +39,13 @@ export type TerraDataset = {
   points: TerraPoint[];
 };
 
+export type TerraPointPage = TerraDataset & {
+  limit: number;
+  nextOffset: number | null;
+  offset: number;
+  total: number;
+};
+
 export type TerraPlaybackConfig = {
   label: string;
   mediaKind: "audio";
@@ -56,6 +64,10 @@ export type TerraMode = {
   id: TerraModeId;
   label: string;
   dataEndpoint: string;
+  countryCatalog?: {
+    markerEndpoint: (countryCode: string) => string;
+    searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => string;
+  };
   detailEndpoint: (id: string) => string;
   playback?: TerraPlaybackConfig;
   loadingLabel: string;

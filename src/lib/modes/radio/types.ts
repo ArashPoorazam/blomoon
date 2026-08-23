@@ -1,0 +1,48 @@
+import type { TerraPlayableAudio, TerraPoint, TerraPointDetail } from "../types";
+
+export type RadioBrowserServer = {
+  name?: string;
+};
+
+export type RadioBrowserStation = {
+  stationuuid?: string;
+  name?: string;
+  url?: string;
+  url_resolved?: string;
+  homepage?: string;
+  favicon?: string;
+  tags?: string;
+  country?: string;
+  countrycode?: string;
+  state?: string;
+  language?: string;
+  languagecodes?: string;
+  votes?: number | string;
+  clickcount?: number | string;
+  codec?: string;
+  bitrate?: number | string;
+  lastcheckok?: number | string;
+  lastchecktime_iso8601?: string;
+  lastcheckoktime_iso8601?: string;
+  geo_lat?: number | string | null;
+  geo_long?: number | string | null;
+};
+
+export type RadioClickResponse = {
+  ok?: boolean;
+  url?: string;
+};
+
+export type RadioStationRecord = {
+  clickCount: number;
+  detail: TerraPointDetail;
+  point: TerraPoint & { countryCode: string };
+  searchText: string;
+  streamUrl: string;
+  votes: number;
+};
+
+export type PlayableCacheEntry = {
+  fetchedAt: number;
+  stream: TerraPlayableAudio;
+};

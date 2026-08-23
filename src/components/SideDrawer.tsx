@@ -1,11 +1,9 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-
-const LIST_PAGE_SIZE = 50;
+import { SideDrawerList } from "./SideDrawerList";
 
 type SideDrawerProps = {
   activeMode: TerraMode;
@@ -13,7 +11,9 @@ type SideDrawerProps = {
   collapsed: boolean;
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
+  hasMoreRemotePoints?: boolean;
   loading: boolean;
+  loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
   points: TerraPoint[];
   providerError: string | null;
@@ -23,6 +23,7 @@ type SideDrawerProps = {
   totalPoints: number;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
+  onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
@@ -35,7 +36,9 @@ export function SideDrawer({
   collapsed,
   detail,
   detailAccessory,
+  hasMoreRemotePoints,
   loading,
+  loadingMoreRemotePoints,
   modes,
   points,
   providerError,
@@ -45,6 +48,7 @@ export function SideDrawer({
   totalPoints,
   onClearCountrySelection,
   onClearSelection,
+  onLoadMoreRemotePoints,
   onModeChange,
   onPointSelect,
   onQueryChange,
@@ -72,10 +76,12 @@ export function SideDrawer({
             onClearSelection={onClearSelection}
           />
         ) : (
-          <ListView
+          <SideDrawerList
             activeMode={activeMode}
             activeModeId={activeModeId}
+            hasMoreRemotePoints={hasMoreRemotePoints}
             loading={loading}
+            loadingMoreRemotePoints={loadingMoreRemotePoints}
             modes={modes}
             points={points}
             providerError={providerError}
@@ -84,6 +90,7 @@ export function SideDrawer({
             selectedId={selectedId}
             totalPoints={totalPoints}
             onClearCountrySelection={onClearCountrySelection}
+            onLoadMoreRemotePoints={onLoadMoreRemotePoints}
             onModeChange={onModeChange}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
@@ -91,137 +98,6 @@ export function SideDrawer({
         )}
       </div>
     </aside>
-  );
-}
-
-function ListView({
-  activeMode,
-  activeModeId,
-  loading,
-  modes,
-  points,
-  providerError,
-  query,
-  selectedCountry,
-  selectedId,
-  totalPoints,
-  onClearCountrySelection,
-  onModeChange,
-  onPointSelect,
-  onQueryChange
-}: {
-  activeMode: TerraMode;
-  activeModeId: TerraModeId;
-  loading: boolean;
-  modes: TerraMode[];
-  points: TerraPoint[];
-  providerError: string | null;
-  query: string;
-  selectedCountry: CountryInfo | null;
-  selectedId: string | null;
-  totalPoints: number;
-  onClearCountrySelection: () => void;
-  onModeChange: (modeId: TerraModeId) => void;
-  onPointSelect: (point: TerraPoint) => void;
-  onQueryChange: (value: string) => void;
-}) {
-  const [visibleLimit, setVisibleLimit] = useState(LIST_PAGE_SIZE);
-  const listedPoints = useMemo(() => points.slice(0, visibleLimit), [points, visibleLimit]);
-  const hasMorePoints = listedPoints.length < points.length;
-
-  useEffect(() => {
-    setVisibleLimit(LIST_PAGE_SIZE);
-  }, [activeModeId, query, selectedCountry?.code]);
-
-  return (
-    <>
-      <div className="drawer-header">
-        <div>
-          <div className="drawer-kicker">Terravue</div>
-          <h1 className="drawer-title">{activeMode.label}</h1>
-          <ModeSwitcher
-            activeModeId={activeModeId}
-            modes={modes}
-            onModeChange={onModeChange}
-          />
-          <p className="drawer-subtitle">
-            {loading ? activeMode.loadingLabel : formatVisibleCount(listedPoints.length, points.length, totalPoints)}
-          </p>
-        </div>
-      </div>
-
-      <div className="search-row">
-        <Search size={16} aria-hidden="true" />
-        <input
-          className="search-input"
-          placeholder={activeMode.searchPlaceholder}
-          type="search"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-        />
-      </div>
-
-      <ProviderNotice message={providerError} />
-      <CountryFilter country={selectedCountry} onClear={onClearCountrySelection} />
-
-      <div className="point-list">
-        {points.length === 0 ? (
-          <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
-        ) : (
-          listedPoints.map((point) => (
-            <button
-              className={`point-row ${selectedId === point.id ? "selected" : ""}`}
-              key={point.id}
-              type="button"
-              onClick={() => onPointSelect(point)}
-            >
-              <span className="point-copy">
-                <span className="point-name">{point.name}</span>
-                <span className="point-meta">
-                  {point.summary} · {formatDateTime(point.timestamp)}
-                </span>
-              </span>
-              <span className="point-metric">
-                {activeMode.formatPointMetric(point)}
-              </span>
-            </button>
-          ))
-        )}
-        {hasMorePoints ? (
-          <button
-            className="point-list-more"
-            type="button"
-            onClick={() => setVisibleLimit((value) => value + LIST_PAGE_SIZE)}
-          >
-            Show 50 more
-          </button>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-function CountryFilter({
-  country,
-  onClear
-}: {
-  country: CountryInfo | null;
-  onClear: () => void;
-}) {
-  if (!country) {
-    return null;
-  }
-
-  return (
-    <div className="country-filter">
-      <span>
-        Country filter
-        <strong>{country.name}</strong>
-      </span>
-      <button type="button" aria-label="Clear country filter" onClick={onClear}>
-        <X size={14} aria-hidden="true" />
-      </button>
-    </div>
   );
 }
 
@@ -277,40 +153,6 @@ function DetailView({
       </div>
     </>
   );
-}
-
-function ModeSwitcher({
-  activeModeId,
-  modes,
-  onModeChange
-}: {
-  activeModeId: TerraModeId;
-  modes: TerraMode[];
-  onModeChange: (modeId: TerraModeId) => void;
-}) {
-  return (
-    <div className="mode-switcher" aria-label="Data mode">
-      {modes.map((mode) => (
-        <button
-          aria-pressed={activeModeId === mode.id}
-          className={activeModeId === mode.id ? "active" : ""}
-          key={mode.id}
-          type="button"
-          onClick={() => onModeChange(mode.id)}
-        >
-          {mode.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-function ProviderNotice({ message }: { message: string | null }) {
-  if (!message) {
-    return null;
-  }
-
-  return <div className="provider-notice">{message}</div>;
 }
 
 type DetailField = {
@@ -384,16 +226,4 @@ function getDetailFieldValue(detail: TerraPointDetail) {
 function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
   const value = point.metrics?.[label];
   return value === undefined || value === null ? fallback : String(value);
-}
-
-function formatVisibleCount(listedCount: number, matchingCount: number, totalCount: number) {
-  if (matchingCount === 0) {
-    return "0 visible points";
-  }
-
-  if (matchingCount === totalCount) {
-    return `${listedCount} listed of ${totalCount} points`;
-  }
-
-  return `${listedCount} listed of ${matchingCount} matching points`;
 }

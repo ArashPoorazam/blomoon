@@ -5,6 +5,23 @@ export const terraModes = [
     id: "radio",
     label: "Radio",
     dataEndpoint: "/api/modes/radio/points",
+    countryCatalog: {
+      markerEndpoint: (countryCode: string) => (
+        `/api/modes/radio/countries/${encodeURIComponent(countryCode)}/points`
+      ),
+      searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => {
+        const searchParams = new URLSearchParams({
+          limit: String(params.limit),
+          offset: String(params.offset)
+        });
+
+        if (params.query.trim()) {
+          searchParams.set("q", params.query.trim());
+        }
+
+        return `/api/modes/radio/countries/${encodeURIComponent(countryCode)}/search?${searchParams.toString()}`;
+      }
+    },
     detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
     playback: {
       label: "Live audio",

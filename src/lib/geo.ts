@@ -1,4 +1,4 @@
-import { geoContains } from "d3-geo";
+import { geoCentroid, geoContains } from "d3-geo";
 import type * as GeoJSON from "geojson";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
@@ -27,6 +27,7 @@ let cachedCountryFeatures: CountryFeature[] | null = null;
 let cachedCountryBorderMesh: GeoJSON.MultiLineString | null = null;
 let cachedCountryByCode: Map<string, CountryInfo> | null = null;
 let cachedCountryByName: Map<string, CountryInfo> | null = null;
+let cachedAlphaCodeByCountryCode: Map<string, string> | null = null;
 
 const atlasRegionOverrides: ReadonlyMap<string, CountryInfo> = new Map([
   ["kosovo", { code: "X-KOSOVO", name: "Kosovo" }],
@@ -145,6 +146,16 @@ export function normalizeCountryCode(code?: string | null, displayName?: string 
   return country?.code;
 }
 
+export function getAlphaCountryCode(code?: string | null) {
+  const country = findCountryByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  return getAlphaCodeByCountryCode().get(country.code) ?? null;
+}
+
 export function getCountryCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }> {
   return {
     type: "FeatureCollection",
@@ -160,6 +171,41 @@ export function getCountryFeatureByCode(code?: string | null): CountryFeature | 
   }
 
   return getCountryFeatures().find((feature) => feature.id === country.code) ?? null;
+}
+
+export function getEstimatedCountryCoordinates(code: string, seed: string) {
+  const country = getCountryFeatureByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  const [longitude, latitude] = geoCentroid(country);
+
+  if (!isValidCoordinatePair(latitude, longitude)) {
+    return null;
+  }
+
+  const hash = hashString(seed);
+  const longitudeDirection = ((hash & 0xff) / 255) * 2 - 1;
+  const latitudeDirection = (((hash >> 8) & 0xff) / 255) * 2 - 1;
+
+  for (const radius of [2.4, 1.2, 0.5, 0] as const) {
+    const estimatedLongitude = longitude + longitudeDirection * radius;
+    const estimatedLatitude = latitude + latitudeDirection * radius;
+
+    if (
+      isValidCoordinatePair(estimatedLatitude, estimatedLongitude) &&
+      geoContains(country, [estimatedLongitude, estimatedLatitude])
+    ) {
+      return {
+        latitude: estimatedLatitude,
+        longitude: estimatedLongitude
+      };
+    }
+  }
+
+  return null;
 }
 
 export function getCountryBorderMesh(): GeoJSON.MultiLineString {
@@ -281,6 +327,29 @@ function getCountryByName() {
   return cachedCountryByName;
 }
 
+function getAlphaCodeByCountryCode() {
+  if (cachedAlphaCodeByCountryCode) {
+    return cachedAlphaCodeByCountryCode;
+  }
+
+  const supportedValuesOf = (Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
+  const alphaCodes = typeof supportedValuesOf === "function" ? supportedValuesOf("region") : [];
+  const alphaCodeByCountryCode = new Map<string, string>();
+
+  alphaCodes
+    .filter((alphaCode) => /^[A-Z]{2}$/.test(alphaCode))
+    .forEach((alphaCode) => {
+      const countryCode = normalizeCountryCode(alphaCode);
+
+      if (countryCode) {
+        alphaCodeByCountryCode.set(countryCode, alphaCode);
+      }
+    });
+
+  cachedAlphaCodeByCountryCode = alphaCodeByCountryCode;
+  return cachedAlphaCodeByCountryCode;
+}
+
 function getCountriesTopology() {
   return countries as CountriesTopology;
 }
@@ -336,4 +405,15 @@ function normalizeCountryName(value: string) {
     .toLowerCase();
 
   return countryNameAliases.get(normalized) ?? normalized;
+}
+
+function hashString(value: string) {
+  let hash = 2166136261;
+
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index);
+    hash = Math.imul(hash, 16777619);
+  }
+
+  return hash >>> 0;
 }
