@@ -1,5 +1,6 @@
 import type { TerraDataset, TerraPoint, TerraPointDetail } from "./types";
 import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "./fixtures/radio";
+import { isValidCoordinatePair, normalizeCountryCode } from "@/lib/geo";
 
 const RADIO_BROWSER_DIRECTORY_URL = "https://all.api.radio-browser.info/json/servers";
 const RADIO_BROWSER_FALLBACK_HOSTS = [
@@ -340,6 +341,7 @@ function normalizeStation(station?: RadioBrowserStation): RadioStationRecord | n
   if (
     latitude === null ||
     longitude === null ||
+    !isValidCoordinatePair(latitude, longitude) ||
     !streamUrl ||
     !isSafeStreamUrl(streamUrl) ||
     station.lastcheckok === 0
@@ -347,8 +349,8 @@ function normalizeStation(station?: RadioBrowserStation): RadioStationRecord | n
     return null;
   }
 
-  const countryCode = normalizeText(station.countrycode).toUpperCase() || undefined;
   const country = normalizeText(station.country) || "Unknown country";
+  const countryCode = normalizeCountryCode(station.countrycode, country);
   const language = normalizeText(station.language);
   const tags = splitTags(station.tags);
   const codec = normalizeText(station.codec);

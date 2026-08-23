@@ -1,4 +1,4 @@
-import type { MarkerColorMode } from "@/lib/theme/globe";
+import type { MarkerColorMode, MarkerColorToken } from "@/lib/theme/globe";
 
 export type TerraModeId = "earthquakes" | "radio" | "weather" | (string & {});
 
@@ -8,6 +8,7 @@ export type TerraPoint = {
   name: string;
   latitude: number;
   longitude: number;
+  /** ISO 3166-1 numeric country code. */
   countryCode?: string;
   severity?: number;
   timestamp?: string;
@@ -42,14 +43,16 @@ export type TerraMode = {
   label: string;
   dataEndpoint: string;
   detailEndpoint: (id: string) => string;
+  detailAccessory?: "radioPlayback";
   loadingLabel: string;
   emptyLabel: string;
   searchPlaceholder: string;
   markerMetricLabel: string;
   markerColorMode: MarkerColorMode;
-  markerColor?: string;
+  markerColorToken?: MarkerColorToken;
   fallbackNotice: string;
   formatPointMetric: (point: TerraPoint) => string;
+  matchCountry: (point: TerraPoint, countryCode: string) => boolean;
   matchPoint: (point: TerraPoint, query: string) => boolean;
   sortPoints: (points: TerraPoint[]) => TerraPoint[];
 };

@@ -2,8 +2,8 @@
 
 import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
+import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { DataSourceInfo, TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-import { formatDateTime } from "@/lib/geo";
 
 const LIST_PAGE_SIZE = 50;
 
@@ -18,9 +18,11 @@ type SideDrawerProps = {
   points: TerraPoint[];
   providerError: string | null;
   query: string;
+  selectedCountry: CountryInfo | null;
   selectedId: string | null;
   source: DataSourceInfo | null;
   totalPoints: number;
+  onClearCountrySelection: () => void;
   onClearSelection: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
@@ -39,9 +41,11 @@ export function SideDrawer({
   points,
   providerError,
   query,
+  selectedCountry,
   selectedId,
   source,
   totalPoints,
+  onClearCountrySelection,
   onClearSelection,
   onModeChange,
   onPointSelect,
@@ -78,9 +82,11 @@ export function SideDrawer({
             points={points}
             providerError={providerError}
             query={query}
+            selectedCountry={selectedCountry}
             selectedId={selectedId}
             source={source}
             totalPoints={totalPoints}
+            onClearCountrySelection={onClearCountrySelection}
             onModeChange={onModeChange}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
@@ -99,9 +105,11 @@ function ListView({
   points,
   providerError,
   query,
+  selectedCountry,
   selectedId,
   source,
   totalPoints,
+  onClearCountrySelection,
   onModeChange,
   onPointSelect,
   onQueryChange
@@ -113,9 +121,11 @@ function ListView({
   points: TerraPoint[];
   providerError: string | null;
   query: string;
+  selectedCountry: CountryInfo | null;
   selectedId: string | null;
   source: DataSourceInfo | null;
   totalPoints: number;
+  onClearCountrySelection: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
@@ -126,7 +136,7 @@ function ListView({
 
   useEffect(() => {
     setVisibleLimit(LIST_PAGE_SIZE);
-  }, [activeModeId, query]);
+  }, [activeModeId, query, selectedCountry?.code]);
 
   return (
     <>
@@ -157,6 +167,7 @@ function ListView({
       </div>
 
       <SourceMeta providerError={providerError} source={source} />
+      <CountryFilter country={selectedCountry} onClear={onClearCountrySelection} />
 
       <div className="point-list">
         {points.length === 0 ? (
@@ -192,6 +203,30 @@ function ListView({
         ) : null}
       </div>
     </>
+  );
+}
+
+function CountryFilter({
+  country,
+  onClear
+}: {
+  country: CountryInfo | null;
+  onClear: () => void;
+}) {
+  if (!country) {
+    return null;
+  }
+
+  return (
+    <div className="country-filter">
+      <span>
+        Country filter
+        <strong>{country.name}</strong>
+      </span>
+      <button type="button" aria-label="Clear country filter" onClick={onClear}>
+        <X size={14} aria-hidden="true" />
+      </button>
+    </div>
   );
 }
 

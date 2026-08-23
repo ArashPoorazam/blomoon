@@ -1,0 +1,66 @@
+:root,
+.terravue-shell[data-theme="night"] {
+  --background: #050509;
+  --panel: rgba(22, 22, 30, 0.94);
+  --panel-solid: #1a1b26;
+  --panel-border: rgba(122, 162, 247, 0.18);
+  --text: #c0caf5;
+  --muted: #787c99;
+  --muted-strong: #a9b1d6;
+  --line: rgba(192, 202, 245, 0.12);
+  --accent: #7aa2f7;
+  --accent-strong: #7dcfff;
+  --danger: #f7768e;
+  --warning: #e0af68;
+  --control: rgba(122, 162, 247, 0.08);
+  --control-hover: rgba(122, 162, 247, 0.16);
+  --surface-soft: rgba(255, 255, 255, 0.04);
+  --surface: rgba(255, 255, 255, 0.06);
+  --surface-strong: rgba(255, 255, 255, 0.08);
+  --focus-ring: rgba(122, 162, 247, 0.72);
+  --metric: #e0af68;
+  --metric-border: rgba(224, 175, 104, 0.42);
+  --info: #7dcfff;
+  --info-border: rgba(125, 207, 255, 0.24);
+  --info-surface: rgba(125, 207, 255, 0.07);
+  --info-control: rgba(125, 207, 255, 0.14);
+  --tooltip-border: rgba(122, 162, 247, 0.28);
+  --tooltip-bg: rgba(22, 22, 30, 0.94);
+  --shadow-panel: rgba(0, 0, 0, 0.42);
+  --shadow-tooltip: rgba(0, 0, 0, 0.34);
+  --loading-bg: rgba(8, 8, 8, 0.68);
+  --drawer-width: min(390px, 88vw);
+  --panel-blur: 20px;
+}
+
+.terravue-shell[data-theme="atlas"] {
+  --background: #102a43;
+  --panel: rgba(250, 247, 239, 0.94);
+  --panel-solid: #f5efe2;
+  --panel-border: rgba(39, 54, 74, 0.2);
+  --text: #202837;
+  --muted: #667085;
+  --muted-strong: #344054;
+  --line: rgba(39, 54, 74, 0.14);
+  --accent: #2f80ed;
+  --accent-strong: #0b66c3;
+  --danger: #b42318;
+  --warning: #a15c12;
+  --control: rgba(47, 128, 237, 0.08);
+  --control-hover: rgba(47, 128, 237, 0.16);
+  --surface-soft: rgba(39, 54, 74, 0.045);
+  --surface: rgba(39, 54, 74, 0.07);
+  --surface-strong: rgba(39, 54, 74, 0.11);
+  --focus-ring: rgba(47, 128, 237, 0.72);
+  --metric: #9a4f13;
+  --metric-border: rgba(154, 79, 19, 0.34);
+  --info: #0b66c3;
+  --info-border: rgba(11, 102, 195, 0.24);
+  --info-surface: rgba(11, 102, 195, 0.07);
+  --info-control: rgba(11, 102, 195, 0.12);
+  --tooltip-border: rgba(39, 54, 74, 0.24);
+  --tooltip-bg: rgba(250, 247, 239, 0.96);
+  --shadow-panel: rgba(16, 24, 40, 0.24);
+  --shadow-tooltip: rgba(16, 24, 40, 0.18);
+  --loading-bg: rgba(250, 247, 239, 0.78);
+}

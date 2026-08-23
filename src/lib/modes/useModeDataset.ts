@@ -18,7 +18,7 @@ export type ModeDatasetState = {
   setQuery: (value: string) => void;
 };
 
-export function useModeDataset(mode: TerraMode): ModeDatasetState {
+export function useModeDataset(mode: TerraMode, selectedCountryCode: string | null): ModeDatasetState {
   const [points, setPoints] = useState<TerraPoint[]>([]);
   const [source, setSource] = useState<DataSourceInfo | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
@@ -118,9 +118,12 @@ export function useModeDataset(mode: TerraMode): ModeDatasetState {
   }, [mode, points, selectedId]);
 
   const visiblePoints = useMemo(() => {
-    const matchingPoints = points.filter((point) => mode.matchPoint(point, query));
+    const matchingPoints = points.filter((point) => (
+      mode.matchPoint(point, query) &&
+      (!selectedCountryCode || mode.matchCountry(point, selectedCountryCode))
+    ));
     return mode.sortPoints(matchingPoints);
-  }, [mode, points, query]);
+  }, [mode, points, query, selectedCountryCode]);
 
   const selectedPoint = points.find((point) => point.id === selectedId) ?? null;
   const providerError = requestError ?? (source?.isFallback ? mode.fallbackNotice : null);

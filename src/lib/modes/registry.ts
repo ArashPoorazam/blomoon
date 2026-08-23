@@ -1,4 +1,3 @@
-import { globeTheme } from "@/lib/theme/globe";
 import type { TerraMode, TerraPoint } from "./types";
 
 export const terraModes = [
@@ -14,6 +13,7 @@ export const terraModes = [
     markerColorMode: "severity",
     fallbackNotice: "Live earthquake provider unavailable. Showing fixture data.",
     formatPointMetric: formatMagnitudeMetric,
+    matchCountry: matchCountryCode,
     matchPoint: matchTextPoint,
     sortPoints: sortNewestFirst
   },
@@ -22,14 +22,16 @@ export const terraModes = [
     label: "Radio",
     dataEndpoint: "/api/modes/radio/points",
     detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
+    detailAccessory: "radioPlayback",
     loadingLabel: "Loading radio stations",
     emptyLabel: "No matching radio stations.",
     searchPlaceholder: "Filter by station, country, language, or tag",
     markerMetricLabel: "Listeners",
     markerColorMode: "single",
-    markerColor: globeTheme.markers.radio,
+    markerColorToken: "radio",
     fallbackNotice: "Radio Browser is unavailable.",
     formatPointMetric: formatRadioMetric,
+    matchCountry: matchCountryCode,
     matchPoint: matchTextPoint,
     sortPoints: sortRadioStations
   }
@@ -51,6 +53,10 @@ function matchTextPoint(point: TerraPoint, query: string) {
   const metricText = Object.values(point.metrics ?? {}).join(" ");
   const haystack = `${point.name} ${point.summary} ${metricText}`.toLowerCase();
   return haystack.includes(value);
+}
+
+function matchCountryCode(point: TerraPoint, countryCode: string) {
+  return point.countryCode === countryCode;
 }
 
 function sortNewestFirst(points: TerraPoint[]) {

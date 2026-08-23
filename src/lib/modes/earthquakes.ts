@@ -1,5 +1,6 @@
 import type { TerraDataset, TerraPoint, TerraPointDetail } from "./types";
 import { EARTHQUAKE_FIXTURE_POINTS, EARTHQUAKE_FIXTURE_SOURCE } from "./fixtures/earthquakes";
+import { getCountryAtCoordinates, isValidCoordinatePair } from "@/lib/geo";
 
 const USGS_ALL_DAY_FEED =
   "https://earthquake.usgs.gov/earthquakes/feed/v1.0/summary/all_day.geojson";
@@ -130,7 +131,7 @@ function normalizeFeature(feature: UsgsFeature): TerraPoint | null {
 
   const [longitude, latitude, depthKm = 0] = coordinates;
 
-  if (!Number.isFinite(latitude) || !Number.isFinite(longitude)) {
+  if (!isValidCoordinatePair(latitude, longitude)) {
     return null;
   }
 
@@ -138,6 +139,7 @@ function normalizeFeature(feature: UsgsFeature): TerraPoint | null {
   const title = feature.properties.title ?? feature.properties.place ?? "Earthquake";
   const place = normalizePlace(feature.properties.place ?? title);
   const timestamp = feature.properties.time ? new Date(feature.properties.time).toISOString() : undefined;
+  const country = getCountryAtCoordinates(latitude, longitude);
 
   return {
     id: feature.id,
@@ -145,6 +147,7 @@ function normalizeFeature(feature: UsgsFeature): TerraPoint | null {
     name: place.name,
     latitude,
     longitude,
+    countryCode: country?.code,
     severity: normalizeMagnitude(magnitude),
     timestamp,
     summary: place.context,
