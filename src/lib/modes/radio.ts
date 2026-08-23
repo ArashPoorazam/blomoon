@@ -1,4 +1,5 @@
 import type { TerraDataset, TerraPoint, TerraPointDetail } from "./types";
+import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "./fixtures/radio";
 
 const RADIO_BROWSER_DIRECTORY_URL = "https://all.api.radio-browser.info/json/servers";
 const RADIO_BROWSER_FALLBACK_HOSTS = [
@@ -8,6 +9,7 @@ const RADIO_BROWSER_FALLBACK_HOSTS = [
 ] as const;
 const RADIO_BROWSER_USER_AGENT = "Terravue/0.1 (+https://github.com/daedalus/terravue)";
 const STATION_CACHE_TTL_MS = 30 * 60 * 1000;
+const FALLBACK_CACHE_TTL_MS = 2 * 60 * 1000;
 const STREAM_CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 7_000;
 const STREAM_VALIDATION_TIMEOUT_MS = 5_000;
@@ -61,6 +63,7 @@ export type RadioPlayableStream = {
 let stationCache: {
   fetchedAt: number;
   dataset: TerraDataset;
+  isFallback: boolean;
   records: Map<string, RadioStationRecord>;
 } | null = null;
 
@@ -76,40 +79,50 @@ const playableCache = new Map<string, {
 
 export async function getRadioDataset(force = false): Promise<TerraDataset> {
   const now = Date.now();
+  const stationCacheTtl = stationCache?.isFallback ? FALLBACK_CACHE_TTL_MS : STATION_CACHE_TTL_MS;
 
-  if (!force && stationCache && now - stationCache.fetchedAt < STATION_CACHE_TTL_MS) {
+  if (!force && stationCache && now - stationCache.fetchedAt < stationCacheTtl) {
     return stationCache.dataset;
   }
 
-  const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/search", {
-    has_geo_info: "true",
-    hidebroken: "true",
-    limit: String(CATALOG_LIMIT),
-    order: "clickcount",
-    reverse: "true"
-  });
-  const records = stations
-    .map(normalizeStation)
-    .filter((record): record is RadioStationRecord => Boolean(record));
+  try {
+    const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/search", {
+      has_geo_info: "true",
+      hidebroken: "true",
+      limit: String(CATALOG_LIMIT),
+      order: "clickcount",
+      reverse: "true"
+    });
+    const records = stations
+      .map(normalizeStation)
+      .filter((record): record is RadioStationRecord => Boolean(record));
 
-  const dataset: TerraDataset = {
-    modeId: "radio",
-    source: {
-      name: "Radio Browser",
-      url: "https://www.radio-browser.info/",
-      attribution: "Community radio station data provided by Radio Browser.",
-      lastUpdated: new Date().toISOString()
-    },
-    points: records.map((record) => record.point)
-  };
+    if (records.length === 0) {
+      throw new Error("Radio Browser returned no usable stations");
+    }
 
-  stationCache = {
-    fetchedAt: now,
-    dataset,
-    records: new Map(records.map((record) => [record.point.id, record]))
-  };
+    const dataset: TerraDataset = {
+      modeId: "radio",
+      source: {
+        name: "Radio Browser",
+        url: "https://www.radio-browser.info/",
+        attribution: "Community radio station data provided by Radio Browser.",
+        lastUpdated: new Date().toISOString()
+      },
+      points: records.map((record) => record.point)
+    };
 
-  return dataset;
+    stationCache = {
+      fetchedAt: now,
+      dataset,
+      isFallback: false,
+      records: new Map(records.map((record) => [record.point.id, record]))
+    };
+
+    return dataset;
+  } catch {
+    return getFallbackDataset(now);
+  }
 }
 
 export async function getRadioDetail(id: string): Promise<TerraPointDetail | null> {
@@ -440,4 +453,22 @@ function isSafeStreamUrl(value?: string | null) {
   } catch {
     return false;
   }
+}
+
+function getFallbackDataset(fetchedAt = Date.now()): TerraDataset {
+  const records = RADIO_FIXTURE_RECORDS;
+  const dataset: TerraDataset = {
+    modeId: "radio",
+    source: RADIO_FIXTURE_SOURCE,
+    points: records.map((record) => record.point)
+  };
+
+  stationCache = {
+    fetchedAt,
+    dataset,
+    isFallback: true,
+    records: new Map(records.map((record) => [record.point.id, record]))
+  };
+
+  return dataset;
 }
