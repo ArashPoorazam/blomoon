@@ -1,5 +1,6 @@
 import {
   getEstimatedCountryCoordinates,
+  isCoordinateInCountry,
   isValidCoordinatePair,
   normalizeCountryCode
 } from "@/lib/geo";
@@ -20,12 +21,17 @@ export function normalizeStation(station?: RadioBrowserStation): RadioStationRec
 
   const exactLatitude = parseNumber(station.geo_lat);
   const exactLongitude = parseNumber(station.geo_long);
-  const estimatedCoordinates = exactLatitude === null || exactLongitude === null
-    ? getEstimatedCountryCoordinates(countryCode, station.stationuuid)
+  const exactCoordinates = exactLatitude !== null && exactLongitude !== null
+    && isCoordinateInCountry(exactLatitude, exactLongitude, countryCode)
+    ? {
+      latitude: exactLatitude,
+      longitude: exactLongitude
+    }
     : null;
-  const latitude = exactLatitude ?? estimatedCoordinates?.latitude ?? null;
-  const longitude = exactLongitude ?? estimatedCoordinates?.longitude ?? null;
-  const locationPrecision = exactLatitude !== null && exactLongitude !== null ? "station" : "country";
+  const estimatedCoordinates = exactCoordinates ?? getEstimatedCountryCoordinates(countryCode, station.stationuuid);
+  const latitude = estimatedCoordinates?.latitude ?? null;
+  const longitude = estimatedCoordinates?.longitude ?? null;
+  const locationPrecision = exactCoordinates ? "station" : "country";
 
   if (latitude === null || longitude === null || !isValidCoordinatePair(latitude, longitude)) {
     return null;
@@ -56,7 +62,7 @@ export function normalizeStation(station?: RadioBrowserStation): RadioStationRec
       Codec: codec || "Unknown",
       Country: country,
       Language: language || "Unknown",
-      Location: locationPrecision === "station" ? "Station coordinates" : "Country estimate",
+      Location: locationPrecision === "station" ? "Station coordinates" : "Estimated in-country placement",
       Tags: tags.join(", ") || "Untagged",
       Votes: votes
     }

@@ -1,8 +1,13 @@
-import { geoCentroid, geoContains } from "d3-geo";
+import { geoContains } from "d3-geo";
 import type * as GeoJSON from "geojson";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countries from "world-atlas/countries-50m.json";
+import { getEstimatedCoordinatesInCountry } from "./geo/countryPlacement";
+import {
+  ISO_ALPHA2_BY_NUMERIC_COUNTRY_CODE,
+  ISO_NUMERIC_BY_ALPHA2_COUNTRY_CODE
+} from "./geo/isoCountries";
 
 export const GLOBE_RADIUS = 2;
 
@@ -58,6 +63,7 @@ const countryNameAliases: ReadonlyMap<string, string> = new Map([
   ["russian federation", "russia"],
   ["syrian arab republic", "syria"],
   ["tanzania united republic of", "tanzania"],
+  ["turkiye", "turkey"],
   ["uk", "united kingdom"],
   ["united states", "united states of america"],
   ["usa", "united states of america"],
@@ -116,6 +122,16 @@ export function getCountryAtCoordinates(latitude: number, longitude: number): Co
   return null;
 }
 
+export function isCoordinateInCountry(latitude: number, longitude: number, code?: string | null) {
+  const country = getCountryFeatureByCode(code);
+
+  return Boolean(
+    country &&
+    isValidCoordinatePair(latitude, longitude) &&
+    geoContains(country, [longitude, latitude])
+  );
+}
+
 export function findCountryByCode(code?: string | null): CountryInfo | null {
   const normalizedCode = normalizeKnownCountryCode(code);
   return normalizedCode ? getCountryByCode().get(normalizedCode) ?? null : null;
@@ -128,6 +144,13 @@ export function normalizeCountryCode(code?: string | null, displayName?: string 
     return knownCode;
   }
 
+  const alphaCode = normalizeAlphaCountryCode(code);
+  const numericCode = alphaCode ? ISO_NUMERIC_BY_ALPHA2_COUNTRY_CODE.get(alphaCode) : null;
+
+  if (numericCode && getCountryByCode().has(numericCode)) {
+    return numericCode;
+  }
+
   if (displayName) {
     const country = findCountryByName(displayName);
 
@@ -135,8 +158,6 @@ export function normalizeCountryCode(code?: string | null, displayName?: string 
       return country.code;
     }
   }
-
-  const alphaCode = normalizeAlphaCountryCode(code);
 
   if (!alphaCode || !regionDisplayNames) {
     return undefined;
@@ -153,7 +174,7 @@ export function getAlphaCountryCode(code?: string | null) {
     return null;
   }
 
-  return getAlphaCodeByCountryCode().get(country.code) ?? null;
+  return ISO_ALPHA2_BY_NUMERIC_COUNTRY_CODE.get(country.code) ?? getAlphaCodeByCountryCode().get(country.code) ?? null;
 }
 
 export function getCountryCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }> {
@@ -180,32 +201,7 @@ export function getEstimatedCountryCoordinates(code: string, seed: string) {
     return null;
   }
 
-  const [longitude, latitude] = geoCentroid(country);
-
-  if (!isValidCoordinatePair(latitude, longitude)) {
-    return null;
-  }
-
-  const hash = hashString(seed);
-  const longitudeDirection = ((hash & 0xff) / 255) * 2 - 1;
-  const latitudeDirection = (((hash >> 8) & 0xff) / 255) * 2 - 1;
-
-  for (const radius of [2.4, 1.2, 0.5, 0] as const) {
-    const estimatedLongitude = longitude + longitudeDirection * radius;
-    const estimatedLatitude = latitude + latitudeDirection * radius;
-
-    if (
-      isValidCoordinatePair(estimatedLatitude, estimatedLongitude) &&
-      geoContains(country, [estimatedLongitude, estimatedLatitude])
-    ) {
-      return {
-        latitude: estimatedLatitude,
-        longitude: estimatedLongitude
-      };
-    }
-  }
-
-  return null;
+  return getEstimatedCoordinatesInCountry(country, seed, isValidCoordinatePair);
 }
 
 export function getCountryBorderMesh(): GeoJSON.MultiLineString {
@@ -332,19 +328,20 @@ function getAlphaCodeByCountryCode() {
     return cachedAlphaCodeByCountryCode;
   }
 
-  const supportedValuesOf = (Intl as typeof Intl & { supportedValuesOf?: (key: string) => string[] }).supportedValuesOf;
-  const alphaCodes = typeof supportedValuesOf === "function" ? supportedValuesOf("region") : [];
   const alphaCodeByCountryCode = new Map<string, string>();
 
-  alphaCodes
-    .filter((alphaCode) => /^[A-Z]{2}$/.test(alphaCode))
-    .forEach((alphaCode) => {
-      const countryCode = normalizeCountryCode(alphaCode);
+  ISO_ALPHA2_BY_NUMERIC_COUNTRY_CODE.forEach((alphaCode, numericCode) => {
+    if (getCountryByCode().has(numericCode)) {
+      alphaCodeByCountryCode.set(numericCode, alphaCode);
+      return;
+    }
 
-      if (countryCode) {
-        alphaCodeByCountryCode.set(countryCode, alphaCode);
-      }
-    });
+    const countryCode = normalizeCountryCode(alphaCode);
+
+    if (countryCode) {
+      alphaCodeByCountryCode.set(countryCode, alphaCode);
+    }
+  });
 
   cachedAlphaCodeByCountryCode = alphaCodeByCountryCode;
   return cachedAlphaCodeByCountryCode;
@@ -405,15 +402,4 @@ function normalizeCountryName(value: string) {
     .toLowerCase();
 
   return countryNameAliases.get(normalized) ?? normalized;
-}
-
-function hashString(value: string) {
-  let hash = 2166136261;
-
-  for (let index = 0; index < value.length; index += 1) {
-    hash ^= value.charCodeAt(index);
-    hash = Math.imul(hash, 16777619);
-  }
-
-  return hash >>> 0;
 }
