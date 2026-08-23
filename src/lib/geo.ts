@@ -3,6 +3,7 @@ import type * as GeoJSON from "geojson";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
 import countries from "world-atlas/countries-50m.json";
+import { simplifyPolygonFeature } from "./geoSimplify";
 
 export const GLOBE_RADIUS = 2;
 
@@ -27,6 +28,10 @@ let cachedCountryFeatures: CountryFeature[] | null = null;
 let cachedCountryBorderMesh: GeoJSON.MultiLineString | null = null;
 let cachedCountryByCode: Map<string, CountryInfo> | null = null;
 let cachedCountryByName: Map<string, CountryInfo> | null = null;
+let cachedRenderCountryFeatures: CountryFeature[] | null = null;
+let cachedRenderCountryCollection: GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }> | null = null;
+let cachedRenderCountryBorderMesh: GeoJSON.MultiLineString | null = null;
+let cachedRenderCountryOutlineByCode: Map<string, GeoJSON.MultiLineString> | null = null;
 
 const atlasRegionOverrides: ReadonlyMap<string, CountryInfo> = new Map([
   ["kosovo", { code: "X-KOSOVO", name: "Kosovo" }],
@@ -152,6 +157,17 @@ export function getCountryCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygo
   };
 }
 
+export function getRenderCountryCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygon | GeoJSON.MultiPolygon, { name: string }> {
+  if (!cachedRenderCountryCollection) {
+    cachedRenderCountryCollection = {
+      type: "FeatureCollection",
+      features: getRenderCountryFeatures()
+    };
+  }
+
+  return cachedRenderCountryCollection;
+}
+
 export function getCountryFeatureByCode(code?: string | null): CountryFeature | null {
   const country = findCountryByCode(code);
 
@@ -169,6 +185,17 @@ export function getCountryBorderMesh(): GeoJSON.MultiLineString {
   }
 
   return cachedCountryBorderMesh;
+}
+
+export function getRenderCountryBorderMesh(): GeoJSON.MultiLineString {
+  if (!cachedRenderCountryBorderMesh) {
+    cachedRenderCountryBorderMesh = {
+      type: "MultiLineString",
+      coordinates: getRenderCountryFeatures().flatMap((country) => getOutlineLines(country).coordinates)
+    };
+  }
+
+  return cachedRenderCountryBorderMesh;
 }
 
 export function getCountryOutlineLines(code?: string | null): GeoJSON.MultiLineString | null {
@@ -189,6 +216,38 @@ export function getCountryOutlineLines(code?: string | null): GeoJSON.MultiLineS
     type: "MultiLineString",
     coordinates: country.geometry.coordinates.flat()
   };
+}
+
+export function getRenderCountryFeatureByCode(code?: string | null): CountryFeature | null {
+  const country = findCountryByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  return getRenderCountryFeatures().find((feature) => feature.id === country.code) ?? null;
+}
+
+export function getRenderCountryOutlineLines(code?: string | null): GeoJSON.MultiLineString | null {
+  const country = getRenderCountryFeatureByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  if (!cachedRenderCountryOutlineByCode) {
+    cachedRenderCountryOutlineByCode = new Map();
+  }
+
+  const cachedOutline = cachedRenderCountryOutlineByCode.get(country.id);
+
+  if (cachedOutline) {
+    return cachedOutline;
+  }
+
+  const outline = getOutlineLines(country);
+  cachedRenderCountryOutlineByCode.set(country.id, outline);
+  return outline;
 }
 
 function getCountryFeatures(): CountryFeature[] {
@@ -226,6 +285,28 @@ function getCountryFeatures(): CountryFeature[] {
 
   cachedCountryFeatures = features;
   return features;
+}
+
+function getRenderCountryFeatures(): CountryFeature[] {
+  if (!cachedRenderCountryFeatures) {
+    cachedRenderCountryFeatures = getCountryFeatures().map(simplifyPolygonFeature);
+  }
+
+  return cachedRenderCountryFeatures;
+}
+
+function getOutlineLines(country: CountryFeature): GeoJSON.MultiLineString {
+  if (country.geometry.type === "Polygon") {
+    return {
+      type: "MultiLineString",
+      coordinates: country.geometry.coordinates
+    };
+  }
+
+  return {
+    type: "MultiLineString",
+    coordinates: country.geometry.coordinates.flat()
+  };
 }
 
 function getCountryByCode() {

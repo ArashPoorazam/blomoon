@@ -1,7 +1,7 @@
 "use client";
 
 import { Palette } from "lucide-react";
-import { useRef, useState } from "react";
+import { useCallback, useRef, useState, type MouseEvent } from "react";
 import { findCountryByCode, formatCoordinate, getCountryAtCoordinates, type CountryInfo } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
@@ -41,38 +41,44 @@ export function TerravueApp() {
       <RadioPlaybackPanel detail={modeState.detail} playback={audioPlayback} playbackLabel={activeMode.playback.label} />
     ) : null;
 
-  function selectPoint(point: TerraPoint) {
+  const selectPoint = useCallback((point: TerraPoint) => {
     modeState.selectPoint(point);
     setSelectedCountry(findCountryByCode(point.countryCode) ?? getCountryAtCoordinates(point.latitude, point.longitude));
     setDrawerCollapsed(false);
-  }
+  }, [modeState.selectPoint]);
 
-  function selectMode(modeId: TerraModeId) {
+  const selectMode = useCallback((modeId: TerraModeId) => {
     setActiveModeId(modeId);
     setDrawerCollapsed(false);
     setHoveredPoint(null);
-  }
+  }, []);
 
-  function selectCountry(country: CountryInfo | null) {
+  const selectCountry = useCallback((country: CountryInfo | null) => {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
     setDrawerCollapsed(false);
     setHoveredPoint(null);
-  }
+  }, [selectedCountry?.code]);
 
-  function switchTheme() {
+  const switchTheme = useCallback(() => {
     setThemeId(nextTheme.id);
-  }
+  }, [nextTheme.id]);
+
+  const clearCountrySelection = useCallback(() => {
+    selectCountry(null);
+  }, [selectCountry]);
+
+  const handleMouseMove = useCallback((event: MouseEvent<HTMLElement>) => {
+    if (tooltipRef.current) {
+      tooltipRef.current.style.transform = `translate(${event.clientX + 14}px, ${event.clientY + 14}px)`;
+    }
+  }, []);
 
   return (
     <main
       className={`terravue-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}
       data-theme={activeTheme.id}
-      onMouseMove={(event) => {
-        if (tooltipRef.current) {
-          tooltipRef.current.style.transform = `translate(${event.clientX + 14}px, ${event.clientY + 14}px)`;
-        }
-      }}
+      onMouseMove={handleMouseMove}
     >
       <div className="globe-stage">
         <GlobeScene
@@ -133,7 +139,7 @@ export function TerravueApp() {
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
         totalPoints={modeState.points.length}
-        onClearCountrySelection={() => selectCountry(null)}
+        onClearCountrySelection={clearCountrySelection}
         onClearSelection={modeState.clearSelection}
         onModeChange={selectMode}
         onPointSelect={selectPoint}

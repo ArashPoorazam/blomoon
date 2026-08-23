@@ -4,12 +4,13 @@ import { Line } from "@react-three/drei";
 import type * as GeoJSON from "geojson";
 import { useMemo } from "react";
 import * as THREE from "three";
-import { GLOBE_RADIUS, getCountryBorderMesh, getCountryOutlineLines, isValidCoordinatePair } from "@/lib/geo";
+import { GLOBE_RADIUS, getRenderCountryBorderMesh, getRenderCountryOutlineLines, isValidCoordinatePair } from "@/lib/geo";
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { latLonToVector3 } from "./globeMath";
 
 const BORDER_ALTITUDE = 1.0018;
 const SELECTED_OUTLINE_ALTITUDE = 1.0032;
+const surfaceLineSegmentsCache = new Map<string, THREE.Vector3[]>();
 
 type CountryOutlinesProps = {
   selectedCountryCode: string | null;
@@ -23,12 +24,14 @@ export function CountryOutlines({
   theme
 }: CountryOutlinesProps) {
   const borderSegments = useMemo(
-    () => getSurfaceLineSegments(getCountryBorderMesh(), GLOBE_RADIUS * BORDER_ALTITUDE),
+    () => getCachedSurfaceLineSegments("borders", getRenderCountryBorderMesh(), GLOBE_RADIUS * BORDER_ALTITUDE),
     []
   );
   const selectedSegments = useMemo(() => {
-    const outline = getCountryOutlineLines(selectedCountryCode);
-    return outline ? getSurfaceLineSegments(outline, GLOBE_RADIUS * SELECTED_OUTLINE_ALTITUDE) : [];
+    const outline = getRenderCountryOutlineLines(selectedCountryCode);
+    return outline
+      ? getCachedSurfaceLineSegments(`selected:${selectedCountryCode}`, outline, GLOBE_RADIUS * SELECTED_OUTLINE_ALTITUDE)
+      : [];
   }, [selectedCountryCode]);
 
   return (
@@ -57,6 +60,18 @@ export function CountryOutlines({
       ) : null}
     </>
   );
+}
+
+function getCachedSurfaceLineSegments(key: string, multiline: GeoJSON.MultiLineString, radius: number) {
+  const cachedSegments = surfaceLineSegmentsCache.get(key);
+
+  if (cachedSegments) {
+    return cachedSegments;
+  }
+
+  const segments = getSurfaceLineSegments(multiline, radius);
+  surfaceLineSegmentsCache.set(key, segments);
+  return segments;
 }
 
 function getSurfaceLineSegments(multiline: GeoJSON.MultiLineString, radius: number) {

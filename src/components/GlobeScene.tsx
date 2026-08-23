@@ -1,6 +1,7 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
+import { memo } from "react";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
@@ -22,7 +23,7 @@ type GlobeSceneProps = {
   onPointSelect: (point: TerraPoint) => void;
 };
 
-export function GlobeScene({
+export const GlobeScene = memo(function GlobeScene({
   focusKey,
   markerColor,
   markerColorMode,
@@ -59,4 +60,4 @@ export function GlobeScene({
       <AdaptiveOrbitControls />
     </Canvas>
   );
-}
+});

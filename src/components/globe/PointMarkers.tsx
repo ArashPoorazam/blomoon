@@ -21,6 +21,15 @@ type MarkerBatch = {
   points: TerraPoint[];
 };
 
+type MarkerTransform = {
+  position: THREE.Vector3;
+  quaternion: THREE.Quaternion;
+};
+
+type MarkerWriteContext = {
+  temp: THREE.Object3D;
+};
+
 type PointMarkersProps = {
   markerColor?: string;
   markerColorMode: MarkerColorMode;
@@ -236,10 +245,12 @@ function SelectedPointMarker({
 
 function useScaledMarkerInstances(meshRef: RefObject<THREE.InstancedMesh | null>, points: TerraPoint[]) {
   const markerScale = useRef(getMarkerScale(DEFAULT_CAMERA_DISTANCE));
+  const transforms = useMemo(() => getMarkerTransforms(points), [points]);
+  const writeContext = useMemo(createMarkerWriteContext, []);
 
   useLayoutEffect(() => {
-    writeMarkerInstances(meshRef.current, points, markerScale.current);
-  }, [meshRef, points]);
+    writeMarkerInstances(meshRef.current, transforms, markerScale.current, writeContext);
+  }, [meshRef, transforms, writeContext]);
 
   useFrame(({ camera }) => {
     const nextScale = getMarkerScale(camera.position.length());
@@ -249,7 +260,7 @@ function useScaledMarkerInstances(meshRef: RefObject<THREE.InstancedMesh | null>
     }
 
     markerScale.current = nextScale;
-    writeMarkerInstances(meshRef.current, points, markerScale.current);
+    writeMarkerInstances(meshRef.current, transforms, markerScale.current, writeContext);
   });
 }
 
@@ -272,32 +283,47 @@ function useScaledMarkerGroup(groupRef: RefObject<THREE.Group | null>) {
   });
 }
 
-function writeMarkerInstances(mesh: THREE.InstancedMesh | null, points: TerraPoint[], markerScale: number) {
+function writeMarkerInstances(
+  mesh: THREE.InstancedMesh | null,
+  transforms: MarkerTransform[],
+  markerScale: number,
+  context: MarkerWriteContext
+) {
   if (!mesh) {
     return;
   }
 
-  const temp = new THREE.Object3D();
-  const normal = new THREE.Vector3();
-  const quaternion = new THREE.Quaternion();
-  const markerPosition = new THREE.Vector3();
-  const outward = new THREE.Vector3(0, 0, 1);
+  transforms.forEach((transform, index) => {
+    context.temp.position.copy(transform.position);
+    context.temp.quaternion.copy(transform.quaternion);
+    context.temp.scale.setScalar(markerScale);
+    context.temp.updateMatrix();
 
-  points.forEach((point, index) => {
-    normal.copy(latLonToVector3(point.latitude, point.longitude, 1)).normalize();
-    markerPosition.copy(normal).multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE);
-    quaternion.setFromUnitVectors(outward, normal);
-
-    temp.position.copy(markerPosition);
-    temp.quaternion.copy(quaternion);
-    temp.scale.setScalar(markerScale);
-    temp.updateMatrix();
-
-    mesh.setMatrixAt(index, temp.matrix);
+    mesh.setMatrixAt(index, context.temp.matrix);
   });
 
-  mesh.count = points.length;
+  mesh.count = transforms.length;
   mesh.instanceMatrix.needsUpdate = true;
+}
+
+function getMarkerTransforms(points: TerraPoint[]): MarkerTransform[] {
+  const normal = new THREE.Vector3();
+  const outward = new THREE.Vector3(0, 0, 1);
+
+  return points.map((point) => {
+    normal.copy(latLonToVector3(point.latitude, point.longitude, 1)).normalize();
+
+    return {
+      position: normal.clone().multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE),
+      quaternion: new THREE.Quaternion().setFromUnitVectors(outward, normal)
+    };
+  });
+}
+
+function createMarkerWriteContext(): MarkerWriteContext {
+  return {
+    temp: new THREE.Object3D()
+  };
 }
 
 function getMarkerBatches(

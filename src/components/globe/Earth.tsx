@@ -7,13 +7,21 @@ import * as THREE from "three";
 import {
   GLOBE_RADIUS,
   getCountryAtCoordinates,
-  getCountryCollection,
-  getCountryFeatureByCode,
+  getRenderCountryCollection,
+  getRenderCountryFeatureByCode,
   type CountryInfo
 } from "@/lib/geo";
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { CountryOutlines } from "./CountryOutlines";
 import { vector3ToLatLon } from "./globeMath";
+
+const EARTH_TEXTURE_WIDTH = 4096;
+const EARTH_TEXTURE_HEIGHT = 2048;
+const HIGHLIGHT_TEXTURE_WIDTH = 1024;
+const HIGHLIGHT_TEXTURE_HEIGHT = 512;
+const EARTH_WIDTH_SEGMENTS = 96;
+const EARTH_HEIGHT_SEGMENTS = 64;
+const COUNTRY_HIGHLIGHT_ALTITUDE = 1.0011;
 
 type EarthProps = {
   selectedCountryOutlineColor: string;
@@ -29,8 +37,8 @@ export function Earth({
   onCountrySelect
 }: EarthProps) {
   const texture = useMemo(
-    () => createEarthTexture(theme, selectedCountryCode),
-    [selectedCountryCode, theme]
+    () => createEarthTexture(theme),
+    [theme]
   );
 
   useEffect(() => () => {
@@ -46,9 +54,13 @@ export function Earth({
   return (
     <>
       <mesh onClick={handleClick}>
-        <sphereGeometry args={[GLOBE_RADIUS, 128, 128]} />
+        <sphereGeometry args={[GLOBE_RADIUS, EARTH_WIDTH_SEGMENTS, EARTH_HEIGHT_SEGMENTS]} />
         <meshBasicMaterial map={texture} />
       </mesh>
+      <SelectedCountryOverlay
+        selectedCountryCode={selectedCountryCode}
+        theme={theme}
+      />
       <CountryOutlines
         selectedCountryCode={selectedCountryCode}
         selectedOutlineColor={selectedCountryOutlineColor}
@@ -58,10 +70,7 @@ export function Earth({
   );
 }
 
-function createEarthTexture(theme: GlobeTheme, selectedCountryCode: string | null) {
-  const width = 4096;
-  const height = 2048;
-
+function createEarthTexture(theme: GlobeTheme) {
   if (typeof document === "undefined") {
     return new THREE.Texture();
   }
@@ -69,28 +78,22 @@ function createEarthTexture(theme: GlobeTheme, selectedCountryCode: string | nul
   const canvas = document.createElement("canvas");
   const context = canvas.getContext("2d");
 
-  canvas.width = width;
-  canvas.height = height;
+  canvas.width = EARTH_TEXTURE_WIDTH;
+  canvas.height = EARTH_TEXTURE_HEIGHT;
 
   if (!context) {
     return new THREE.CanvasTexture(canvas);
   }
 
   context.fillStyle = theme.ocean;
-  context.fillRect(0, 0, width, height);
+  context.fillRect(0, 0, EARTH_TEXTURE_WIDTH, EARTH_TEXTURE_HEIGHT);
 
-  const projection = geoEquirectangular()
-    .translate([width / 2, height / 2])
-    .scale(width / (2 * Math.PI))
-    .precision(0.2);
-  const path = geoPath(projection, context);
+  const path = createTexturePath(context, EARTH_TEXTURE_WIDTH, EARTH_TEXTURE_HEIGHT);
 
   context.fillStyle = theme.land;
   context.beginPath();
-  path(getCountryCollection());
+  path(getRenderCountryCollection());
   context.fill("evenodd");
-
-  drawSelectedCountry(context, path, theme, selectedCountryCode);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -98,26 +101,91 @@ function createEarthTexture(theme: GlobeTheme, selectedCountryCode: string | nul
   return texture;
 }
 
-function drawSelectedCountry(
-  context: CanvasRenderingContext2D,
-  path: ReturnType<typeof geoPath>,
-  theme: GlobeTheme,
-  selectedCountryCode: string | null
-) {
-  if (!selectedCountryCode) {
-    return;
+function SelectedCountryOverlay({
+  selectedCountryCode,
+  theme
+}: {
+  selectedCountryCode: string | null;
+  theme: GlobeTheme;
+}) {
+  const texture = useMemo(
+    () => createSelectedCountryTexture(theme, selectedCountryCode),
+    [selectedCountryCode, theme]
+  );
+
+  useEffect(() => () => {
+    texture?.dispose();
+  }, [texture]);
+
+  if (!texture) {
+    return null;
   }
 
-  const selectedCountry = getCountryFeatureByCode(selectedCountryCode);
+  return (
+    <mesh raycast={ignoreRaycast}>
+      <sphereGeometry
+        args={[
+          GLOBE_RADIUS * COUNTRY_HIGHLIGHT_ALTITUDE,
+          EARTH_WIDTH_SEGMENTS,
+          EARTH_HEIGHT_SEGMENTS
+        ]}
+      />
+      <meshBasicMaterial
+        depthWrite={false}
+        map={texture}
+        opacity={theme.countryHighlightOpacity}
+        transparent
+      />
+    </mesh>
+  );
+}
+
+function ignoreRaycast() {}
+
+function createSelectedCountryTexture(theme: GlobeTheme, selectedCountryCode: string | null) {
+  if (!selectedCountryCode || typeof document === "undefined") {
+    return null;
+  }
+
+  const selectedCountry = getRenderCountryFeatureByCode(selectedCountryCode);
 
   if (!selectedCountry) {
-    return;
+    return null;
   }
 
+  const canvas = document.createElement("canvas");
+  const context = canvas.getContext("2d");
+
+  canvas.width = HIGHLIGHT_TEXTURE_WIDTH;
+  canvas.height = HIGHLIGHT_TEXTURE_HEIGHT;
+
+  if (!context) {
+    return new THREE.CanvasTexture(canvas);
+  }
+
+  const path = createTexturePath(context, HIGHLIGHT_TEXTURE_WIDTH, HIGHLIGHT_TEXTURE_HEIGHT);
+
+  context.clearRect(0, 0, HIGHLIGHT_TEXTURE_WIDTH, HIGHLIGHT_TEXTURE_HEIGHT);
   context.fillStyle = theme.countryHighlight;
-  context.globalAlpha = theme.countryHighlightOpacity;
   context.beginPath();
   path(selectedCountry);
   context.fill("evenodd");
-  context.globalAlpha = 1;
+
+  const texture = new THREE.CanvasTexture(canvas);
+  texture.colorSpace = THREE.SRGBColorSpace;
+  texture.anisotropy = 8;
+  return texture;
+}
+
+function createTexturePath(
+  context: CanvasRenderingContext2D,
+  width: number,
+  height: number
+) {
+  const projection = geoEquirectangular()
+    .translate([width / 2, height / 2])
+    .scale(width / (2 * Math.PI))
+    .precision(0.2);
+
+  return geoPath(projection, context);
 }

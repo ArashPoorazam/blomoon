@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import type { DataSourceInfo, TerraDataset, TerraMode, TerraPoint, TerraPointDetail } from "./types";
 
 export type ModeDatasetState = {
@@ -127,6 +127,8 @@ export function useModeDataset(mode: TerraMode, selectedCountryCode: string | nu
 
   const selectedPoint = points.find((point) => point.id === selectedId) ?? null;
   const providerError = requestError ?? (source?.isFallback ? mode.fallbackNotice : null);
+  const clearSelection = useCallback(() => setSelectedId(null), []);
+  const selectPoint = useCallback((point: TerraPoint) => setSelectedId(point.id), []);
 
   return {
     detail,
@@ -138,8 +140,8 @@ export function useModeDataset(mode: TerraMode, selectedCountryCode: string | nu
     selectedPoint,
     source,
     visiblePoints,
-    clearSelection: () => setSelectedId(null),
-    selectPoint: (point: TerraPoint) => setSelectedId(point.id),
+    clearSelection,
+    selectPoint,
     setQuery
   };
 }
