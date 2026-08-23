@@ -7,8 +7,8 @@ import * as THREE from "three";
 import {
   GLOBE_RADIUS,
   getCountryAtCoordinates,
-  getRenderCountryCollection,
-  getRenderCountryFeatureByCode,
+  getCountryCollection,
+  getCountryFeatureByCode,
   type CountryInfo
 } from "@/lib/geo";
 import type { GlobeTheme } from "@/lib/theme/globe";
@@ -92,7 +92,7 @@ function createEarthTexture(theme: GlobeTheme) {
 
   context.fillStyle = theme.land;
   context.beginPath();
-  path(getRenderCountryCollection());
+  path(getCountryCollection());
   context.fill("evenodd");
 
   const texture = new THREE.CanvasTexture(canvas);
@@ -147,7 +147,7 @@ function createSelectedCountryTexture(theme: GlobeTheme, selectedCountryCode: st
     return null;
   }
 
-  const selectedCountry = getRenderCountryFeatureByCode(selectedCountryCode);
+  const selectedCountry = getCountryFeatureByCode(selectedCountryCode);
 
   if (!selectedCountry) {
     return null;

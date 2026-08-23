@@ -4,7 +4,7 @@ import { Line } from "@react-three/drei";
 import type * as GeoJSON from "geojson";
 import { useMemo } from "react";
 import * as THREE from "three";
-import { GLOBE_RADIUS, getRenderCountryBorderMesh, getRenderCountryOutlineLines, isValidCoordinatePair } from "@/lib/geo";
+import { GLOBE_RADIUS, getCountryBorderMesh, getCountryOutlineLines, isValidCoordinatePair } from "@/lib/geo";
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { latLonToVector3 } from "./globeMath";
 
@@ -24,11 +24,11 @@ export function CountryOutlines({
   theme
 }: CountryOutlinesProps) {
   const borderSegments = useMemo(
-    () => getCachedSurfaceLineSegments("borders", getRenderCountryBorderMesh(), GLOBE_RADIUS * BORDER_ALTITUDE),
+    () => getCachedSurfaceLineSegments("borders", getCountryBorderMesh(), GLOBE_RADIUS * BORDER_ALTITUDE),
     []
   );
   const selectedSegments = useMemo(() => {
-    const outline = getRenderCountryOutlineLines(selectedCountryCode);
+    const outline = getCountryOutlineLines(selectedCountryCode);
     return outline
       ? getCachedSurfaceLineSegments(`selected:${selectedCountryCode}`, outline, GLOBE_RADIUS * SELECTED_OUTLINE_ALTITUDE)
       : [];
