@@ -4,16 +4,16 @@ import { GLOBE_RADIUS } from "@/lib/geo";
 const DEG_TO_RAD = Math.PI / 180;
 const RAD_TO_DEG = 180 / Math.PI;
 
-export const MIN_CAMERA_DISTANCE = 2.15;
+export const MIN_CAMERA_DISTANCE = 2.5;
 export const DEFAULT_CAMERA_DISTANCE = 5.2;
-export const MAX_CAMERA_DISTANCE = 10;
+export const MAX_CAMERA_DISTANCE = 7;
 export const MIN_ROTATE_SPEED = 0.18;
 export const DEFAULT_ROTATE_SPEED = 0.55;
 export const MAX_ROTATE_SPEED = 0.7;
 export const MARKER_RADIUS = 0.0072;
 export const MARKER_ALTITUDE = 1.001;
-export const MIN_MARKER_SCALE = 0.5;
-export const MAX_MARKER_SCALE = 3;
+export const MIN_MARKER_SCALE = 0.4;
+export const MAX_MARKER_SCALE = 2.3;
 
 export function latLonToVector3(latitude: number, longitude: number, radius = GLOBE_RADIUS) {
   const phi = (90 - latitude) * DEG_TO_RAD;
