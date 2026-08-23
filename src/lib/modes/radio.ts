@@ -14,7 +14,8 @@ const FALLBACK_CACHE_TTL_MS = 2 * 60 * 1000;
 const STREAM_CACHE_TTL_MS = 5 * 60 * 1000;
 const REQUEST_TIMEOUT_MS = 7_000;
 const STREAM_VALIDATION_TIMEOUT_MS = 5_000;
-const CATALOG_LIMIT = 420;
+const CATALOG_TARGET_LIMIT = 2_000;
+const CATALOG_PROVIDER_LIMIT = 2_600;
 
 type RadioBrowserServer = {
   name?: string;
@@ -83,13 +84,14 @@ export async function getRadioDataset(force = false): Promise<TerraDataset> {
     const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/search", {
       has_geo_info: "true",
       hidebroken: "true",
-      limit: String(CATALOG_LIMIT),
+      limit: String(CATALOG_PROVIDER_LIMIT),
       order: "clickcount",
       reverse: "true"
     });
     const records = stations
       .map(normalizeStation)
-      .filter((record): record is RadioStationRecord => Boolean(record));
+      .filter((record): record is RadioStationRecord => Boolean(record))
+      .slice(0, CATALOG_TARGET_LIMIT);
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable stations");
