@@ -45,10 +45,22 @@
   white-space: nowrap;
 }
 
+.radio-player-status {
+  margin-top: 4px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
 .radio-player-controls {
   display: flex;
   gap: 8px;
   margin-top: 13px;
+}
+
+.radio-player-controls.compact {
+  flex: 0 0 auto;
+  margin-top: 0;
 }
 
 .radio-control {
@@ -84,6 +96,11 @@
   opacity: 0.52;
 }
 
+.radio-control:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+}
+
 .radio-player-meta {
   display: flex;
   flex-wrap: wrap;
@@ -111,6 +128,41 @@
   line-height: 1.4;
 }
 
+.radio-mini-player {
+  position: absolute;
+  right: 18px;
+  bottom: 18px;
+  left: 18px;
+  z-index: 8;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 14px;
+  max-width: 620px;
+  padding: 12px;
+  border: 1px solid var(--info-border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 42px var(--shadow-tooltip);
+  backdrop-filter: blur(var(--panel-blur));
+}
+
+.drawer-open .radio-mini-player {
+  right: calc(var(--drawer-width) + 18px);
+}
+
+.radio-mini-main {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 10px;
+}
+
+.radio-mini-player .radio-player-error {
+  grid-column: 1 / -1;
+  margin-top: -4px;
+}
+
 .spin {
   animation: spin 900ms linear infinite;
 }
@@ -118,5 +170,23 @@
 @keyframes spin {
   to {
     transform: rotate(360deg);
+  }
+}
+
+@media (max-width: 760px) {
+  .radio-mini-player,
+  .drawer-open .radio-mini-player {
+    right: 12px;
+    bottom: 12px;
+    left: 12px;
+    grid-template-columns: 1fr;
+  }
+
+  .radio-player-controls.compact {
+    width: 100%;
+  }
+
+  .radio-player-controls.compact .radio-control {
+    flex: 1;
   }
 }

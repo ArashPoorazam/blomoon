@@ -3,7 +3,7 @@
 import { ChevronLeft, ChevronRight, ExternalLink, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
-import type { DataSourceInfo, TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
+import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 
 const LIST_PAGE_SIZE = 50;
 
@@ -20,7 +20,6 @@ type SideDrawerProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  source: DataSourceInfo | null;
   totalPoints: number;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
@@ -43,7 +42,6 @@ export function SideDrawer({
   query,
   selectedCountry,
   selectedId,
-  source,
   totalPoints,
   onClearCountrySelection,
   onClearSelection,
@@ -84,7 +82,6 @@ export function SideDrawer({
             query={query}
             selectedCountry={selectedCountry}
             selectedId={selectedId}
-            source={source}
             totalPoints={totalPoints}
             onClearCountrySelection={onClearCountrySelection}
             onModeChange={onModeChange}
@@ -107,7 +104,6 @@ function ListView({
   query,
   selectedCountry,
   selectedId,
-  source,
   totalPoints,
   onClearCountrySelection,
   onModeChange,
@@ -123,7 +119,6 @@ function ListView({
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  source: DataSourceInfo | null;
   totalPoints: number;
   onClearCountrySelection: () => void;
   onModeChange: (modeId: TerraModeId) => void;
@@ -166,7 +161,7 @@ function ListView({
         />
       </div>
 
-      <SourceMeta providerError={providerError} source={source} />
+      <ProviderNotice message={providerError} />
       <CountryFilter country={selectedCountry} onClear={onClearCountrySelection} />
 
       <div className="point-list">
@@ -257,11 +252,18 @@ function DetailView({
       <div className="detail-body">
         {detailAccessory ? <div className="detail-accessory">{detailAccessory}</div> : null}
 
-        <div className="detail-grid">
-          {(detail?.fields.length ? detail.fields : fallbackFields(detail, activeMode)).map((field) => (
-            <div className="detail-stat" key={field.label}>
-              <div className="detail-label">{field.label}</div>
-              <div className="detail-value">{field.value}</div>
+        <div className="detail-sections">
+          {getDetailSections(detail, activeMode).map((section) => (
+            <div className="detail-section" key={section.title}>
+              <div className="detail-section-title">{section.title}</div>
+              <div className="detail-grid">
+                {section.fields.map((field) => (
+                  <div className="detail-stat" key={field.label}>
+                    <div className="detail-label">{field.label}</div>
+                    <div className="detail-value">{field.value}</div>
+                  </div>
+                ))}
+              </div>
             </div>
           ))}
         </div>
@@ -303,53 +305,80 @@ function ModeSwitcher({
   );
 }
 
-function SourceMeta({
-  providerError,
-  source
-}: {
-  providerError: string | null;
-  source: DataSourceInfo | null;
-}) {
-  if (!source && !providerError) {
+function ProviderNotice({ message }: { message: string | null }) {
+  if (!message) {
     return null;
   }
 
-  return (
-    <div className="source-meta">
-      {source ? (
-        <>
-          <div className="source-row">
-            <span>Provider</span>
-            <a href={source.url} target="_blank" rel="noreferrer">
-              {source.name}
-            </a>
-          </div>
-          <div className="source-row">
-            <span>Updated</span>
-            <strong>{formatDateTime(source.lastUpdated)}</strong>
-          </div>
-          <p>{source.attribution}</p>
-        </>
-      ) : null}
-      {providerError ? <div className="source-warning">{providerError}</div> : null}
-    </div>
-  );
+  return <div className="provider-notice">{message}</div>;
 }
 
-function fallbackFields(detail: TerraPointDetail | null, activeMode: TerraMode) {
+type DetailField = {
+  label: string;
+  value: string;
+};
+
+type DetailSection = {
+  fields: DetailField[];
+  title: string;
+};
+
+function getDetailSections(detail: TerraPointDetail | null, activeMode: TerraMode): DetailSection[] {
   if (!detail) {
     return [
-      { label: activeMode.markerMetricLabel, value: "Loading" },
-      { label: "Time", value: "Loading" }
+      {
+        title: "Station",
+        fields: [
+          { label: activeMode.markerMetricLabel, value: "Loading" },
+          { label: "Time", value: "Loading" }
+        ]
+      }
     ];
   }
 
+  const fieldValue = getDetailFieldValue(detail);
+
   return [
-    { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
-    { label: "Latitude", value: detail.latitude.toFixed(3) },
-    { label: "Longitude", value: detail.longitude.toFixed(3) },
-    { label: "Time", value: formatDateTime(detail.timestamp) }
-  ];
+    {
+      title: "Station",
+      fields: [
+        { label: "Country", value: fieldValue("Country") },
+        { label: "Language", value: fieldValue("Language") },
+        { label: "Tags", value: fieldValue("Tags") }
+      ]
+    },
+    {
+      title: "Stream",
+      fields: [
+        { label: "Codec", value: fieldValue("Codec") },
+        { label: "Bitrate", value: fieldValue("Bitrate") }
+      ]
+    },
+    {
+      title: "Activity",
+      fields: [
+        { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
+        { label: "Votes", value: fieldValue("Votes") },
+        { label: "Last checked", value: formatDateTime(detail.timestamp) }
+      ]
+    },
+    {
+      title: "Location",
+      fields: [
+        { label: "Latitude", value: detail.latitude.toFixed(3) },
+        { label: "Longitude", value: detail.longitude.toFixed(3) }
+      ]
+    }
+  ].map((section) => ({
+    ...section,
+    fields: section.fields.filter((field) => field.value !== "Unknown" && field.value !== "Untagged")
+  })).filter((section) => section.fields.length > 0);
+}
+
+function getDetailFieldValue(detail: TerraPointDetail) {
+  const fields = new Map(detail.fields.map((field) => [field.label, field.value]));
+
+  return (label: string) => fields.get(label) ?? getMetricValue(detail, label, "Unknown");
 }
 
 function getMetricValue(point: TerraPoint, label: string, fallback = "?") {

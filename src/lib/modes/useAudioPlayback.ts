@@ -7,6 +7,7 @@ export type AudioPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "e
 
 export type AudioPlaybackState = {
   error: string | null;
+  point: TerraPointDetail | null;
   pointId: string | null;
   status: AudioPlaybackStatus;
 };
@@ -21,14 +22,12 @@ type PlayableAudioResponse = {
   streamUrl: string;
 };
 
-export function useAudioPlayback(
-  playback: TerraPlaybackConfig | null,
-  activePointId: string | null
-): AudioPlaybackController {
+export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPlaybackController {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playRequestRef = useRef(0);
   const [state, setState] = useState<AudioPlaybackState>({
     error: null,
+    point: null,
     pointId: null,
     status: "idle"
   });
@@ -42,6 +41,7 @@ export function useAudioPlayback(
     audioRef.current = null;
     setState({
       error: null,
+      point: null,
       pointId: null,
       status: "idle"
     });
@@ -66,23 +66,29 @@ export function useAudioPlayback(
       return;
     }
 
-    const pausedAudio = audioRef.current;
+    const existingAudio = audioRef.current;
 
-    if (pausedAudio && state.pointId === point.id && state.status === "paused") {
+    if (existingAudio && state.pointId === point.id && state.status === "paused") {
       try {
-        await pausedAudio.play();
+        await existingAudio.play();
         setState({
           error: null,
+          point,
           pointId: point.id,
           status: "playing"
         });
       } catch {
         setState({
           error: "Playback was blocked. Press play again.",
+          point,
           pointId: point.id,
           status: "error"
         });
       }
+      return;
+    }
+
+    if (existingAudio && state.pointId === point.id && state.status === "playing") {
       return;
     }
 
@@ -95,6 +101,7 @@ export function useAudioPlayback(
 
     setState({
       error: null,
+      point,
       pointId: point.id,
       status: "loading"
     });
@@ -124,6 +131,7 @@ export function useAudioPlayback(
 
         setState({
           error: null,
+          point,
           pointId: point.id,
           status: "playing"
         });
@@ -147,6 +155,7 @@ export function useAudioPlayback(
 
         setState({
           error: "The stream stopped or could not be decoded by this browser.",
+          point,
           pointId: point.id,
           status: "error"
         });
@@ -162,17 +171,12 @@ export function useAudioPlayback(
       audioRef.current = null;
       setState({
         error: error instanceof Error ? error.message : "This stream is not playable right now.",
+        point,
         pointId: point.id,
         status: "error"
       });
     }
   }, [playback, state.pointId, state.status]);
-
-  useEffect(() => {
-    if (!activePointId || (state.pointId && state.pointId !== activePointId)) {
-      stop();
-    }
-  }, [activePointId, state.pointId, stop]);
 
   useEffect(() => {
     if (!playback) {

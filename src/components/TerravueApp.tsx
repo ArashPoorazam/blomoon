@@ -15,7 +15,7 @@ import {
   type TerraThemeId
 } from "@/lib/theme/themes";
 import { GlobeScene } from "./GlobeScene";
-import { RadioPlaybackPanel } from "./RadioPlaybackPanel";
+import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
 import { SideDrawer } from "./SideDrawer";
 
 export function TerravueApp() {
@@ -29,7 +29,7 @@ export function TerravueApp() {
   const activeTheme = getTerraTheme(themeId);
   const nextTheme = getNextTerraTheme(themeId);
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null);
-  const audioPlayback = useAudioPlayback(activeMode.playback ?? null, modeState.selectedId);
+  const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const drawerOpen = !drawerCollapsed;
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
@@ -50,7 +50,6 @@ export function TerravueApp() {
   function selectCountry(country: CountryInfo | null) {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
-    modeState.clearSelection();
     setDrawerCollapsed(false);
     setHoveredPoint(null);
   }
@@ -74,7 +73,7 @@ export function TerravueApp() {
           focusKey={modeState.selectedId}
           markerColor={resolveMarkerColor(activeTheme, activeMode.markerColorToken)}
           markerColorMode={activeMode.markerColorMode}
-          points={modeState.visiblePoints}
+          points={modeState.points}
           selectedCountryCode={selectedCountry?.code ?? null}
           selectedPoint={modeState.selectedPoint}
           theme={activeTheme.globe}
@@ -126,7 +125,6 @@ export function TerravueApp() {
         query={modeState.query}
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
-        source={modeState.source}
         totalPoints={modeState.points.length}
         onClearCountrySelection={() => selectCountry(null)}
         onClearSelection={modeState.clearSelection}
@@ -135,6 +133,10 @@ export function TerravueApp() {
         onQueryChange={modeState.setQuery}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
       />
+
+      {activeMode.playback && audioPlayback.point ? (
+        <RadioMiniPlayer playback={audioPlayback} playbackLabel={activeMode.playback.label} />
+      ) : null}
     </main>
   );
 }
