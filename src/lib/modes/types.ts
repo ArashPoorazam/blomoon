@@ -8,7 +8,7 @@ export type TerraPoint = {
   name: string;
   latitude: number;
   longitude: number;
-  /** ISO 3166-1 numeric country code. */
+  /** ISO 3166-1 numeric country code, or a documented atlas-only X-* code. */
   countryCode?: string;
   prominence?: number;
   timestamp?: string;

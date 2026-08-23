@@ -7,7 +7,7 @@ import type { RefObject } from "react";
 import * as THREE from "three";
 import { GLOBE_RADIUS } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
-import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
+import { resolvePointMarkerColor, type GlobeTheme, type MarkerColorMode } from "@/lib/theme/globe";
 import {
   DEFAULT_CAMERA_DISTANCE,
   MARKER_ALTITUDE,
@@ -309,7 +309,7 @@ function getMarkerBatches(
   const batches = new Map<string, TerraPoint[]>();
 
   points.forEach((point) => {
-    const color = getMarkerColor(point, markerColorMode, singleColor, theme);
+    const color = resolvePointMarkerColor(point, markerColorMode, singleColor, theme);
     const batch = batches.get(color);
 
     if (batch) {
@@ -324,21 +324,6 @@ function getMarkerBatches(
     color,
     points: batchPoints
   } satisfies MarkerBatch));
-}
-
-function getMarkerColor(
-  point: TerraPoint,
-  markerColorMode: MarkerColorMode,
-  singleColor: string,
-  theme: GlobeTheme
-) {
-  if (markerColorMode === "single") {
-    return singleColor;
-  }
-
-  const value = THREE.MathUtils.clamp(point.prominence ?? 0.3, 0, 1);
-  const bucketIndex = Math.round(value * (theme.markers.prominence.length - 1));
-  return theme.markers.prominence[bucketIndex];
 }
 
 function getInstanceCapacity(count: number) {

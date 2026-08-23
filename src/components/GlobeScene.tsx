@@ -14,6 +14,7 @@ type GlobeSceneProps = {
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
   selectedCountryCode: string | null;
+  selectedCountryOutlineColor: string;
   selectedPoint: TerraPoint | null;
   theme: GlobeTheme;
   onCountrySelect: (country: CountryInfo | null) => void;
@@ -27,6 +28,7 @@ export function GlobeScene({
   markerColorMode,
   points,
   selectedCountryCode,
+  selectedCountryOutlineColor,
   selectedPoint,
   theme,
   onCountrySelect,
@@ -38,6 +40,7 @@ export function GlobeScene({
       <color attach="background" args={[theme.ocean]} />
 
       <Earth
+        selectedCountryOutlineColor={selectedCountryOutlineColor}
         selectedCountryCode={selectedCountryCode}
         theme={theme}
         onCountrySelect={onCountrySelect}

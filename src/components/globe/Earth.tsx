@@ -7,20 +7,27 @@ import * as THREE from "three";
 import {
   GLOBE_RADIUS,
   getCountryAtCoordinates,
-  getCountryBorderMesh,
   getCountryCollection,
+  getCountryFeatureByCode,
   type CountryInfo
 } from "@/lib/geo";
 import type { GlobeTheme } from "@/lib/theme/globe";
+import { CountryOutlines } from "./CountryOutlines";
 import { vector3ToLatLon } from "./globeMath";
 
 type EarthProps = {
+  selectedCountryOutlineColor: string;
   selectedCountryCode: string | null;
   theme: GlobeTheme;
   onCountrySelect: (country: CountryInfo | null) => void;
 };
 
-export function Earth({ selectedCountryCode, theme, onCountrySelect }: EarthProps) {
+export function Earth({
+  selectedCountryOutlineColor,
+  selectedCountryCode,
+  theme,
+  onCountrySelect
+}: EarthProps) {
   const texture = useMemo(
     () => createEarthTexture(theme, selectedCountryCode),
     [selectedCountryCode, theme]
@@ -37,10 +44,17 @@ export function Earth({ selectedCountryCode, theme, onCountrySelect }: EarthProp
   }
 
   return (
-    <mesh onClick={handleClick}>
-      <sphereGeometry args={[GLOBE_RADIUS, 128, 128]} />
-      <meshBasicMaterial map={texture} />
-    </mesh>
+    <>
+      <mesh onClick={handleClick}>
+        <sphereGeometry args={[GLOBE_RADIUS, 128, 128]} />
+        <meshBasicMaterial map={texture} />
+      </mesh>
+      <CountryOutlines
+        selectedCountryCode={selectedCountryCode}
+        selectedOutlineColor={selectedCountryOutlineColor}
+        theme={theme}
+      />
+    </>
   );
 }
 
@@ -77,7 +91,6 @@ function createEarthTexture(theme: GlobeTheme, selectedCountryCode: string | nul
   context.fill("evenodd");
 
   drawSelectedCountry(context, path, theme, selectedCountryCode);
-  drawCountryBorders(context, path, theme);
 
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
@@ -95,24 +108,16 @@ function drawSelectedCountry(
     return;
   }
 
-  const selectedCountry = getCountryCollection().features.find((country) => country.id === selectedCountryCode);
+  const selectedCountry = getCountryFeatureByCode(selectedCountryCode);
 
   if (!selectedCountry) {
     return;
   }
 
   context.fillStyle = theme.countryHighlight;
+  context.globalAlpha = theme.countryHighlightOpacity;
   context.beginPath();
   path(selectedCountry);
   context.fill("evenodd");
-}
-
-function drawCountryBorders(context: CanvasRenderingContext2D, path: ReturnType<typeof geoPath>, theme: GlobeTheme) {
-  context.strokeStyle = theme.border;
-  context.lineWidth = 1.45;
-  context.lineCap = "round";
-  context.lineJoin = "round";
-  context.beginPath();
-  path(getCountryBorderMesh());
-  context.stroke();
+  context.globalAlpha = 1;
 }

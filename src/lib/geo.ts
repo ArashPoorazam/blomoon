@@ -2,7 +2,7 @@ import { geoContains } from "d3-geo";
 import type * as GeoJSON from "geojson";
 import { feature, mesh } from "topojson-client";
 import type { GeometryCollection, Topology } from "topojson-specification";
-import countries from "world-atlas/countries-110m.json";
+import countries from "world-atlas/countries-50m.json";
 
 export const GLOBE_RADIUS = 2;
 
@@ -28,6 +28,17 @@ let cachedCountryBorderMesh: GeoJSON.MultiLineString | null = null;
 let cachedCountryByCode: Map<string, CountryInfo> | null = null;
 let cachedCountryByName: Map<string, CountryInfo> | null = null;
 
+const atlasRegionOverrides: ReadonlyMap<string, CountryInfo> = new Map([
+  ["kosovo", { code: "X-KOSOVO", name: "Kosovo" }],
+  ["north cyprus", { code: "X-NORTH-CYPRUS", name: "North Cyprus" }],
+  ["somaliland", { code: "X-SOMALILAND", name: "Somaliland" }]
+] as const);
+
+const countryCodeAliases: ReadonlyMap<string, string> = new Map([
+  ["XK", "X-KOSOVO"],
+  ["XKX", "X-KOSOVO"]
+] as const);
+
 const countryNameAliases: ReadonlyMap<string, string> = new Map([
   ["bosnia and herzegovina", "bosnia and herz"],
   ["central african republic", "central african rep"],
@@ -39,6 +50,8 @@ const countryNameAliases: ReadonlyMap<string, string> = new Map([
   ["iran islamic republic of", "iran"],
   ["lao people s democratic republic", "laos"],
   ["moldova republic of", "moldova"],
+  ["n cyprus", "north cyprus"],
+  ["northern cyprus", "north cyprus"],
   ["north macedonia", "macedonia"],
   ["republic of the congo", "congo"],
   ["russian federation", "russia"],
@@ -103,15 +116,15 @@ export function getCountryAtCoordinates(latitude: number, longitude: number): Co
 }
 
 export function findCountryByCode(code?: string | null): CountryInfo | null {
-  const normalizedCode = normalizeIsoNumericCountryCode(code);
+  const normalizedCode = normalizeKnownCountryCode(code);
   return normalizedCode ? getCountryByCode().get(normalizedCode) ?? null : null;
 }
 
 export function normalizeCountryCode(code?: string | null, displayName?: string | null) {
-  const numericCode = normalizeIsoNumericCountryCode(code);
+  const knownCode = normalizeKnownCountryCode(code);
 
-  if (numericCode && getCountryByCode().has(numericCode)) {
-    return numericCode;
+  if (knownCode && getCountryByCode().has(knownCode)) {
+    return knownCode;
   }
 
   if (displayName) {
@@ -139,6 +152,16 @@ export function getCountryCollection(): GeoJSON.FeatureCollection<GeoJSON.Polygo
   };
 }
 
+export function getCountryFeatureByCode(code?: string | null): CountryFeature | null {
+  const country = findCountryByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  return getCountryFeatures().find((feature) => feature.id === country.code) ?? null;
+}
+
 export function getCountryBorderMesh(): GeoJSON.MultiLineString {
   if (!cachedCountryBorderMesh) {
     const topology = getCountriesTopology();
@@ -146,6 +169,26 @@ export function getCountryBorderMesh(): GeoJSON.MultiLineString {
   }
 
   return cachedCountryBorderMesh;
+}
+
+export function getCountryOutlineLines(code?: string | null): GeoJSON.MultiLineString | null {
+  const country = getCountryFeatureByCode(code);
+
+  if (!country) {
+    return null;
+  }
+
+  if (country.geometry.type === "Polygon") {
+    return {
+      type: "MultiLineString",
+      coordinates: country.geometry.coordinates
+    };
+  }
+
+  return {
+    type: "MultiLineString",
+    coordinates: country.geometry.coordinates.flat()
+  };
 }
 
 function getCountryFeatures(): CountryFeature[] {
@@ -158,20 +201,25 @@ function getCountryFeatures(): CountryFeature[] {
   const features: CountryFeature[] = [];
 
   collection.features.forEach((country) => {
-    const countryId = typeof country.id === "string" ? country.id : String(country.id ?? "");
     const name = country.properties?.name;
 
-    if (!isIsoNumericCountryCode(countryId) || !name || !isCountryGeometry(country.geometry)) {
+    if (!name || !isCountryGeometry(country.geometry)) {
+      return;
+    }
+
+    const countryInfo = getCountryInfo(country.id, name);
+
+    if (!countryInfo) {
       return;
     }
 
     features.push({
       type: "Feature",
-      id: countryId.padStart(3, "0"),
+      id: countryInfo.code,
       bbox: country.bbox,
       geometry: country.geometry,
       properties: {
-        name
+        name: countryInfo.name
       }
     });
   });
@@ -237,19 +285,40 @@ function getCountriesTopology() {
   return countries as CountriesTopology;
 }
 
+function getCountryInfo(id: string | number | undefined, name: string): CountryInfo | null {
+  const countryId = typeof id === "string" ? id : String(id ?? "");
+  const numericCode = normalizeIsoNumericCountryCode(countryId);
+
+  if (numericCode) {
+    return {
+      code: numericCode,
+      name
+    };
+  }
+
+  return atlasRegionOverrides.get(normalizeCountryName(name)) ?? null;
+}
+
 function isCountryGeometry(
   geometry: GeoJSON.Geometry
 ): geometry is GeoJSON.Polygon | GeoJSON.MultiPolygon {
   return geometry.type === "Polygon" || geometry.type === "MultiPolygon";
 }
 
-function isIsoNumericCountryCode(value: string) {
-  return /^\d{3}$/.test(value);
-}
-
 function normalizeIsoNumericCountryCode(value?: string | null) {
   const normalized = (value ?? "").trim();
   return /^\d{1,3}$/.test(normalized) ? normalized.padStart(3, "0") : null;
+}
+
+function normalizeKnownCountryCode(value?: string | null) {
+  const numericCode = normalizeIsoNumericCountryCode(value);
+
+  if (numericCode) {
+    return numericCode;
+  }
+
+  const normalized = (value ?? "").trim().toUpperCase();
+  return countryCodeAliases.get(normalized) ?? (getCountryByCode().has(normalized) ? normalized : null);
 }
 
 function normalizeAlphaCountryCode(value?: string | null) {

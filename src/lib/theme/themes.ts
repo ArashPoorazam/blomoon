@@ -21,7 +21,12 @@ export const terraThemes = [
       ocean: "#102a43",
       land: "#d7c79a",
       border: "#27364a",
+      borderLineWidth: 1.15,
+      borderOpacity: 0.66,
       countryHighlight: "#2f80ed",
+      countryHighlightOpacity: 0.28,
+      selectedCountryOutlineOpacity: 0.98,
+      selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#f7f4ea",
         selected: "#e65a34",

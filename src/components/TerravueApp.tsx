@@ -2,11 +2,12 @@
 
 import { Palette } from "lucide-react";
 import { useRef, useState } from "react";
-import { formatCoordinate, type CountryInfo } from "@/lib/geo";
+import { findCountryByCode, formatCoordinate, getCountryAtCoordinates, type CountryInfo } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
+import { resolvePointMarkerColor } from "@/lib/theme/globe";
 import {
   defaultTheme,
   getNextTerraTheme,
@@ -31,6 +32,10 @@ export function TerravueApp() {
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null);
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const drawerOpen = !drawerCollapsed;
+  const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
+  const selectedCountryOutlineColor = modeState.selectedPoint
+    ? resolvePointMarkerColor(modeState.selectedPoint, activeMode.markerColorMode, defaultMarkerColor, activeTheme.globe)
+    : defaultMarkerColor;
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
       <RadioPlaybackPanel detail={modeState.detail} playback={audioPlayback} playbackLabel={activeMode.playback.label} />
@@ -38,6 +43,7 @@ export function TerravueApp() {
 
   function selectPoint(point: TerraPoint) {
     modeState.selectPoint(point);
+    setSelectedCountry(findCountryByCode(point.countryCode) ?? getCountryAtCoordinates(point.latitude, point.longitude));
     setDrawerCollapsed(false);
   }
 
@@ -71,10 +77,11 @@ export function TerravueApp() {
       <div className="globe-stage">
         <GlobeScene
           focusKey={modeState.selectedId}
-          markerColor={resolveMarkerColor(activeTheme, activeMode.markerColorToken)}
+          markerColor={defaultMarkerColor}
           markerColorMode={activeMode.markerColorMode}
           points={modeState.points}
           selectedCountryCode={selectedCountry?.code ?? null}
+          selectedCountryOutlineColor={selectedCountryOutlineColor}
           selectedPoint={modeState.selectedPoint}
           theme={activeTheme.globe}
           onCountrySelect={selectCountry}
