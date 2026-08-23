@@ -8,8 +8,8 @@ import { GLOBE_RADIUS, getCountryBorderMesh, getCountryOutlineLines, isValidCoor
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { latLonToVector3 } from "./globeMath";
 
-const BORDER_ALTITUDE = 1.0018;
-const SELECTED_OUTLINE_ALTITUDE = 1.0032;
+const BORDER_ALTITUDE = 1.00005;
+const SELECTED_OUTLINE_ALTITUDE = 1.00025;
 const surfaceLineSegmentsCache = new Map<string, THREE.Vector3[]>();
 
 type CountryOutlinesProps = {
@@ -38,6 +38,7 @@ export function CountryOutlines({
     <>
       <Line
         color={theme.border}
+        depthTest
         depthWrite={false}
         lineWidth={theme.borderLineWidth}
         opacity={theme.borderOpacity}
@@ -49,6 +50,7 @@ export function CountryOutlines({
       {selectedSegments.length > 0 ? (
         <Line
           color={selectedOutlineColor}
+          depthTest
           depthWrite={false}
           lineWidth={theme.selectedCountryOutlineWidth}
           opacity={theme.selectedCountryOutlineOpacity}

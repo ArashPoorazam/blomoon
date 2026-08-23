@@ -21,7 +21,7 @@ const HIGHLIGHT_TEXTURE_WIDTH = 1024;
 const HIGHLIGHT_TEXTURE_HEIGHT = 512;
 const EARTH_WIDTH_SEGMENTS = 96;
 const EARTH_HEIGHT_SEGMENTS = 64;
-const COUNTRY_HIGHLIGHT_ALTITUDE = 1.0011;
+const COUNTRY_HIGHLIGHT_ALTITUDE = 1.00045;
 
 type EarthProps = {
   selectedCountryOutlineColor: string;
@@ -131,6 +131,7 @@ function SelectedCountryOverlay({
         ]}
       />
       <meshBasicMaterial
+        depthTest
         depthWrite={false}
         map={texture}
         opacity={theme.countryHighlightOpacity}
