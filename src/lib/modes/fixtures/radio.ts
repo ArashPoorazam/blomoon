@@ -37,7 +37,7 @@ function createFixtureRecord(
     latitude,
     longitude,
     countryCode,
-    severity: 0.45,
+    prominence: 0.45,
     timestamp: FIXTURE_TIMESTAMP,
     summary: `${country} · ${language} · ${tags}`,
     metrics: {

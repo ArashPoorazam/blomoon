@@ -2,27 +2,15 @@ import type { TerraMode, TerraPoint } from "./types";
 
 export const terraModes = [
   {
-    id: "earthquakes",
-    label: "Earthquakes",
-    dataEndpoint: "/api/modes/earthquakes/points",
-    detailEndpoint: (id: string) => `/api/modes/earthquakes/points/${encodeURIComponent(id)}`,
-    loadingLabel: "Loading earthquakes",
-    emptyLabel: "No matching earthquakes.",
-    searchPlaceholder: "Filter by place or magnitude",
-    markerMetricLabel: "Magnitude",
-    markerColorMode: "severity",
-    fallbackNotice: "Live earthquake provider unavailable. Showing fixture data.",
-    formatPointMetric: formatMagnitudeMetric,
-    matchCountry: matchCountryCode,
-    matchPoint: matchTextPoint,
-    sortPoints: sortNewestFirst
-  },
-  {
     id: "radio",
     label: "Radio",
     dataEndpoint: "/api/modes/radio/points",
     detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
-    detailAccessory: "radioPlayback",
+    playback: {
+      label: "Live audio",
+      mediaKind: "audio",
+      playableEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/playable`
+    },
     loadingLabel: "Loading radio stations",
     emptyLabel: "No matching radio stations.",
     searchPlaceholder: "Filter by station, country, language, or tag",
@@ -59,15 +47,6 @@ function matchCountryCode(point: TerraPoint, countryCode: string) {
   return point.countryCode === countryCode;
 }
 
-function sortNewestFirst(points: TerraPoint[]) {
-  return [...points].sort((a, b) => getPointTime(b) - getPointTime(a));
-}
-
-function formatMagnitudeMetric(point: TerraPoint) {
-  const value = point.metrics?.Magnitude;
-  return `M ${value === undefined || value === null ? "?" : value}`;
-}
-
 function formatRadioMetric(point: TerraPoint) {
   const codec = point.metrics?.Codec;
   const bitrate = point.metrics?.Bitrate;
@@ -89,10 +68,6 @@ function sortRadioStations(points: TerraPoint[]) {
 
     return a.name.localeCompare(b.name);
   });
-}
-
-function getPointTime(point: TerraPoint) {
-  return point.timestamp ? new Date(point.timestamp).getTime() : 0;
 }
 
 function getNumericMetric(point: TerraPoint, key: string) {

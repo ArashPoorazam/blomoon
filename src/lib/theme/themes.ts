@@ -29,7 +29,7 @@ export const terraThemes = [
         tokens: {
           radio: "#c73272"
         },
-        severity: [
+        prominence: [
           "#3178c6",
           "#287c8e",
           "#388659",

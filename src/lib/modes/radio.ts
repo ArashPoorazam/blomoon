@@ -1,4 +1,4 @@
-import type { TerraDataset, TerraPoint, TerraPointDetail } from "./types";
+import type { TerraDataset, TerraPlayableAudio, TerraPoint, TerraPointDetail } from "./types";
 import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "./fixtures/radio";
 import { isValidCoordinatePair, normalizeCountryCode } from "@/lib/geo";
 
@@ -54,13 +54,6 @@ type RadioStationRecord = {
   streamUrl: string;
 };
 
-export type RadioPlayableStream = {
-  checkedAt: string;
-  contentType?: string;
-  stationId: string;
-  streamUrl: string;
-};
-
 let stationCache: {
   fetchedAt: number;
   dataset: TerraDataset;
@@ -75,7 +68,7 @@ let serverCache: {
 
 const playableCache = new Map<string, {
   fetchedAt: number;
-  stream: RadioPlayableStream;
+  stream: TerraPlayableAudio;
 }>();
 
 export async function getRadioDataset(force = false): Promise<TerraDataset> {
@@ -131,7 +124,7 @@ export async function getRadioDetail(id: string): Promise<TerraPointDetail | nul
   return record?.detail ?? null;
 }
 
-export async function getRadioPlayableStream(id: string): Promise<RadioPlayableStream | null> {
+export async function getRadioPlayableStream(id: string): Promise<TerraPlayableAudio | null> {
   const now = Date.now();
   const cached = playableCache.get(id);
 
@@ -148,10 +141,11 @@ export async function getRadioPlayableStream(id: string): Promise<RadioPlayableS
   const clickedUrl = await resolveClickedStationUrl(id);
   const streamUrl = clickedUrl ?? record.streamUrl;
   const validation = await validateStreamUrl(streamUrl);
-  const stream: RadioPlayableStream = {
+  const stream: TerraPlayableAudio = {
     checkedAt: new Date().toISOString(),
     contentType: validation.contentType,
-    stationId: id,
+    mediaKind: "audio",
+    pointId: id,
     streamUrl
   };
 
@@ -366,7 +360,7 @@ function normalizeStation(station?: RadioBrowserStation): RadioStationRecord | n
     latitude,
     longitude,
     countryCode,
-    severity: normalizePopularity(clickCount, votes),
+    prominence: normalizePopularity(clickCount, votes),
     timestamp: station.lastchecktime_iso8601 || undefined,
     summary,
     metrics: {

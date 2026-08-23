@@ -1,4 +1,4 @@
-export type MarkerColorMode = "severity" | "single";
+export type MarkerColorMode = "prominence" | "single";
 export type MarkerColorToken = "radio";
 
 export type GlobeTheme = {
@@ -10,7 +10,7 @@ export type GlobeTheme = {
     defaultSingle: string;
     selected: string;
     selectedRing: string;
-    severity: readonly string[];
+    prominence: readonly string[];
     tokens: Record<MarkerColorToken, string>;
   };
 };
@@ -27,7 +27,7 @@ export const defaultGlobeTheme = {
     tokens: {
       radio: "#ff4499"
     },
-    severity: [
+    prominence: [
       "#7aa2f7",
       "#929ff7",
       "#aa9cf7",

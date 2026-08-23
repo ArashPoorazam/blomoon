@@ -3,7 +3,7 @@ import "./globals.css";
 
 export const metadata: Metadata = {
   title: "Terravue",
-  description: "Explore live data on a focused interactive globe."
+  description: "Explore live entertainment streams on a focused interactive globe."
 };
 
 export default function RootLayout({

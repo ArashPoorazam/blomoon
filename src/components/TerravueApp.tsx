@@ -5,8 +5,8 @@ import { useRef, useState } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
+import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
-import { useRadioPlayback } from "@/lib/modes/useRadioPlayback";
 import {
   defaultTheme,
   getNextTerraTheme,
@@ -29,11 +29,11 @@ export function TerravueApp() {
   const activeTheme = getTerraTheme(themeId);
   const nextTheme = getNextTerraTheme(themeId);
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null);
-  const radioPlayback = useRadioPlayback(activeMode.detailAccessory === "radioPlayback" ? modeState.selectedId : null);
+  const audioPlayback = useAudioPlayback(activeMode.playback ?? null, modeState.selectedId);
   const drawerOpen = !drawerCollapsed;
   const detailAccessory =
-    activeMode.detailAccessory === "radioPlayback" && modeState.detail ? (
-      <RadioPlaybackPanel detail={modeState.detail} playback={radioPlayback} />
+    activeMode.playback && modeState.detail ? (
+      <RadioPlaybackPanel detail={modeState.detail} playback={audioPlayback} playbackLabel={activeMode.playback.label} />
     ) : null;
 
   function selectPoint(point: TerraPoint) {

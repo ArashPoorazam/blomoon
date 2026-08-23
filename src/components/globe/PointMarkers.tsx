@@ -336,9 +336,9 @@ function getMarkerColor(
     return singleColor;
   }
 
-  const value = THREE.MathUtils.clamp(point.severity ?? 0.3, 0, 1);
-  const bucketIndex = Math.round(value * (theme.markers.severity.length - 1));
-  return theme.markers.severity[bucketIndex];
+  const value = THREE.MathUtils.clamp(point.prominence ?? 0.3, 0, 1);
+  const bucketIndex = Math.round(value * (theme.markers.prominence.length - 1));
+  return theme.markers.prominence[bucketIndex];
 }
 
 function getInstanceCapacity(count: number) {

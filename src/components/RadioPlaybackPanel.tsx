@@ -1,16 +1,17 @@
 "use client";
 
 import { Pause, Play, Radio, Square, LoaderCircle } from "lucide-react";
-import type { RadioPlaybackController } from "@/lib/modes/useRadioPlayback";
+import type { AudioPlaybackController } from "@/lib/modes/useAudioPlayback";
 import type { TerraPointDetail } from "@/lib/modes/types";
 
 type RadioPlaybackPanelProps = {
   detail: TerraPointDetail;
-  playback: RadioPlaybackController;
+  playback: AudioPlaybackController;
+  playbackLabel: string;
 };
 
-export function RadioPlaybackPanel({ detail, playback }: RadioPlaybackPanelProps) {
-  const isCurrentStation = playback.stationId === detail.id;
+export function RadioPlaybackPanel({ detail, playback, playbackLabel }: RadioPlaybackPanelProps) {
+  const isCurrentStation = playback.pointId === detail.id;
   const status = isCurrentStation ? playback.status : "idle";
   const isBusy = status === "loading";
   const isPlaying = status === "playing";
@@ -24,7 +25,7 @@ export function RadioPlaybackPanel({ detail, playback }: RadioPlaybackPanelProps
           <Radio size={18} />
         </div>
         <div className="radio-player-copy">
-          <div className="radio-player-kicker">Live station</div>
+          <div className="radio-player-kicker">{playbackLabel}</div>
           <div className="radio-player-title">{detail.name}</div>
         </div>
       </div>

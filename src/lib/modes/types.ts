@@ -1,6 +1,6 @@
 import type { MarkerColorMode, MarkerColorToken } from "@/lib/theme/globe";
 
-export type TerraModeId = "earthquakes" | "radio" | "weather" | (string & {});
+export type TerraModeId = "radio" | "podcasts" | "tv" | (string & {});
 
 export type TerraPoint = {
   id: string;
@@ -10,7 +10,7 @@ export type TerraPoint = {
   longitude: number;
   /** ISO 3166-1 numeric country code. */
   countryCode?: string;
-  severity?: number;
+  prominence?: number;
   timestamp?: string;
   summary: string;
   metrics?: Record<string, string | number | null>;
@@ -38,12 +38,26 @@ export type TerraDataset = {
   points: TerraPoint[];
 };
 
+export type TerraPlaybackConfig = {
+  label: string;
+  mediaKind: "audio";
+  playableEndpoint: (id: string) => string;
+};
+
+export type TerraPlayableAudio = {
+  checkedAt: string;
+  contentType?: string;
+  mediaKind: "audio";
+  pointId: string;
+  streamUrl: string;
+};
+
 export type TerraMode = {
   id: TerraModeId;
   label: string;
   dataEndpoint: string;
   detailEndpoint: (id: string) => string;
-  detailAccessory?: "radioPlayback";
+  playback?: TerraPlaybackConfig;
   loadingLabel: string;
   emptyLabel: string;
   searchPlaceholder: string;

@@ -1,32 +1,35 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TerraPointDetail } from "./types";
+import type { TerraPlaybackConfig, TerraPointDetail } from "./types";
 
-export type RadioPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
+export type AudioPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
 
-export type RadioPlaybackState = {
+export type AudioPlaybackState = {
   error: string | null;
-  stationId: string | null;
-  status: RadioPlaybackStatus;
+  pointId: string | null;
+  status: AudioPlaybackStatus;
 };
 
-export type RadioPlaybackController = RadioPlaybackState & {
+export type AudioPlaybackController = AudioPlaybackState & {
   pause: () => void;
-  play: (station: TerraPointDetail) => Promise<void>;
+  play: (point: TerraPointDetail) => Promise<void>;
   stop: () => void;
 };
 
-type PlayableStreamResponse = {
+type PlayableAudioResponse = {
   streamUrl: string;
 };
 
-export function useRadioPlayback(activeStationId: string | null): RadioPlaybackController {
+export function useAudioPlayback(
+  playback: TerraPlaybackConfig | null,
+  activePointId: string | null
+): AudioPlaybackController {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const playRequestRef = useRef(0);
-  const [state, setState] = useState<RadioPlaybackState>({
+  const [state, setState] = useState<AudioPlaybackState>({
     error: null,
-    stationId: null,
+    pointId: null,
     status: "idle"
   });
 
@@ -39,7 +42,7 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
     audioRef.current = null;
     setState({
       error: null,
-      stationId: null,
+      pointId: null,
       status: "idle"
     });
   }, []);
@@ -58,25 +61,25 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
     }));
   }, []);
 
-  const play = useCallback(async (station: TerraPointDetail) => {
-    if (station.modeId !== "radio") {
+  const play = useCallback(async (point: TerraPointDetail) => {
+    if (!playback) {
       return;
     }
 
     const pausedAudio = audioRef.current;
 
-    if (pausedAudio && state.stationId === station.id && state.status === "paused") {
+    if (pausedAudio && state.pointId === point.id && state.status === "paused") {
       try {
         await pausedAudio.play();
         setState({
           error: null,
-          stationId: station.id,
+          pointId: point.id,
           status: "playing"
         });
       } catch {
         setState({
           error: "Playback was blocked. Press play again.",
-          stationId: station.id,
+          pointId: point.id,
           status: "error"
         });
       }
@@ -92,20 +95,20 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
 
     setState({
       error: null,
-      stationId: station.id,
+      pointId: point.id,
       status: "loading"
     });
 
     try {
-      const response = await fetch(`/api/modes/radio/points/${encodeURIComponent(station.id)}/playable`, {
+      const response = await fetch(playback.playableEndpoint(point.id), {
         method: "POST"
       });
 
       if (!response.ok) {
-        throw new Error("Station stream is not playable right now.");
+        throw new Error("This stream is not playable right now.");
       }
 
-      const playable = (await response.json()) as PlayableStreamResponse;
+      const playable = (await response.json()) as PlayableAudioResponse;
 
       if (playRequestRef.current !== requestId) {
         return;
@@ -121,7 +124,7 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
 
         setState({
           error: null,
-          stationId: station.id,
+          pointId: point.id,
           status: "playing"
         });
       });
@@ -130,7 +133,7 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
           return;
         }
 
-        setState((current) => current.stationId === station.id && current.status === "playing"
+        setState((current) => current.pointId === point.id && current.status === "playing"
           ? {
               ...current,
               status: "paused"
@@ -143,8 +146,8 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
         }
 
         setState({
-          error: "The station stream stopped or could not be decoded by this browser.",
-          stationId: station.id,
+          error: "The stream stopped or could not be decoded by this browser.",
+          pointId: point.id,
           status: "error"
         });
       });
@@ -158,18 +161,24 @@ export function useRadioPlayback(activeStationId: string | null): RadioPlaybackC
 
       audioRef.current = null;
       setState({
-        error: error instanceof Error ? error.message : "Station stream is not playable right now.",
-        stationId: station.id,
+        error: error instanceof Error ? error.message : "This stream is not playable right now.",
+        pointId: point.id,
         status: "error"
       });
     }
-  }, [state.stationId, state.status]);
+  }, [playback, state.pointId, state.status]);
 
   useEffect(() => {
-    if (!activeStationId || (state.stationId && state.stationId !== activeStationId)) {
+    if (!activePointId || (state.pointId && state.pointId !== activePointId)) {
       stop();
     }
-  }, [activeStationId, state.stationId, stop]);
+  }, [activePointId, state.pointId, stop]);
+
+  useEffect(() => {
+    if (!playback) {
+      stop();
+    }
+  }, [playback, stop]);
 
   useEffect(() => () => {
     playRequestRef.current += 1;
