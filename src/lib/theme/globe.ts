@@ -16,6 +16,7 @@ export type GlobeTheme = {
   selectedCountryOutlineWidth: number;
   markers: {
     defaultSingle: string;
+    listed: string;
     selected: string;
     selectedRing: string;
     prominence: readonly string[];
@@ -35,6 +36,7 @@ export const defaultGlobeTheme = {
   selectedCountryOutlineWidth: 2.1,
   markers: {
     defaultSingle: "#ffffff",
+    listed: "#4ade80",
     selected: "#ff9e64",
     selectedRing: "#ffffff",
     tokens: {

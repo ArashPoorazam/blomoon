@@ -14,6 +14,8 @@ import {
   getLiveWorldRecords,
   sortRadioRecords
 } from "./livePages";
+import { getLiveRadioRecordPage } from "./searchPages";
+import type { RadioSortOption } from "./api";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
 import { fetchRadioBrowserJson } from "./provider";
 import type {
@@ -115,6 +117,50 @@ export async function getRadioCountryPointPage({
       limit,
       offset,
       query
+    });
+  }
+}
+
+export async function getRadioPointPage({
+  countryCode,
+  limit,
+  offset,
+  query,
+  sort
+}: {
+  countryCode: string | null;
+  limit: number;
+  offset: number;
+  query: string;
+  sort: RadioSortOption;
+}): Promise<TerraPointPage> {
+  try {
+    const page = await getLiveRadioRecordPage({
+      countryCode,
+      limit,
+      offset,
+      query,
+      sort
+    });
+
+    return {
+      modeId: "radio",
+      source: createLiveSource(),
+      points: page.records.map((record) => record.point),
+      limit,
+      nextOffset: page.nextOffset,
+      offset,
+      total: page.total,
+      totalKind: page.totalKind
+    };
+  } catch {
+    const catalog = await getRadioCatalog();
+    return getFallbackRadioPointPage(catalog, {
+      countryCode,
+      limit,
+      offset,
+      query,
+      sort
     });
   }
 }
@@ -327,6 +373,43 @@ function getFallbackCountryPointPage(
   };
 }
 
+function getFallbackRadioPointPage(
+  catalog: RadioCatalog,
+  {
+    countryCode,
+    limit,
+    offset,
+    query,
+    sort
+  }: {
+    countryCode: string | null;
+    limit: number;
+    offset: number;
+    query: string;
+    sort: RadioSortOption;
+  }
+): TerraPointPage {
+  const terms = normalizeQuery(query);
+  const sourceRecords = countryCode ? catalog.recordsByCountry.get(countryCode) ?? [] : catalog.records;
+  const records = sortFallbackRecords(
+    sourceRecords.filter((record) => matchesSearch(record, terms)),
+    sort
+  );
+  const points = records.slice(offset, offset + limit).map((record) => record.point);
+  const nextOffset = offset + limit < records.length ? offset + limit : null;
+
+  return {
+    modeId: "radio",
+    source: createFallbackSource(catalog.source),
+    points,
+    limit,
+    nextOffset,
+    offset,
+    total: records.length,
+    totalKind: "exact"
+  };
+}
+
 function normalizeQuery(query: string) {
   return query
     .trim()
@@ -337,6 +420,25 @@ function normalizeQuery(query: string) {
 
 function matchesSearch(record: RadioStationRecord, terms: string[]) {
   return terms.every((term) => record.searchText.includes(term));
+}
+
+function sortFallbackRecords(records: RadioStationRecord[], sort: RadioSortOption) {
+  return [...records].sort((a, b) => {
+    const direction = sort === "votes_desc" ? 1 : -1;
+    const voteDiff = (b.votes - a.votes) * direction;
+
+    if (voteDiff !== 0) {
+      return voteDiff;
+    }
+
+    const clickDiff = (b.clickCount - a.clickCount) * direction;
+
+    if (clickDiff !== 0) {
+      return clickDiff;
+    }
+
+    return a.point.name.localeCompare(b.point.name);
+  });
 }
 
 function createFixtureRecords(): RadioStationRecord[] {

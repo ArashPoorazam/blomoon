@@ -1,10 +1,34 @@
 import type { TerraMode, TerraPoint } from "./types";
 
+const radioSortOptions = [
+  { id: "votes_desc", label: "Most votes" },
+  { id: "votes_asc", label: "Least votes" }
+];
+
 export const terraModes = [
   {
     id: "radio",
     label: "Radio",
     dataEndpoint: "/api/modes/radio/points",
+    defaultSortId: "votes_desc",
+    listEndpoint: (params) => {
+      const searchParams = new URLSearchParams({
+        limit: String(params.limit),
+        offset: String(params.offset),
+        sort: params.sortId
+      });
+
+      if (params.countryCode) {
+        searchParams.set("countryCode", params.countryCode);
+      }
+
+      if (params.query.trim()) {
+        searchParams.set("q", params.query.trim());
+      }
+
+      return `/api/modes/radio/search?${searchParams.toString()}`;
+    },
+    sortOptions: radioSortOptions,
     countryCatalog: {
       markerEndpoint: (countryCode: string) => (
         `/api/modes/radio/countries/${encodeURIComponent(countryCode)}/points`

@@ -17,7 +17,10 @@ import {
   fetchRadioBrowserJsonWithOptions,
   getRadioBrowserHosts
 } from "./provider";
-import type { RadioBrowserStation, RadioStationRecord } from "./types";
+import type {
+  RadioBrowserStation,
+  RadioStationRecord
+} from "./types";
 
 export type RadioCountryRecordPage = {
   nextOffset: number | null;

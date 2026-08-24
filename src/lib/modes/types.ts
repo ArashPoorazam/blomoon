@@ -53,6 +53,19 @@ export type TerraPlaybackConfig = {
   playableEndpoint: (id: string) => string;
 };
 
+export type TerraModeSortOption = {
+  id: string;
+  label: string;
+};
+
+export type TerraModeListParams = {
+  countryCode: string | null;
+  limit: number;
+  offset: number;
+  query: string;
+  sortId: string;
+};
+
 export type TerraPlayableAudio = {
   checkedAt: string;
   contentType?: string;
@@ -65,6 +78,9 @@ export type TerraMode = {
   id: TerraModeId;
   label: string;
   dataEndpoint: string;
+  defaultSortId: string;
+  listEndpoint: (params: TerraModeListParams) => string;
+  sortOptions: TerraModeSortOption[];
   countryCatalog?: {
     markerEndpoint: (countryCode: string) => string;
     searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => string;

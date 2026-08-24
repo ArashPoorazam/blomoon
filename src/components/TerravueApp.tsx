@@ -28,6 +28,7 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
+  const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
@@ -37,8 +38,15 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const drawerOpen = !drawerCollapsed;
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
-  const selectedCountryOutlineColor = modeState.selectedPoint
-    ? resolvePointMarkerColor(modeState.selectedPoint, activeMode.markerColorMode, defaultMarkerColor, activeTheme.globe)
+  const listedPointIds = new Set(modeState.visiblePoints.map((point) => point.id));
+  const globePoints = showListedOnGlobe ? modeState.visiblePoints : modeState.globePoints;
+  const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && listedPointIds.has(modeState.selectedPoint.id))
+    ? modeState.selectedPoint
+    : null;
+  const globeMarkerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
+  const globeMarkerColorMode = showListedOnGlobe ? "single" : activeMode.markerColorMode;
+  const selectedCountryOutlineColor = globeSelectedPoint
+    ? resolvePointMarkerColor(globeSelectedPoint, globeMarkerColorMode, globeMarkerColor, activeTheme.globe)
     : defaultMarkerColor;
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
@@ -87,12 +95,12 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
       <div className="globe-stage">
         <GlobeScene
           focusKey={modeState.selectedId}
-          markerColor={defaultMarkerColor}
-          markerColorMode={activeMode.markerColorMode}
-          points={modeState.globePoints}
+          markerColor={globeMarkerColor}
+          markerColorMode={globeMarkerColorMode}
+          points={globePoints}
           selectedCountryCode={selectedCountry?.code ?? null}
           selectedCountryOutlineColor={selectedCountryOutlineColor}
-          selectedPoint={modeState.selectedPoint}
+          selectedPoint={globeSelectedPoint}
           theme={activeTheme.globe}
           onCountrySelect={selectCountry}
           onPointHover={setHoveredPoint}
@@ -130,8 +138,9 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
         detail={modeState.detail}
         detailAccessory={detailAccessory}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
-        loadedRemotePointCount={modeState.loadedVisiblePointCount}
+        isLoadingDrawerTask={modeState.isLoadingDrawerTask}
         loading={modeState.listLoading}
+        loadingTaskLabel={modeState.loadingTaskLabel}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
         modes={terraModes}
         points={modeState.visiblePoints}
@@ -139,16 +148,20 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
         query={modeState.query}
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
+        showListedOnGlobe={showListedOnGlobe}
+        sortId={modeState.sortId}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
-        remotePointLoadingStatus={modeState.visiblePointLoadingStatus}
+        onCountryFilterChange={selectCountry}
         onClearCountrySelection={clearCountrySelection}
         onClearSelection={modeState.clearSelection}
-        onLoadMoreRemotePoints={undefined}
+        onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
         onModeChange={selectMode}
         onPointSelect={selectPoint}
         onQueryChange={modeState.setQuery}
+        onSortChange={modeState.setSortId}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
+        onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
 
       {activeMode.playback && audioPlayback.point ? (

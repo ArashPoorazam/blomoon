@@ -12,8 +12,6 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 Terravue is a globe-based live entertainment directory. Its purpose is to help people discover and play streamable media by geography: radio now, podcasts/live audio next, and TV/video only when the media contracts are ready.
 
-Terravue is not a generic live-data globe. Do not add unrelated telemetry, disaster, finance, weather, traffic, social, or novelty modes. A mode must represent an entertainment/media catalog with real playable or inspectable streams.
-
 Terravue has one reusable globe core and removable media modes/plugins. The globe core owns map rendering, country interaction, point rendering, camera behavior, shared visual effects, and extension hooks. A media mode/plugin owns its provider adapter, REST endpoints, labels, filtering/search rules, sorting rules, detail content, playback resolution, and fixtures.
 
 The quality bar is that a media mode can be added, disabled, or removed without changing unrelated modes or adding mode-specific branches to the globe core.

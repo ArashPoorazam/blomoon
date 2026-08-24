@@ -1,17 +1,14 @@
 "use client";
 
-import { CheckCircle2, LoaderCircle, Search, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
-import { formatDateTime, type CountryInfo } from "@/lib/geo";
+import { Globe2, Search, X } from "lucide-react";
+import { useMemo } from "react";
+import { findCountryByCode, formatDateTime, getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
-
-const LIST_PAGE_SIZE = 50;
 
 type SideDrawerListProps = {
   activeMode: TerraMode;
   activeModeId: TerraModeId;
   hasMoreRemotePoints?: boolean;
-  loadedRemotePointCount?: number;
   loading: boolean;
   loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
@@ -20,21 +17,24 @@ type SideDrawerListProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
+  showListedOnGlobe: boolean;
+  sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
-  remotePointLoadingStatus?: "loading" | "complete" | null;
+  onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
+  onSortChange: (sortId: string) => void;
+  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawerList({
   activeMode,
   activeModeId,
   hasMoreRemotePoints,
-  loadedRemotePointCount,
   loading,
   loadingMoreRemotePoints,
   modes,
@@ -43,30 +43,23 @@ export function SideDrawerList({
   query,
   selectedCountry,
   selectedId,
+  showListedOnGlobe,
+  sortId,
   totalPoints,
   totalPointsKind,
-  remotePointLoadingStatus,
+  onCountryFilterChange,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
   onModeChange,
   onPointSelect,
-  onQueryChange
+  onQueryChange,
+  onSortChange,
+  onToggleShowListedOnGlobe
 }: SideDrawerListProps) {
-  const [visibleLimit, setVisibleLimit] = useState(LIST_PAGE_SIZE);
-  const usesRemoteStatus = Boolean(remotePointLoadingStatus);
-  const usesRemotePaging = usesRemoteStatus || Boolean(onLoadMoreRemotePoints);
-  const listedPoints = useMemo(
-    () => usesRemotePaging ? points : points.slice(0, visibleLimit),
-    [points, usesRemotePaging, visibleLimit]
-  );
-  const loadedPointCount = usesRemoteStatus ? loadedRemotePointCount ?? points.length : points.length;
-  const matchingPointCount = usesRemotePaging ? totalPoints : points.length;
-  const hasMorePoints = usesRemoteStatus ? false : usesRemotePaging ? Boolean(hasMoreRemotePoints) : listedPoints.length < points.length;
+  const listedPoints = points;
+  const countries = useMemo(getKnownCountries, []);
+  const hasMorePoints = Boolean(hasMoreRemotePoints);
   const isLoadingMorePoints = Boolean(loadingMoreRemotePoints);
-
-  useEffect(() => {
-    setVisibleLimit(LIST_PAGE_SIZE);
-  }, [activeModeId, query, selectedCountry?.code, usesRemotePaging]);
 
   return (
     <>
@@ -84,10 +77,7 @@ export function SideDrawerList({
               ? activeMode.loadingLabel
               : formatVisibleCount({
                 listedCount: listedPoints.length,
-                loadedCount: loadedPointCount,
                 loadingMore: isLoadingMorePoints,
-                matchingCount: matchingPointCount,
-                remoteStatus: remotePointLoadingStatus ?? null,
                 totalCount: totalPoints,
                 totalKind: totalPointsKind
               })}
@@ -96,7 +86,7 @@ export function SideDrawerList({
       </div>
 
       <div className="search-row">
-        <Search size={16} aria-hidden="true" />
+        <Search className="search-icon" size={16} aria-hidden="true" />
         <input
           className="search-input"
           placeholder={activeMode.searchPlaceholder}
@@ -104,10 +94,25 @@ export function SideDrawerList({
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}
         />
+        {query ? (
+          <button className="search-clear" type="button" aria-label="Clear search" onClick={() => onQueryChange("")}>
+            <X size={14} aria-hidden="true" />
+          </button>
+        ) : null}
       </div>
 
       <ProviderNotice message={providerError} />
-      <CountryFilter country={selectedCountry} onClear={onClearCountrySelection} />
+      <FilterControls
+        activeMode={activeMode}
+        countries={countries}
+        selectedCountry={selectedCountry}
+        showListedOnGlobe={showListedOnGlobe}
+        sortId={sortId}
+        onCountryFilterChange={onCountryFilterChange}
+        onClearCountrySelection={onClearCountrySelection}
+        onSortChange={onSortChange}
+        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
+      />
 
       <div className="point-list">
         {points.length === 0 ? (
@@ -132,9 +137,7 @@ export function SideDrawerList({
             </button>
           ))
         )}
-        {usesRemoteStatus ? (
-          <RemoteLoadingStatusButton status={remotePointLoadingStatus} />
-        ) : hasMorePoints ? (
+        {hasMorePoints ? (
           <button
             className="point-list-more"
             disabled={isLoadingMorePoints}
@@ -142,10 +145,7 @@ export function SideDrawerList({
             onClick={() => {
               if (onLoadMoreRemotePoints) {
                 onLoadMoreRemotePoints();
-                return;
               }
-
-              setVisibleLimit((value) => value + LIST_PAGE_SIZE);
             }}
           >
             {isLoadingMorePoints ? "Loading" : "Show 50 more"}
@@ -156,49 +156,72 @@ export function SideDrawerList({
   );
 }
 
-function RemoteLoadingStatusButton({
-  status
+function FilterControls({
+  activeMode,
+  countries,
+  selectedCountry,
+  showListedOnGlobe,
+  sortId,
+  onCountryFilterChange,
+  onClearCountrySelection,
+  onSortChange,
+  onToggleShowListedOnGlobe
 }: {
-  status: "loading" | "complete" | null | undefined;
+  activeMode: TerraMode;
+  countries: CountryInfo[];
+  selectedCountry: CountryInfo | null;
+  showListedOnGlobe: boolean;
+  sortId: string;
+  onCountryFilterChange: (country: CountryInfo | null) => void;
+  onClearCountrySelection: () => void;
+  onSortChange: (sortId: string) => void;
+  onToggleShowListedOnGlobe: () => void;
 }) {
-  if (!status) {
-    return null;
-  }
-
-  const loading = status === "loading";
-
   return (
-    <button className="point-list-more point-list-status" disabled type="button">
-      {loading ? (
-        <LoaderCircle className="loading-status-icon spinning" size={15} aria-hidden="true" />
-      ) : (
-        <CheckCircle2 className="loading-status-icon" size={15} aria-hidden="true" />
-      )}
-      {loading ? "Loading more..." : "Loaded all"}
-    </button>
-  );
-}
+    <div className="filter-panel">
+      <label className="filter-field">
+        <span>Country</span>
+        <select
+          value={selectedCountry?.code ?? ""}
+          onChange={(event) => onCountryFilterChange(findCountryByCode(event.target.value))}
+        >
+          <option value="">All countries</option>
+          {countries.map((country) => (
+            <option key={country.code} value={country.code}>
+              {country.name}
+            </option>
+          ))}
+        </select>
+      </label>
 
-function CountryFilter({
-  country,
-  onClear
-}: {
-  country: CountryInfo | null;
-  onClear: () => void;
-}) {
-  if (!country) {
-    return null;
-  }
+      <label className="filter-field">
+        <span>Sort</span>
+        <select value={sortId} onChange={(event) => onSortChange(event.target.value)}>
+          {activeMode.sortOptions.map((option) => (
+            <option key={option.id} value={option.id}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+      </label>
 
-  return (
-    <div className="country-filter">
-      <span>
-        Country filter
-        <strong>{country.name}</strong>
-      </span>
-      <button type="button" aria-label="Clear country filter" onClick={onClear}>
-        <X size={14} aria-hidden="true" />
-      </button>
+      <div className="filter-actions">
+        {selectedCountry ? (
+          <button className="filter-chip" type="button" onClick={onClearCountrySelection}>
+            {selectedCountry.name}
+            <X size={14} aria-hidden="true" />
+          </button>
+        ) : null}
+        <button
+          aria-pressed={showListedOnGlobe}
+          className={`listed-globe-toggle ${showListedOnGlobe ? "active" : ""}`}
+          type="button"
+          onClick={onToggleShowListedOnGlobe}
+        >
+          <Globe2 size={15} aria-hidden="true" />
+          Listed on globe
+        </button>
+      </div>
     </div>
   );
 }
@@ -238,28 +261,18 @@ function ProviderNotice({ message }: { message: string | null }) {
 }
 
 function formatVisibleCount({
-  loadedCount,
   listedCount,
   loadingMore,
-  matchingCount,
-  remoteStatus,
   totalCount,
   totalKind
 }: {
-  loadedCount: number;
   listedCount: number;
   loadingMore: boolean;
-  matchingCount: number;
-  remoteStatus: "loading" | "complete" | null;
   totalCount: number;
   totalKind: "exact" | "lowerBound";
 }) {
-  if (matchingCount === 0) {
+  if (totalCount === 0 && listedCount === 0) {
     return "0 visible points";
-  }
-
-  if (remoteStatus) {
-    return `${listedCount} listed, ${loadedCount} loaded`;
   }
 
   if (totalKind === "lowerBound") {
@@ -268,9 +281,5 @@ function formatVisibleCount({
       : `${listedCount} listed, more available`;
   }
 
-  if (matchingCount === totalCount) {
-    return `${listedCount} listed of ${totalCount} points`;
-  }
-
-  return `${listedCount} listed of ${matchingCount} matching points`;
+  return `${listedCount} listed from ${totalCount} stations`;
 }

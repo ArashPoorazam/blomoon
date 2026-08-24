@@ -29,6 +29,7 @@ export const terraThemes = [
       selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#f7f4ea",
+        listed: "#1fbf75",
         selected: "#e65a34",
         selectedRing: "#ffffff",
         tokens: {

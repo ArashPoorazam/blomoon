@@ -10,23 +10,27 @@ export type ModeDatasetState = {
   detail: TerraPointDetail | null;
   globePoints: TerraPoint[];
   hasMoreVisiblePoints: boolean;
+  isLoadingDrawerTask: boolean;
   listLoading: boolean;
   loadedVisiblePointCount: number;
   loading: boolean;
   loadingMoreVisiblePoints: boolean;
+  loadingTaskLabel: string;
   points: TerraPoint[];
   providerError: string | null;
   query: string;
   selectedId: string | null;
   selectedPoint: TerraPoint | null;
+  sortId: string;
   source: DataSourceInfo | null;
   totalVisiblePoints: number;
   totalVisiblePointsKind: TerraPointPage["totalKind"];
-  visiblePointLoadingStatus: "loading" | "complete" | null;
   visiblePoints: TerraPoint[];
   clearSelection: () => void;
+  loadMoreVisiblePoints: () => void;
   selectPoint: (point: TerraPoint) => void;
   setQuery: (value: string) => void;
+  setSortId: (value: string) => void;
 };
 
 export function useModeDataset(
@@ -41,18 +45,21 @@ export function useModeDataset(
   const [detail, setDetail] = useState<TerraPointDetail | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
+  const [sortId, setSortId] = useState(mode.defaultSortId);
   const [loading, setLoading] = useState(() => !initialModeDataset);
   const [refreshingLivePoints, setRefreshingLivePoints] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [countryMarkerPoints, setCountryMarkerPoints] = useState<TerraPoint[]>([]);
-  const [countryListedPoints, setCountryListedPoints] = useState<TerraPoint[]>([]);
-  const [countryLoadedPoints, setCountryLoadedPoints] = useState<TerraPoint[]>([]);
-  const [countryNextOffset, setCountryNextOffset] = useState<number | null>(null);
+  const [countryMarkerLoading, setCountryMarkerLoading] = useState(false);
+  const [visiblePoints, setVisiblePoints] = useState<TerraPoint[]>(() => initialModeDataset?.points.slice(0, LIST_PAGE_SIZE) ?? []);
+  const [nextVisiblePointOffset, setNextVisiblePointOffset] = useState<number | null>(null);
   const [countrySource, setCountrySource] = useState<DataSourceInfo | null>(null);
-  const [countryTotal, setCountryTotal] = useState(0);
-  const [countryTotalKind, setCountryTotalKind] = useState<TerraPointPage["totalKind"]>("exact");
-  const [countryListLoading, setCountryListLoading] = useState(false);
+  const [visiblePointSource, setVisiblePointSource] = useState<DataSourceInfo | null>(() => initialModeDataset?.source ?? null);
+  const [visiblePointTotal, setVisiblePointTotal] = useState(initialModeDataset?.points.length ?? 0);
+  const [visiblePointTotalKind, setVisiblePointTotalKind] = useState<TerraPointPage["totalKind"]>("exact");
+  const [listLoading, setListLoading] = useState(() => !initialModeDataset);
   const [countryRequestError, setCountryRequestError] = useState<string | null>(null);
+  const [listRequestError, setListRequestError] = useState<string | null>(null);
   const [loadingMoreVisiblePoints, setLoadingMoreVisiblePoints] = useState(false);
 
   useEffect(() => {
@@ -66,6 +73,10 @@ export function useModeDataset(
   }, [query]);
 
   useEffect(() => {
+    setSortId(mode.defaultSortId);
+  }, [mode]);
+
+  useEffect(() => {
     let cancelled = false;
 
     async function loadPoints() {
@@ -75,8 +86,6 @@ export function useModeDataset(
       setRequestError(null);
       setSelectedId(null);
       setDetail(null);
-      setQuery("");
-      setDebouncedQuery("");
       setPoints(seededDataset?.points ?? []);
       setSource(seededDataset?.source ?? null);
       setRefreshingLivePoints(Boolean(seededDataset));
@@ -123,10 +132,12 @@ export function useModeDataset(
       if (!selectedCountryCode || !mode.countryCatalog) {
         setCountryMarkerPoints([]);
         setCountrySource(null);
+        setCountryMarkerLoading(false);
         setCountryRequestError(null);
         return;
       }
 
+      setCountryMarkerLoading(true);
       setCountryRequestError(null);
 
       try {
@@ -150,6 +161,10 @@ export function useModeDataset(
           setCountryMarkerPoints([]);
           setCountryRequestError(`${mode.label} country markers are unavailable.`);
         }
+      } finally {
+        if (!cancelled) {
+          setCountryMarkerLoading(false);
+        }
       }
     }
 
@@ -165,96 +180,55 @@ export function useModeDataset(
     let cancelled = false;
     const controller = new AbortController();
 
-    async function loadCountryPages() {
-      const countryCatalog = mode.countryCatalog;
-
-      if (!selectedCountryCode || !countryCatalog) {
-        setCountryListedPoints([]);
-        setCountryLoadedPoints([]);
-        setCountryNextOffset(null);
-        setCountrySource(null);
-        setCountryTotal(0);
-        setCountryTotalKind("exact");
-        setCountryListLoading(false);
-        setLoadingMoreVisiblePoints(false);
-        setCountryRequestError(null);
-        return;
-      }
-
-      setCountryListLoading(true);
+    async function loadVisiblePoints() {
+      setListLoading(true);
       setLoadingMoreVisiblePoints(false);
-      setCountryRequestError(null);
-      setCountryListedPoints([]);
-      setCountryLoadedPoints([]);
-      setCountryNextOffset(null);
-      setCountryTotal(0);
-      setCountryTotalKind("exact");
+      setListRequestError(null);
+      setVisiblePoints([]);
+      setNextVisiblePointOffset(null);
+      setVisiblePointTotal(0);
+      setVisiblePointTotalKind("exact");
 
       try {
-        const firstPage = await fetchPointPage(countryCatalog.searchEndpoint(selectedCountryCode, {
+        const firstPage = await fetchPointPage(mode.listEndpoint({
+          countryCode: selectedCountryCode,
           limit: LIST_PAGE_SIZE,
           offset: 0,
-          query: debouncedQuery
+          query: debouncedQuery,
+          sortId
         }), controller.signal);
 
         if (!cancelled) {
-          setCountryListedPoints(firstPage.points);
-          setCountryLoadedPoints(firstPage.points);
-          setCountryNextOffset(firstPage.nextOffset);
-          setCountrySource(firstPage.source);
-          setCountryTotal(firstPage.total);
-          setCountryTotalKind(firstPage.totalKind);
-          setCountryListLoading(false);
-        }
-
-        let nextOffset = firstPage.nextOffset;
-
-        if (nextOffset !== null && !cancelled) {
-          setLoadingMoreVisiblePoints(true);
-        }
-
-        while (nextOffset !== null && !cancelled) {
-          const nextPage = await fetchPointPage(countryCatalog.searchEndpoint(selectedCountryCode, {
-            limit: LIST_PAGE_SIZE,
-            offset: nextOffset,
-            query: debouncedQuery
-          }), controller.signal);
-
-          if (cancelled) {
-            return;
-          }
-
-          setCountryLoadedPoints((currentPoints) => mergePoints(currentPoints, nextPage.points));
-          setCountryNextOffset(nextPage.nextOffset);
-          setCountrySource(nextPage.source);
-          setCountryTotal(nextPage.total);
-          setCountryTotalKind(nextPage.totalKind);
-          nextOffset = nextPage.nextOffset;
+          setVisiblePoints(firstPage.points);
+          setNextVisiblePointOffset(firstPage.nextOffset);
+          setVisiblePointSource(firstPage.source);
+          setVisiblePointTotal(firstPage.total);
+          setVisiblePointTotalKind(firstPage.totalKind);
         }
       } catch (error) {
         if (!cancelled && !isAbortError(error)) {
-          setCountryNextOffset(null);
-          setCountryRequestError(`${mode.label} country stations are unavailable.`);
+          setNextVisiblePointOffset(null);
+          setListRequestError(`${mode.label} stations are unavailable.`);
         }
       } finally {
         if (!cancelled) {
-          setCountryListLoading(false);
+          setListLoading(false);
           setLoadingMoreVisiblePoints(false);
         }
       }
     }
 
-    void loadCountryPages();
+    void loadVisiblePoints();
 
     return () => {
       cancelled = true;
       controller.abort();
     };
-  }, [debouncedQuery, mode, selectedCountryCode]);
+  }, [debouncedQuery, mode, selectedCountryCode, sortId]);
 
   const allKnownPoints = useMemo(
-    () => mergePoints(points, countryMarkerPoints, countryListedPoints, countryLoadedPoints),
-    [countryLoadedPoints, countryListedPoints, countryMarkerPoints, points]
+    () => mergePoints(points, countryMarkerPoints, visiblePoints),
+    [countryMarkerPoints, points, visiblePoints]
   );
   const selectedPoint = useMemo(
     () => allKnownPoints.find((point) => point.id === selectedId) ?? null,
@@ -311,18 +285,6 @@ export function useModeDataset(
     };
   }, [mode, selectedId]);
 
-  const visiblePoints = useMemo(() => {
-    if (selectedCountryCode && mode.countryCatalog) {
-      return countryListedPoints;
-    }
-
-    const matchingPoints = points.filter((point) => (
-      mode.matchPoint(point, query) &&
-      (!selectedCountryCode || mode.matchCountry(point, selectedCountryCode))
-    ));
-    return mode.sortPoints(matchingPoints);
-  }, [countryListedPoints, mode, points, query, selectedCountryCode]);
-
   const globePoints = useMemo(
     () => selectedCountryCode && mode.countryCatalog
       ? mergePoints(points, countryMarkerPoints, selectedPoint ? [selectedPoint] : [])
@@ -331,39 +293,108 @@ export function useModeDataset(
   );
   const providerError = requestError
     ?? countryRequestError
-    ?? (countrySource?.isFallback || (!refreshingLivePoints && source?.isFallback) ? mode.fallbackNotice : null);
-  const hasMoreVisiblePoints = Boolean(selectedCountryCode && mode.countryCatalog && countryNextOffset !== null);
-  const totalVisiblePoints = selectedCountryCode && mode.countryCatalog ? countryTotal : visiblePoints.length;
-  const totalVisiblePointsKind = selectedCountryCode && mode.countryCatalog ? countryTotalKind : "exact";
+    ?? listRequestError
+    ?? (visiblePointSource?.isFallback || countrySource?.isFallback || (!refreshingLivePoints && source?.isFallback) ? mode.fallbackNotice : null);
+  const hasMoreVisiblePoints = nextVisiblePointOffset !== null;
+  const totalVisiblePoints = visiblePointTotal;
+  const totalVisiblePointsKind = visiblePointTotalKind;
   const clearSelection = useCallback(() => setSelectedId(null), []);
+  const loadMoreVisiblePoints = useCallback(async () => {
+    if (nextVisiblePointOffset === null || loadingMoreVisiblePoints || listLoading) {
+      return;
+    }
+
+    setLoadingMoreVisiblePoints(true);
+    setListRequestError(null);
+
+    try {
+      const nextPage = await fetchPointPage(mode.listEndpoint({
+        countryCode: selectedCountryCode,
+        limit: LIST_PAGE_SIZE,
+        offset: nextVisiblePointOffset,
+        query: debouncedQuery,
+        sortId
+      }));
+
+      setVisiblePoints((currentPoints) => mergePoints(currentPoints, nextPage.points));
+      setNextVisiblePointOffset(nextPage.nextOffset);
+      setVisiblePointSource(nextPage.source);
+      setVisiblePointTotal(nextPage.total);
+      setVisiblePointTotalKind(nextPage.totalKind);
+    } catch {
+      setNextVisiblePointOffset(null);
+      setListRequestError(`${mode.label} stations are unavailable.`);
+    } finally {
+      setLoadingMoreVisiblePoints(false);
+    }
+  }, [debouncedQuery, listLoading, loadingMoreVisiblePoints, mode, nextVisiblePointOffset, selectedCountryCode, sortId]);
   const selectPoint = useCallback((point: TerraPoint) => setSelectedId(point.id), []);
+  const isLoadingDrawerTask = loading || listLoading || loadingMoreVisiblePoints || countryMarkerLoading;
 
   return {
     detail,
     globePoints,
     hasMoreVisiblePoints,
-    listLoading: loading || countryListLoading,
-    loadedVisiblePointCount: selectedCountryCode && mode.countryCatalog ? countryLoadedPoints.length : visiblePoints.length,
+    isLoadingDrawerTask,
+    listLoading: loading || listLoading,
+    loadedVisiblePointCount: visiblePoints.length,
     loading,
+    loadingTaskLabel: getLoadingTaskLabel({
+      loading,
+      loadingMoreVisiblePoints,
+      mode,
+      query: debouncedQuery,
+      selectedCountryCode
+    }),
     loadingMoreVisiblePoints,
     points,
     providerError,
     query,
     selectedId,
     selectedPoint,
+    sortId,
     source,
     totalVisiblePoints,
     totalVisiblePointsKind,
-    visiblePointLoadingStatus: selectedCountryCode && mode.countryCatalog && visiblePoints.length > 0
-      ? loadingMoreVisiblePoints || countryNextOffset !== null
-        ? "loading"
-        : "complete"
-      : null,
     visiblePoints,
     clearSelection,
+    loadMoreVisiblePoints,
     selectPoint,
-    setQuery
+    setQuery,
+    setSortId
   };
+}
+
+function getLoadingTaskLabel({
+  loading,
+  loadingMoreVisiblePoints,
+  mode,
+  query,
+  selectedCountryCode
+}: {
+  loading: boolean;
+  loadingMoreVisiblePoints: boolean;
+  mode: TerraMode;
+  query: string;
+  selectedCountryCode: string | null;
+}) {
+  if (loading) {
+    return mode.loadingLabel;
+  }
+
+  if (loadingMoreVisiblePoints) {
+    return "Loading more stations";
+  }
+
+  if (query.trim()) {
+    return "Searching stations";
+  }
+
+  if (selectedCountryCode) {
+    return "Loading country stations";
+  }
+
+  return mode.loadingLabel;
 }
 
 function mergePoints(...pointGroups: TerraPoint[][]) {

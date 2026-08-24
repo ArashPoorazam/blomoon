@@ -1,6 +1,7 @@
 "use client";
 
-import { ChevronLeft, ChevronRight, ExternalLink, X } from "lucide-react";
+import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X } from "lucide-react";
+import { useEffect, useState } from "react";
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import { SideDrawerList } from "./SideDrawerList";
@@ -12,8 +13,9 @@ type SideDrawerProps = {
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
   hasMoreRemotePoints?: boolean;
-  loadedRemotePointCount?: number;
+  isLoadingDrawerTask: boolean;
   loading: boolean;
+  loadingTaskLabel: string;
   loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
   points: TerraPoint[];
@@ -21,16 +23,20 @@ type SideDrawerProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
+  showListedOnGlobe: boolean;
+  sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
-  remotePointLoadingStatus?: "loading" | "complete" | null;
+  onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
+  onSortChange: (sortId: string) => void;
   onToggleCollapsed: () => void;
+  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawer({
@@ -40,8 +46,9 @@ export function SideDrawer({
   detail,
   detailAccessory,
   hasMoreRemotePoints,
-  loadedRemotePointCount,
+  isLoadingDrawerTask,
   loading,
+  loadingTaskLabel,
   loadingMoreRemotePoints,
   modes,
   points,
@@ -49,21 +56,27 @@ export function SideDrawer({
   query,
   selectedCountry,
   selectedId,
+  showListedOnGlobe,
+  sortId,
   totalPoints,
   totalPointsKind,
-  remotePointLoadingStatus,
+  onCountryFilterChange,
   onClearCountrySelection,
   onClearSelection,
   onLoadMoreRemotePoints,
   onModeChange,
   onPointSelect,
   onQueryChange,
-  onToggleCollapsed
+  onSortChange,
+  onToggleCollapsed,
+  onToggleShowListedOnGlobe
 }: SideDrawerProps) {
   const isDetail = Boolean(selectedId);
 
   return (
     <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label={`${activeMode.label} data`}>
+      <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
+
       <button
         aria-label={collapsed ? "Open drawer" : "Close drawer"}
         className="drawer-toggle"
@@ -86,7 +99,6 @@ export function SideDrawer({
             activeMode={activeMode}
             activeModeId={activeModeId}
             hasMoreRemotePoints={hasMoreRemotePoints}
-            loadedRemotePointCount={loadedRemotePointCount}
             loading={loading}
             loadingMoreRemotePoints={loadingMoreRemotePoints}
             modes={modes}
@@ -95,18 +107,59 @@ export function SideDrawer({
             query={query}
             selectedCountry={selectedCountry}
             selectedId={selectedId}
+            showListedOnGlobe={showListedOnGlobe}
+            sortId={sortId}
             totalPoints={totalPoints}
             totalPointsKind={totalPointsKind}
-            remotePointLoadingStatus={remotePointLoadingStatus}
+            onCountryFilterChange={onCountryFilterChange}
             onClearCountrySelection={onClearCountrySelection}
             onLoadMoreRemotePoints={onLoadMoreRemotePoints}
             onModeChange={onModeChange}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
+            onSortChange={onSortChange}
+            onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
           />
         )}
       </div>
     </aside>
+  );
+}
+
+function DrawerLoadingStatus({ active, label }: { active: boolean; label: string }) {
+  const [visible, setVisible] = useState(false);
+  const [status, setStatus] = useState<"loading" | "complete">("loading");
+
+  useEffect(() => {
+    if (active) {
+      setVisible(true);
+      setStatus("loading");
+      return;
+    }
+
+    setStatus("complete");
+    const timeout = window.setTimeout(() => {
+      setVisible(false);
+    }, 1500);
+
+    return () => {
+      window.clearTimeout(timeout);
+    };
+  }, [active]);
+
+  if (!visible) {
+    return null;
+  }
+
+  return (
+    <div className={`drawer-loading-panel ${status}`} role="status" aria-live="polite">
+      {status === "loading" ? (
+        <LoaderCircle className="drawer-loading-icon spinning" size={18} aria-hidden="true" />
+      ) : (
+        <CheckCircle2 className="drawer-loading-icon" size={18} aria-hidden="true" />
+      )}
+      <span>{status === "loading" ? label : "Loaded"}</span>
+    </div>
   );
 }
 
