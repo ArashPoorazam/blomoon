@@ -28,7 +28,9 @@
   --tooltip-bg: rgba(22, 22, 30, 0.94);
   --shadow-panel: rgba(0, 0, 0, 0.42);
   --shadow-tooltip: rgba(0, 0, 0, 0.34);
-  --loading-bg: rgba(8, 8, 8, 0.68);
+  --scrollbar-thumb: rgba(122, 162, 247, 0.34);
+  --scrollbar-thumb-hover: rgba(125, 207, 255, 0.52);
+  --scrollbar-track: rgba(255, 255, 255, 0.035);
   --drawer-width: min(390px, 88vw);
   --panel-blur: 20px;
 }
@@ -62,5 +64,7 @@
   --tooltip-bg: rgba(250, 247, 239, 0.96);
   --shadow-panel: rgba(16, 24, 40, 0.24);
   --shadow-tooltip: rgba(16, 24, 40, 0.18);
-  --loading-bg: rgba(250, 247, 239, 0.78);
+  --scrollbar-thumb: rgba(47, 128, 237, 0.32);
+  --scrollbar-thumb-hover: rgba(11, 102, 195, 0.5);
+  --scrollbar-track: rgba(39, 54, 74, 0.055);
 }

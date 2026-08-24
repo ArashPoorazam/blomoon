@@ -211,6 +211,36 @@
   padding: 0 12px 18px;
 }
 
+.point-list,
+.detail-body {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+.point-list::-webkit-scrollbar,
+.detail-body::-webkit-scrollbar {
+  width: 10px;
+}
+
+.point-list::-webkit-scrollbar-track,
+.detail-body::-webkit-scrollbar-track {
+  background: var(--scrollbar-track);
+}
+
+.point-list::-webkit-scrollbar-thumb,
+.detail-body::-webkit-scrollbar-thumb {
+  border: 2px solid transparent;
+  border-radius: 999px;
+  background: var(--scrollbar-thumb);
+  background-clip: padding-box;
+}
+
+.point-list::-webkit-scrollbar-thumb:hover,
+.detail-body::-webkit-scrollbar-thumb:hover {
+  background: var(--scrollbar-thumb-hover);
+  background-clip: padding-box;
+}
+
 .point-row {
   display: grid;
   width: 100%;

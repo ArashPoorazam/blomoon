@@ -50,6 +50,16 @@ export async function getRadioDataset(force = false): Promise<TerraDataset> {
   };
 }
 
+export function getRadioFixtureDataset(): TerraDataset {
+  const catalog = createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, Date.now(), true);
+
+  return {
+    modeId: "radio",
+    source: catalog.source,
+    points: catalog.worldRecords.map((record) => record.point)
+  };
+}
+
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
   const { records, source } = await getCountryRecordsWithSource(countryCode);
 

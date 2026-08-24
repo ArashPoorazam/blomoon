@@ -14,6 +14,11 @@ import {
   latLonToVector3
 } from "./globeMath";
 
+type CameraFocusTarget = {
+  distance: number | null;
+  normal: THREE.Vector3;
+};
+
 export function CameraFocus({
   focusKey,
   selectedPoint
@@ -22,8 +27,9 @@ export function CameraFocus({
   selectedPoint: TerraPoint | null;
 }) {
   const lastFocusKey = useRef<string | null>(null);
-  const focusTarget = useRef<THREE.Vector3 | null>(null);
+  const focusTarget = useRef<CameraFocusTarget | null>(null);
   const target = useMemo(() => new THREE.Vector3(0, 0, 0), []);
+  const targetPosition = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
     if (!selectedPoint || !focusKey || lastFocusKey.current === focusKey) {
@@ -31,7 +37,10 @@ export function CameraFocus({
     }
 
     lastFocusKey.current = focusKey;
-    focusTarget.current = latLonToVector3(selectedPoint.latitude, selectedPoint.longitude, 1).normalize().multiplyScalar(4.65);
+    focusTarget.current = {
+      distance: null,
+      normal: latLonToVector3(selectedPoint.latitude, selectedPoint.longitude, 1).normalize()
+    };
   }, [focusKey, selectedPoint]);
 
   useFrame(({ camera }, delta) => {
@@ -39,12 +48,14 @@ export function CameraFocus({
       return;
     }
 
-    const alpha = 1 - Math.pow(0.025, delta);
+    focusTarget.current.distance ??= camera.position.length();
+    targetPosition.copy(focusTarget.current.normal).multiplyScalar(focusTarget.current.distance);
 
-    camera.position.lerp(focusTarget.current, alpha);
+    const alpha = 1 - Math.pow(0.025, delta);
+    camera.position.lerp(targetPosition, alpha).setLength(focusTarget.current.distance);
     camera.lookAt(target);
 
-    if (camera.position.distanceTo(focusTarget.current) < 0.025) {
+    if (camera.position.distanceTo(targetPosition) < 0.025) {
       focusTarget.current = null;
     }
   });

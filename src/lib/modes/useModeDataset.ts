@@ -26,13 +26,18 @@ export type ModeDatasetState = {
   setQuery: (value: string) => void;
 };
 
-export function useModeDataset(mode: TerraMode, selectedCountryCode: string | null): ModeDatasetState {
-  const [points, setPoints] = useState<TerraPoint[]>([]);
-  const [source, setSource] = useState<DataSourceInfo | null>(null);
+export function useModeDataset(
+  mode: TerraMode,
+  selectedCountryCode: string | null,
+  initialDataset?: TerraDataset
+): ModeDatasetState {
+  const initialModeDataset = getInitialDataset(mode, initialDataset);
+  const [points, setPoints] = useState<TerraPoint[]>(() => initialModeDataset?.points ?? []);
+  const [source, setSource] = useState<DataSourceInfo | null>(() => initialModeDataset?.source ?? null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<TerraPointDetail | null>(null);
   const [query, setQuery] = useState("");
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !initialModeDataset);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [countryMarkerPoints, setCountryMarkerPoints] = useState<TerraPoint[]>([]);
   const [countryPagePoints, setCountryPagePoints] = useState<TerraPoint[]>([]);
@@ -46,11 +51,15 @@ export function useModeDataset(mode: TerraMode, selectedCountryCode: string | nu
     let cancelled = false;
 
     async function loadPoints() {
-      setLoading(true);
+      const seededDataset = getInitialDataset(mode, initialDataset);
+
+      setLoading(!seededDataset);
       setRequestError(null);
       setSelectedId(null);
       setDetail(null);
       setQuery("");
+      setPoints(seededDataset?.points ?? []);
+      setSource(seededDataset?.source ?? null);
 
       try {
         const response = await fetch(mode.dataEndpoint, { cache: "no-store" });
@@ -66,7 +75,7 @@ export function useModeDataset(mode: TerraMode, selectedCountryCode: string | nu
           setSource(dataset.source);
         }
       } catch {
-        if (!cancelled) {
+        if (!cancelled && !seededDataset) {
           setPoints([]);
           setSource(null);
           setRequestError(`${mode.label} data is unavailable.`);
@@ -83,7 +92,7 @@ export function useModeDataset(mode: TerraMode, selectedCountryCode: string | nu
     return () => {
       cancelled = true;
     };
-  }, [mode]);
+  }, [initialDataset, mode]);
 
   useEffect(() => {
     let cancelled = false;
@@ -325,4 +334,8 @@ function mergePoints(...pointGroups: TerraPoint[][]) {
   });
 
   return Array.from(pointsById.values());
+}
+
+function getInitialDataset(mode: TerraMode, initialDataset?: TerraDataset) {
+  return initialDataset?.modeId === mode.id ? initialDataset : null;
 }

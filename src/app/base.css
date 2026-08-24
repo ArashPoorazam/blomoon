@@ -95,24 +95,6 @@ button {
   line-height: 1.2;
 }
 
-.loading-layer {
-  position: absolute;
-  inset: 0;
-  z-index: 4;
-  display: grid;
-  place-items: center;
-  pointer-events: none;
-}
-
-.loading-pill {
-  padding: 10px 13px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--loading-bg);
-  color: var(--muted-strong);
-  font-size: 13px;
-}
-
 @media (max-width: 760px) {
   .terravue-shell {
     min-height: 100svh;

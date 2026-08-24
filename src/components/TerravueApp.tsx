@@ -4,7 +4,7 @@ import { Palette } from "lucide-react";
 import { useCallback, useRef, useState, type MouseEvent } from "react";
 import { findCountryByCode, formatCoordinate, getCountryAtCoordinates, type CountryInfo } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
-import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
+import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { resolvePointMarkerColor } from "@/lib/theme/globe";
@@ -19,7 +19,11 @@ import { GlobeScene } from "./GlobeScene";
 import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
 import { SideDrawer } from "./SideDrawer";
 
-export function TerravueApp() {
+type TerravueAppProps = {
+  initialDatasets?: Partial<Record<TerraModeId, TerraDataset>>;
+};
+
+export function TerravueApp({ initialDatasets }: TerravueAppProps) {
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
@@ -29,7 +33,7 @@ export function TerravueApp() {
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
   const nextTheme = getNextTerraTheme(themeId);
-  const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null);
+  const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id]);
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const drawerOpen = !drawerCollapsed;
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
@@ -105,12 +109,6 @@ export function TerravueApp() {
       >
         <Palette size={18} aria-hidden="true" />
       </button>
-
-      {modeState.loading ? (
-        <div className="loading-layer">
-          <div className="loading-pill">{activeMode.loadingLabel}</div>
-        </div>
-      ) : null}
 
       {hoveredPoint ? (
         <div
