@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, X } from "lucide-react";
+import { CheckCircle2, LoaderCircle, Search, X } from "lucide-react";
 import { useEffect, useMemo, useState } from "react";
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
@@ -11,6 +11,7 @@ type SideDrawerListProps = {
   activeMode: TerraMode;
   activeModeId: TerraModeId;
   hasMoreRemotePoints?: boolean;
+  loadedRemotePointCount?: number;
   loading: boolean;
   loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
@@ -21,6 +22,7 @@ type SideDrawerListProps = {
   selectedId: string | null;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
+  remotePointLoadingStatus?: "loading" | "complete" | null;
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
@@ -32,6 +34,7 @@ export function SideDrawerList({
   activeMode,
   activeModeId,
   hasMoreRemotePoints,
+  loadedRemotePointCount,
   loading,
   loadingMoreRemotePoints,
   modes,
@@ -42,6 +45,7 @@ export function SideDrawerList({
   selectedId,
   totalPoints,
   totalPointsKind,
+  remotePointLoadingStatus,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
   onModeChange,
@@ -49,13 +53,15 @@ export function SideDrawerList({
   onQueryChange
 }: SideDrawerListProps) {
   const [visibleLimit, setVisibleLimit] = useState(LIST_PAGE_SIZE);
-  const usesRemotePaging = Boolean(onLoadMoreRemotePoints);
+  const usesRemoteStatus = Boolean(remotePointLoadingStatus);
+  const usesRemotePaging = usesRemoteStatus || Boolean(onLoadMoreRemotePoints);
   const listedPoints = useMemo(
     () => usesRemotePaging ? points : points.slice(0, visibleLimit),
     [points, usesRemotePaging, visibleLimit]
   );
+  const loadedPointCount = usesRemoteStatus ? loadedRemotePointCount ?? points.length : points.length;
   const matchingPointCount = usesRemotePaging ? totalPoints : points.length;
-  const hasMorePoints = usesRemotePaging ? Boolean(hasMoreRemotePoints) : listedPoints.length < points.length;
+  const hasMorePoints = usesRemoteStatus ? false : usesRemotePaging ? Boolean(hasMoreRemotePoints) : listedPoints.length < points.length;
   const isLoadingMorePoints = Boolean(loadingMoreRemotePoints);
 
   useEffect(() => {
@@ -78,8 +84,10 @@ export function SideDrawerList({
               ? activeMode.loadingLabel
               : formatVisibleCount({
                 listedCount: listedPoints.length,
+                loadedCount: loadedPointCount,
                 loadingMore: isLoadingMorePoints,
                 matchingCount: matchingPointCount,
+                remoteStatus: remotePointLoadingStatus ?? null,
                 totalCount: totalPoints,
                 totalKind: totalPointsKind
               })}
@@ -124,7 +132,9 @@ export function SideDrawerList({
             </button>
           ))
         )}
-        {hasMorePoints ? (
+        {usesRemoteStatus ? (
+          <RemoteLoadingStatusButton status={remotePointLoadingStatus} />
+        ) : hasMorePoints ? (
           <button
             className="point-list-more"
             disabled={isLoadingMorePoints}
@@ -143,6 +153,29 @@ export function SideDrawerList({
         ) : null}
       </div>
     </>
+  );
+}
+
+function RemoteLoadingStatusButton({
+  status
+}: {
+  status: "loading" | "complete" | null | undefined;
+}) {
+  if (!status) {
+    return null;
+  }
+
+  const loading = status === "loading";
+
+  return (
+    <button className="point-list-more point-list-status" disabled type="button">
+      {loading ? (
+        <LoaderCircle className="loading-status-icon spinning" size={15} aria-hidden="true" />
+      ) : (
+        <CheckCircle2 className="loading-status-icon" size={15} aria-hidden="true" />
+      )}
+      {loading ? "Loading more..." : "Loaded all"}
+    </button>
   );
 }
 
@@ -205,20 +238,28 @@ function ProviderNotice({ message }: { message: string | null }) {
 }
 
 function formatVisibleCount({
+  loadedCount,
   listedCount,
   loadingMore,
   matchingCount,
+  remoteStatus,
   totalCount,
   totalKind
 }: {
+  loadedCount: number;
   listedCount: number;
   loadingMore: boolean;
   matchingCount: number;
+  remoteStatus: "loading" | "complete" | null;
   totalCount: number;
   totalKind: "exact" | "lowerBound";
 }) {
   if (matchingCount === 0) {
     return "0 visible points";
+  }
+
+  if (remoteStatus) {
+    return `${listedCount} listed, ${loadedCount} loaded`;
   }
 
   if (totalKind === "lowerBound") {

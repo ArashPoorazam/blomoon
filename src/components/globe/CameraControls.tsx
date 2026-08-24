@@ -19,6 +19,11 @@ type CameraFocusTarget = {
   normal: THREE.Vector3;
 };
 
+const RIGHT_MOUSE_ORBIT_BUTTONS = {
+  MIDDLE: THREE.MOUSE.DOLLY,
+  RIGHT: THREE.MOUSE.ROTATE
+} as const;
+
 export function CameraFocus({
   focusKey,
   selectedPoint
@@ -66,6 +71,14 @@ export function CameraFocus({
 export function AdaptiveOrbitControls() {
   const controlsRef = useRef<OrbitControlsImpl>(null);
 
+  useEffect(() => {
+    if (!controlsRef.current) {
+      return;
+    }
+
+    controlsRef.current.mouseButtons = RIGHT_MOUSE_ORBIT_BUTTONS;
+  }, []);
+
   useFrame(({ camera }) => {
     if (!controlsRef.current) {
       return;
@@ -81,6 +94,7 @@ export function AdaptiveOrbitControls() {
       enablePan={false}
       maxDistance={MAX_CAMERA_DISTANCE}
       minDistance={MIN_CAMERA_DISTANCE}
+      mouseButtons={RIGHT_MOUSE_ORBIT_BUTTONS}
       rotateSpeed={DEFAULT_ROTATE_SPEED}
     />
   );

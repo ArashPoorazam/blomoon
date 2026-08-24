@@ -137,6 +137,10 @@ export function findCountryByCode(code?: string | null): CountryInfo | null {
   return normalizedCode ? getCountryByCode().get(normalizedCode) ?? null : null;
 }
 
+export function getKnownCountries(): CountryInfo[] {
+  return Array.from(getCountryByCode().values());
+}
+
 export function normalizeCountryCode(code?: string | null, displayName?: string | null) {
   const knownCode = normalizeKnownCountryCode(code);
 

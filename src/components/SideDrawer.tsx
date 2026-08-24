@@ -12,6 +12,7 @@ type SideDrawerProps = {
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
   hasMoreRemotePoints?: boolean;
+  loadedRemotePointCount?: number;
   loading: boolean;
   loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
@@ -22,6 +23,7 @@ type SideDrawerProps = {
   selectedId: string | null;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
+  remotePointLoadingStatus?: "loading" | "complete" | null;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
   onLoadMoreRemotePoints?: () => void;
@@ -38,6 +40,7 @@ export function SideDrawer({
   detail,
   detailAccessory,
   hasMoreRemotePoints,
+  loadedRemotePointCount,
   loading,
   loadingMoreRemotePoints,
   modes,
@@ -48,6 +51,7 @@ export function SideDrawer({
   selectedId,
   totalPoints,
   totalPointsKind,
+  remotePointLoadingStatus,
   onClearCountrySelection,
   onClearSelection,
   onLoadMoreRemotePoints,
@@ -82,6 +86,7 @@ export function SideDrawer({
             activeMode={activeMode}
             activeModeId={activeModeId}
             hasMoreRemotePoints={hasMoreRemotePoints}
+            loadedRemotePointCount={loadedRemotePointCount}
             loading={loading}
             loadingMoreRemotePoints={loadingMoreRemotePoints}
             modes={modes}
@@ -92,6 +97,7 @@ export function SideDrawer({
             selectedId={selectedId}
             totalPoints={totalPoints}
             totalPointsKind={totalPointsKind}
+            remotePointLoadingStatus={remotePointLoadingStatus}
             onClearCountrySelection={onClearCountrySelection}
             onLoadMoreRemotePoints={onLoadMoreRemotePoints}
             onModeChange={onModeChange}

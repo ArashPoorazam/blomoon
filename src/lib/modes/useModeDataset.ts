@@ -11,6 +11,7 @@ export type ModeDatasetState = {
   globePoints: TerraPoint[];
   hasMoreVisiblePoints: boolean;
   listLoading: boolean;
+  loadedVisiblePointCount: number;
   loading: boolean;
   loadingMoreVisiblePoints: boolean;
   points: TerraPoint[];
@@ -21,9 +22,9 @@ export type ModeDatasetState = {
   source: DataSourceInfo | null;
   totalVisiblePoints: number;
   totalVisiblePointsKind: TerraPointPage["totalKind"];
+  visiblePointLoadingStatus: "loading" | "complete" | null;
   visiblePoints: TerraPoint[];
   clearSelection: () => void;
-  loadMoreVisiblePoints: () => void;
   selectPoint: (point: TerraPoint) => void;
   setQuery: (value: string) => void;
 };
@@ -44,7 +45,8 @@ export function useModeDataset(
   const [refreshingLivePoints, setRefreshingLivePoints] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [countryMarkerPoints, setCountryMarkerPoints] = useState<TerraPoint[]>([]);
-  const [countryPagePoints, setCountryPagePoints] = useState<TerraPoint[]>([]);
+  const [countryListedPoints, setCountryListedPoints] = useState<TerraPoint[]>([]);
+  const [countryLoadedPoints, setCountryLoadedPoints] = useState<TerraPoint[]>([]);
   const [countryNextOffset, setCountryNextOffset] = useState<number | null>(null);
   const [countrySource, setCountrySource] = useState<DataSourceInfo | null>(null);
   const [countryTotal, setCountryTotal] = useState(0);
@@ -167,7 +169,8 @@ export function useModeDataset(
       const countryCatalog = mode.countryCatalog;
 
       if (!selectedCountryCode || !countryCatalog) {
-        setCountryPagePoints([]);
+        setCountryListedPoints([]);
+        setCountryLoadedPoints([]);
         setCountryNextOffset(null);
         setCountrySource(null);
         setCountryTotal(0);
@@ -181,7 +184,8 @@ export function useModeDataset(
       setCountryListLoading(true);
       setLoadingMoreVisiblePoints(false);
       setCountryRequestError(null);
-      setCountryPagePoints([]);
+      setCountryListedPoints([]);
+      setCountryLoadedPoints([]);
       setCountryNextOffset(null);
       setCountryTotal(0);
       setCountryTotalKind("exact");
@@ -194,7 +198,8 @@ export function useModeDataset(
         }), controller.signal);
 
         if (!cancelled) {
-          setCountryPagePoints(firstPage.points);
+          setCountryListedPoints(firstPage.points);
+          setCountryLoadedPoints(firstPage.points);
           setCountryNextOffset(firstPage.nextOffset);
           setCountrySource(firstPage.source);
           setCountryTotal(firstPage.total);
@@ -219,7 +224,7 @@ export function useModeDataset(
             return;
           }
 
-          setCountryPagePoints((currentPoints) => mergePoints(currentPoints, nextPage.points));
+          setCountryLoadedPoints((currentPoints) => mergePoints(currentPoints, nextPage.points));
           setCountryNextOffset(nextPage.nextOffset);
           setCountrySource(nextPage.source);
           setCountryTotal(nextPage.total);
@@ -228,6 +233,7 @@ export function useModeDataset(
         }
       } catch (error) {
         if (!cancelled && !isAbortError(error)) {
+          setCountryNextOffset(null);
           setCountryRequestError(`${mode.label} country stations are unavailable.`);
         }
       } finally {
@@ -247,8 +253,8 @@ export function useModeDataset(
   }, [debouncedQuery, mode, selectedCountryCode]);
 
   const allKnownPoints = useMemo(
-    () => mergePoints(points, countryMarkerPoints, countryPagePoints),
-    [countryMarkerPoints, countryPagePoints, points]
+    () => mergePoints(points, countryMarkerPoints, countryListedPoints, countryLoadedPoints),
+    [countryLoadedPoints, countryListedPoints, countryMarkerPoints, points]
   );
   const selectedPoint = useMemo(
     () => allKnownPoints.find((point) => point.id === selectedId) ?? null,
@@ -307,7 +313,7 @@ export function useModeDataset(
 
   const visiblePoints = useMemo(() => {
     if (selectedCountryCode && mode.countryCatalog) {
-      return countryPagePoints;
+      return countryListedPoints;
     }
 
     const matchingPoints = points.filter((point) => (
@@ -315,7 +321,7 @@ export function useModeDataset(
       (!selectedCountryCode || mode.matchCountry(point, selectedCountryCode))
     ));
     return mode.sortPoints(matchingPoints);
-  }, [countryPagePoints, mode, points, query, selectedCountryCode]);
+  }, [countryListedPoints, mode, points, query, selectedCountryCode]);
 
   const globePoints = useMemo(
     () => selectedCountryCode && mode.countryCatalog
@@ -330,42 +336,6 @@ export function useModeDataset(
   const totalVisiblePoints = selectedCountryCode && mode.countryCatalog ? countryTotal : visiblePoints.length;
   const totalVisiblePointsKind = selectedCountryCode && mode.countryCatalog ? countryTotalKind : "exact";
   const clearSelection = useCallback(() => setSelectedId(null), []);
-  const loadMoreVisiblePoints = useCallback(() => {
-    const countryCatalog = mode.countryCatalog;
-    const nextOffset = countryNextOffset;
-    const countryCode = selectedCountryCode;
-
-    if (!countryCode || !countryCatalog || nextOffset === null || loadingMoreVisiblePoints) {
-      return;
-    }
-
-    const endpoint = countryCatalog.searchEndpoint(countryCode, {
-      limit: LIST_PAGE_SIZE,
-      offset: nextOffset,
-      query: debouncedQuery
-    });
-
-    async function loadNextPage() {
-      setLoadingMoreVisiblePoints(true);
-      setCountryRequestError(null);
-
-      try {
-        const page = await fetchPointPage(endpoint);
-
-        setCountryPagePoints((currentPoints) => mergePoints(currentPoints, page.points));
-        setCountryNextOffset(page.nextOffset);
-        setCountrySource(page.source);
-        setCountryTotal(page.total);
-        setCountryTotalKind(page.totalKind);
-      } catch {
-        setCountryRequestError(`${mode.label} country stations are unavailable.`);
-      } finally {
-        setLoadingMoreVisiblePoints(false);
-      }
-    }
-
-    void loadNextPage();
-  }, [countryNextOffset, debouncedQuery, loadingMoreVisiblePoints, mode, selectedCountryCode]);
   const selectPoint = useCallback((point: TerraPoint) => setSelectedId(point.id), []);
 
   return {
@@ -373,6 +343,7 @@ export function useModeDataset(
     globePoints,
     hasMoreVisiblePoints,
     listLoading: loading || countryListLoading,
+    loadedVisiblePointCount: selectedCountryCode && mode.countryCatalog ? countryLoadedPoints.length : visiblePoints.length,
     loading,
     loadingMoreVisiblePoints,
     points,
@@ -383,9 +354,13 @@ export function useModeDataset(
     source,
     totalVisiblePoints,
     totalVisiblePointsKind,
+    visiblePointLoadingStatus: selectedCountryCode && mode.countryCatalog && visiblePoints.length > 0
+      ? loadingMoreVisiblePoints || countryNextOffset !== null
+        ? "loading"
+        : "complete"
+      : null,
     visiblePoints,
     clearSelection,
-    loadMoreVisiblePoints,
     selectPoint,
     setQuery
   };

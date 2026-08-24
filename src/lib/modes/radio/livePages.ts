@@ -1,6 +1,8 @@
-import { getAlphaCountryCode } from "@/lib/geo";
+import { getAlphaCountryCode, getKnownCountries } from "@/lib/geo";
 import {
+  COUNTRY_COVERAGE_LIMIT,
   COUNTRY_MARKER_LIMIT,
+  RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY,
   RADIO_PROVIDER_COUNTRY_PAGE_LIMIT,
   RADIO_PROVIDER_CATALOG_TIMEOUT_MS,
   RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY,
@@ -64,6 +66,20 @@ export async function getLiveWorldRecords() {
 }
 
 async function getLiveWorldRecordsFromHost(host: string) {
+  const [worldRecords, countryCoverageRecords] = await Promise.all([
+    getLiveTopVotedWorldRecordsFromHost(host),
+    getLiveCountryCoverageRecordsFromHost(host)
+  ]);
+  const recordsById = new Map<string, RadioStationRecord>();
+
+  [...worldRecords, ...countryCoverageRecords].forEach((record) => {
+    recordsById.set(record.point.id, record);
+  });
+
+  return sortRadioRecords(Array.from(recordsById.values()));
+}
+
+async function getLiveTopVotedWorldRecordsFromHost(host: string) {
   const recordsById = new Map<string, RadioStationRecord>();
   let exhausted = false;
   let nextOffset = 0;
@@ -101,6 +117,73 @@ async function getLiveWorldRecordsFromHost(host: string) {
   }
 
   return sortRadioRecords(Array.from(recordsById.values())).slice(0, WORLD_MARKER_LIMIT);
+}
+
+async function getLiveCountryCoverageRecordsFromHost(host: string) {
+  const countries = getKnownCountries()
+    .map((country) => ({
+      alphaCode: getAlphaCountryCode(country.code),
+      code: country.code
+    }))
+    .filter((country): country is { alphaCode: string; code: string } => Boolean(country.alphaCode));
+  const countryRecords = await mapWithConcurrency(
+    countries,
+    RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY,
+    async (country) => {
+      try {
+        return await getLiveCountryCoverageRecordsForHost(host, country);
+      } catch {
+        return [];
+      }
+    }
+  );
+
+  return countryRecords.flat();
+}
+
+async function getLiveCountryCoverageRecordsForHost(
+  host: string,
+  {
+    alphaCode,
+    code
+  }: {
+    alphaCode: string;
+    code: string;
+  }
+) {
+  const recordsById = new Map<string, RadioStationRecord>();
+  let exhausted = false;
+  let nextOffset = 0;
+
+  while (recordsById.size < COUNTRY_COVERAGE_LIMIT && !exhausted) {
+    const page = await fetchNormalizedStationPage(
+      {
+        ...getCountryStationPageRequest({
+          alphaCode,
+          offset: nextOffset,
+          query: ""
+        }),
+        host,
+        timeoutMs: RADIO_PROVIDER_CATALOG_TIMEOUT_MS
+      },
+      (record) => record.point.countryCode === code
+    );
+
+    page.records.forEach((record) => {
+      if (recordsById.size < COUNTRY_COVERAGE_LIMIT) {
+        recordsById.set(record.point.id, record);
+      }
+    });
+
+    if (page.nextOffset === null) {
+      exhausted = true;
+      break;
+    }
+
+    nextOffset = page.nextOffset;
+  }
+
+  return sortRadioRecords(Array.from(recordsById.values())).slice(0, COUNTRY_COVERAGE_LIMIT);
 }
 
 export async function getLiveCountryMarkerRecords(countryCode: string) {

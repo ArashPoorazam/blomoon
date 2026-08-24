@@ -5,8 +5,7 @@ import {
   FALLBACK_CACHE_TTL_MS,
   STATION_CACHE_TTL_MS,
   STREAM_CACHE_TTL_MS,
-  STREAM_VALIDATION_TIMEOUT_MS,
-  WORLD_MARKER_LIMIT
+  STREAM_VALIDATION_TIMEOUT_MS
 } from "./config";
 import {
   compareRadioRecords,
@@ -293,7 +292,7 @@ function createCountryIndex(records: RadioStationRecord[]) {
 }
 
 function selectWorldRecords(records: RadioStationRecord[]) {
-  return records.slice(0, WORLD_MARKER_LIMIT);
+  return records;
 }
 
 function getFallbackCountryPointPage(

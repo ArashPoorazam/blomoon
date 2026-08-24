@@ -281,6 +281,32 @@
   color: var(--text);
 }
 
+.point-list-status {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  cursor: default;
+}
+
+.point-list-status:disabled {
+  opacity: 1;
+}
+
+.loading-status-icon {
+  color: var(--accent);
+}
+
+.loading-status-icon.spinning {
+  animation: status-spin 900ms linear infinite;
+}
+
+@keyframes status-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 .point-copy {
   display: block;
   min-width: 0;

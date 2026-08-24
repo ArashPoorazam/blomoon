@@ -130,6 +130,7 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
         detail={modeState.detail}
         detailAccessory={detailAccessory}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
+        loadedRemotePointCount={modeState.loadedVisiblePointCount}
         loading={modeState.listLoading}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
         modes={terraModes}
@@ -140,9 +141,10 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
         selectedId={modeState.selectedId}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
+        remotePointLoadingStatus={modeState.visiblePointLoadingStatus}
         onClearCountrySelection={clearCountrySelection}
         onClearSelection={modeState.clearSelection}
-        onLoadMoreRemotePoints={modeState.hasMoreVisiblePoints ? modeState.loadMoreVisiblePoints : undefined}
+        onLoadMoreRemotePoints={undefined}
         onModeChange={selectMode}
         onPointSelect={selectPoint}
         onQueryChange={modeState.setQuery}
