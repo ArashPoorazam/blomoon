@@ -21,6 +21,7 @@ type SideDrawerProps = {
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
   totalPoints: number;
+  totalPointsKind: "exact" | "lowerBound";
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
   onLoadMoreRemotePoints?: () => void;
@@ -46,6 +47,7 @@ export function SideDrawer({
   selectedCountry,
   selectedId,
   totalPoints,
+  totalPointsKind,
   onClearCountrySelection,
   onClearSelection,
   onLoadMoreRemotePoints,
@@ -89,6 +91,7 @@ export function SideDrawer({
             selectedCountry={selectedCountry}
             selectedId={selectedId}
             totalPoints={totalPoints}
+            totalPointsKind={totalPointsKind}
             onClearCountrySelection={onClearCountrySelection}
             onLoadMoreRemotePoints={onLoadMoreRemotePoints}
             onModeChange={onModeChange}

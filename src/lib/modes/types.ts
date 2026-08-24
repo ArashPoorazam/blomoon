@@ -44,6 +44,7 @@ export type TerraPointPage = TerraDataset & {
   nextOffset: number | null;
   offset: number;
   total: number;
+  totalKind: "exact" | "lowerBound";
 };
 
 export type TerraPlaybackConfig = {

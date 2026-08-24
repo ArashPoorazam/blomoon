@@ -1,17 +1,20 @@
 import type { DataSourceInfo, TerraDataset, TerraPlayableAudio, TerraPointPage } from "../types";
 import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "../fixtures/radio";
-import { getAlphaCountryCode } from "@/lib/geo";
 import {
   COUNTRY_MARKER_LIMIT,
   FALLBACK_CACHE_TTL_MS,
-  RADIO_PROVIDER_CATALOG_LIMIT,
-  RADIO_PROVIDER_COUNTRY_LIMIT,
   STATION_CACHE_TTL_MS,
   STREAM_CACHE_TTL_MS,
   STREAM_VALIDATION_TIMEOUT_MS,
-  WORLD_MARKER_LIMIT,
-  WORLD_MIN_COUNTRY_STATIONS
+  WORLD_MARKER_LIMIT
 } from "./config";
+import {
+  compareRadioRecords,
+  getLiveCountryMarkerRecords,
+  getLiveCountryRecordPage,
+  getLiveWorldRecords,
+  sortRadioRecords
+} from "./livePages";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
 import { fetchRadioBrowserJson } from "./provider";
 import type {
@@ -35,10 +38,6 @@ let catalogCache: RadioCatalog | null = null;
 let catalogRefresh: Promise<RadioCatalog> | null = null;
 
 const playableCache = new Map<string, PlayableCacheEntry>();
-const countryRecordCache = new Map<string, {
-  fetchedAt: number;
-  records: RadioStationRecord[];
-}>();
 
 export async function getRadioDataset(force = false): Promise<TerraDataset> {
   const catalog = await getRadioCatalog(force);
@@ -61,13 +60,24 @@ export function getRadioFixtureDataset(): TerraDataset {
 }
 
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
-  const { records, source } = await getCountryRecordsWithSource(countryCode);
+  try {
+    const records = await getLiveCountryMarkerRecords(countryCode);
 
-  return {
-    modeId: "radio",
-    source,
-    points: records.slice(0, COUNTRY_MARKER_LIMIT).map((record) => record.point)
-  };
+    return {
+      modeId: "radio",
+      source: createLiveSource(),
+      points: records.map((record) => record.point)
+    };
+  } catch {
+    const catalog = await getRadioCatalog();
+    const records = catalog.recordsByCountry.get(countryCode) ?? [];
+
+    return {
+      modeId: "radio",
+      source: createFallbackSource(catalog.source),
+      points: records.slice(0, COUNTRY_MARKER_LIMIT).map((record) => record.point)
+    };
+  }
 }
 
 export async function getRadioCountryPointPage({
@@ -81,21 +91,33 @@ export async function getRadioCountryPointPage({
   offset: number;
   query: string;
 }): Promise<TerraPointPage> {
-  const { records: countryRecords, source } = await getCountryRecordsWithSource(countryCode);
-  const terms = normalizeQuery(query);
-  const records = countryRecords.filter((record) => matchesSearch(record, terms));
-  const points = records.slice(offset, offset + limit).map((record) => record.point);
-  const nextOffset = offset + limit < records.length ? offset + limit : null;
+  try {
+    const page = await getLiveCountryRecordPage({
+      countryCode,
+      limit,
+      offset,
+      query
+    });
 
-  return {
-    modeId: "radio",
-    source,
-    points,
-    limit,
-    nextOffset,
-    offset,
-    total: records.length
-  };
+    return {
+      modeId: "radio",
+      source: createLiveSource(),
+      points: page.records.map((record) => record.point),
+      limit,
+      nextOffset: page.nextOffset,
+      offset,
+      total: page.total,
+      totalKind: page.totalKind
+    };
+  } catch {
+    const catalog = await getRadioCatalog();
+    return getFallbackCountryPointPage(catalog, {
+      countryCode,
+      limit,
+      offset,
+      query
+    });
+  }
 }
 
 export async function getRadioDetail(id: string) {
@@ -158,13 +180,7 @@ async function getRadioCatalog(force = false): Promise<RadioCatalog> {
 
 async function refreshRadioCatalog(fetchedAt: number) {
   try {
-    const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/topvote", {
-      hidebroken: "true",
-      limit: String(RADIO_PROVIDER_CATALOG_LIMIT)
-    });
-    const records = stations
-      .map(normalizeStation)
-      .filter((record): record is RadioStationRecord => Boolean(record));
+    const records = await getLiveWorldRecords();
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable stations");
@@ -186,6 +202,13 @@ function createLiveSource(): DataSourceInfo {
     url: "https://www.radio-browser.info/",
     attribution: "Community radio station data provided by Radio Browser.",
     lastUpdated: new Date().toISOString()
+  };
+}
+
+function createFallbackSource(source: DataSourceInfo): DataSourceInfo {
+  return {
+    ...source,
+    isFallback: true
   };
 }
 
@@ -229,7 +252,7 @@ function createRadioCatalog(
     recordsByCountry,
     recordsById,
     source,
-    worldRecords: selectWorldRecords(sortedRecords, recordsByCountry)
+    worldRecords: selectWorldRecords(sortedRecords)
   };
 }
 
@@ -269,110 +292,40 @@ function createCountryIndex(records: RadioStationRecord[]) {
   return recordsByCountry;
 }
 
-function selectWorldRecords(records: RadioStationRecord[], recordsByCountry: Map<string, RadioStationRecord[]>) {
-  const selected = new Map<string, RadioStationRecord>();
-
-  Array.from(recordsByCountry.entries())
-    .sort(([countryA], [countryB]) => countryA.localeCompare(countryB))
-    .forEach(([, countryRecords]) => {
-      countryRecords.slice(0, WORLD_MIN_COUNTRY_STATIONS).forEach((record) => {
-        if (selected.size < WORLD_MARKER_LIMIT) {
-          selected.set(record.point.id, record);
-        }
-      });
-    });
-
-  for (const record of records) {
-    if (selected.size >= WORLD_MARKER_LIMIT) {
-      break;
-    }
-
-    selected.set(record.point.id, record);
-  }
-
-  return Array.from(selected.values());
+function selectWorldRecords(records: RadioStationRecord[]) {
+  return records.slice(0, WORLD_MARKER_LIMIT);
 }
 
-async function getCountryRecordsWithSource(countryCode: string) {
-  try {
-    return {
-      records: await getLiveCountryRecords(countryCode),
-      source: createLiveSource()
-    };
-  } catch {
-    const catalog = await getRadioCatalog();
-
-    return {
-      records: catalog.recordsByCountry.get(countryCode) ?? [],
-      source: catalog.source
-    };
+function getFallbackCountryPointPage(
+  catalog: RadioCatalog,
+  {
+    countryCode,
+    limit,
+    offset,
+    query
+  }: {
+    countryCode: string;
+    limit: number;
+    offset: number;
+    query: string;
   }
-}
+): TerraPointPage {
+  const terms = normalizeQuery(query);
+  const records = (catalog.recordsByCountry.get(countryCode) ?? [])
+    .filter((record) => matchesSearch(record, terms));
+  const points = records.slice(offset, offset + limit).map((record) => record.point);
+  const nextOffset = offset + limit < records.length ? offset + limit : null;
 
-async function getCountryRecords(catalog: RadioCatalog, countryCode: string) {
-  try {
-    return await getLiveCountryRecords(countryCode);
-  } catch {
-    return catalog.recordsByCountry.get(countryCode) ?? [];
-  }
-}
-
-async function getLiveCountryRecords(countryCode: string) {
-  const now = Date.now();
-  const cached = countryRecordCache.get(countryCode);
-
-  if (cached && now - cached.fetchedAt < STATION_CACHE_TTL_MS) {
-    return cached.records;
-  }
-
-  const alphaCode = getAlphaCountryCode(countryCode);
-
-  if (!alphaCode) {
-    return [];
-  }
-
-  const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>(
-    `/json/stations/bycountrycodeexact/${encodeURIComponent(alphaCode.toLowerCase())}`,
-    {
-      hidebroken: "true",
-      limit: String(RADIO_PROVIDER_COUNTRY_LIMIT),
-      order: "votes",
-      reverse: "true"
-    }
-  );
-  const records = sortRadioRecords(
-    stations
-      .map(normalizeStation)
-      .filter((record): record is RadioStationRecord => Boolean(record))
-      .filter((record) => record.point.countryCode === countryCode)
-  );
-
-  countryRecordCache.set(countryCode, {
-    fetchedAt: now,
-    records
-  });
-
-  return records;
-}
-
-function sortRadioRecords(records: RadioStationRecord[]) {
-  return [...records].sort(compareRadioRecords);
-}
-
-function compareRadioRecords(a: RadioStationRecord, b: RadioStationRecord) {
-  const voteDiff = b.votes - a.votes;
-
-  if (voteDiff !== 0) {
-    return voteDiff;
-  }
-
-  const clickDiff = b.clickCount - a.clickCount;
-
-  if (clickDiff !== 0) {
-    return clickDiff;
-  }
-
-  return a.point.name.localeCompare(b.point.name);
+  return {
+    modeId: "radio",
+    source: createFallbackSource(catalog.source),
+    points,
+    limit,
+    nextOffset,
+    offset,
+    total: records.length,
+    totalKind: "exact"
+  };
 }
 
 function normalizeQuery(query: string) {

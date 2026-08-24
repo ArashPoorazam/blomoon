@@ -20,6 +20,7 @@ type SideDrawerListProps = {
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
   totalPoints: number;
+  totalPointsKind: "exact" | "lowerBound";
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
@@ -40,6 +41,7 @@ export function SideDrawerList({
   selectedCountry,
   selectedId,
   totalPoints,
+  totalPointsKind,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
   onModeChange,
@@ -54,6 +56,7 @@ export function SideDrawerList({
   );
   const matchingPointCount = usesRemotePaging ? totalPoints : points.length;
   const hasMorePoints = usesRemotePaging ? Boolean(hasMoreRemotePoints) : listedPoints.length < points.length;
+  const isLoadingMorePoints = Boolean(loadingMoreRemotePoints);
 
   useEffect(() => {
     setVisibleLimit(LIST_PAGE_SIZE);
@@ -71,7 +74,15 @@ export function SideDrawerList({
             onModeChange={onModeChange}
           />
           <p className="drawer-subtitle">
-            {loading ? activeMode.loadingLabel : formatVisibleCount(listedPoints.length, matchingPointCount, totalPoints)}
+            {loading
+              ? activeMode.loadingLabel
+              : formatVisibleCount({
+                listedCount: listedPoints.length,
+                loadingMore: isLoadingMorePoints,
+                matchingCount: matchingPointCount,
+                totalCount: totalPoints,
+                totalKind: totalPointsKind
+              })}
           </p>
         </div>
       </div>
@@ -116,7 +127,7 @@ export function SideDrawerList({
         {hasMorePoints ? (
           <button
             className="point-list-more"
-            disabled={loadingMoreRemotePoints}
+            disabled={isLoadingMorePoints}
             type="button"
             onClick={() => {
               if (onLoadMoreRemotePoints) {
@@ -127,7 +138,7 @@ export function SideDrawerList({
               setVisibleLimit((value) => value + LIST_PAGE_SIZE);
             }}
           >
-            {loadingMoreRemotePoints ? "Loading" : "Show 50 more"}
+            {isLoadingMorePoints ? "Loading" : "Show 50 more"}
           </button>
         ) : null}
       </div>
@@ -193,9 +204,27 @@ function ProviderNotice({ message }: { message: string | null }) {
   return <div className="provider-notice">{message}</div>;
 }
 
-function formatVisibleCount(listedCount: number, matchingCount: number, totalCount: number) {
+function formatVisibleCount({
+  listedCount,
+  loadingMore,
+  matchingCount,
+  totalCount,
+  totalKind
+}: {
+  listedCount: number;
+  loadingMore: boolean;
+  matchingCount: number;
+  totalCount: number;
+  totalKind: "exact" | "lowerBound";
+}) {
   if (matchingCount === 0) {
     return "0 visible points";
+  }
+
+  if (totalKind === "lowerBound") {
+    return loadingMore
+      ? `${listedCount} listed, loading more`
+      : `${listedCount} listed, more available`;
   }
 
   if (matchingCount === totalCount) {

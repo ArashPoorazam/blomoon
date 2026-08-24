@@ -139,6 +139,7 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
         totalPoints={modeState.totalVisiblePoints}
+        totalPointsKind={modeState.totalVisiblePointsKind}
         onClearCountrySelection={clearCountrySelection}
         onClearSelection={modeState.clearSelection}
         onLoadMoreRemotePoints={modeState.hasMoreVisiblePoints ? modeState.loadMoreVisiblePoints : undefined}

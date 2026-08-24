@@ -77,10 +77,16 @@ function formatRadioMetric(point: TerraPoint) {
 
 function sortRadioStations(points: TerraPoint[]) {
   return [...points].sort((a, b) => {
-    const popularityDiff = getNumericMetric(b, "Clicks") - getNumericMetric(a, "Clicks");
+    const voteDiff = getNumericMetric(b, "Votes") - getNumericMetric(a, "Votes");
 
-    if (popularityDiff !== 0) {
-      return popularityDiff;
+    if (voteDiff !== 0) {
+      return voteDiff;
+    }
+
+    const clickDiff = getNumericMetric(b, "Clicks") - getNumericMetric(a, "Clicks");
+
+    if (clickDiff !== 0) {
+      return clickDiff;
     }
 
     return a.name.localeCompare(b.name);

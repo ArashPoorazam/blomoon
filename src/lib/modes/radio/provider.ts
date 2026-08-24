@@ -7,29 +7,30 @@ import {
 } from "./config";
 import type { RadioBrowserServer } from "./types";
 
+type RadioBrowserJsonOptions = {
+  timeoutMs?: number;
+};
+
 let serverCache: {
   fetchedAt: number;
   hosts: string[];
 } | null = null;
 
 export async function fetchRadioBrowserJson<T>(path: string, params?: Record<string, string>): Promise<T> {
+  return fetchRadioBrowserJsonWithOptions(path, params);
+}
+
+export async function fetchRadioBrowserJsonWithOptions<T>(
+  path: string,
+  params?: Record<string, string>,
+  options: RadioBrowserJsonOptions = {}
+): Promise<T> {
   const hosts = await getRadioBrowserHosts();
   let lastError: Error | null = null;
 
   for (const host of hosts) {
-    const url = new URL(path, `https://${host}`);
-
-    for (const [key, value] of Object.entries(params ?? {})) {
-      url.searchParams.set(key, value);
-    }
-
     try {
-      return await fetchJsonWithTimeout<T>(url, {
-        headers: {
-          accept: "application/json",
-          "user-agent": RADIO_BROWSER_USER_AGENT
-        }
-      });
+      return await fetchRadioBrowserHostJson<T>(host, path, params, options);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Radio Browser request failed");
     }
@@ -38,7 +39,27 @@ export async function fetchRadioBrowserJson<T>(path: string, params?: Record<str
   throw lastError ?? new Error("Radio Browser request failed");
 }
 
-async function getRadioBrowserHosts() {
+export async function fetchRadioBrowserHostJson<T>(
+  host: string,
+  path: string,
+  params?: Record<string, string>,
+  options: RadioBrowserJsonOptions = {}
+) {
+  const url = new URL(path, `https://${host}`);
+
+  for (const [key, value] of Object.entries(params ?? {})) {
+    url.searchParams.set(key, value);
+  }
+
+  return fetchJsonWithTimeout<T>(url, {
+    headers: {
+      accept: "application/json",
+      "user-agent": RADIO_BROWSER_USER_AGENT
+    }
+  }, options.timeoutMs);
+}
+
+export async function getRadioBrowserHosts() {
   const now = Date.now();
 
   if (serverCache && now - serverCache.fetchedAt < STATION_CACHE_TTL_MS) {
@@ -73,9 +94,13 @@ async function getRadioBrowserHosts() {
   return [...RADIO_BROWSER_FALLBACK_HOSTS];
 }
 
-async function fetchJsonWithTimeout<T>(input: URL | string, init: RequestInit = {}) {
+async function fetchJsonWithTimeout<T>(
+  input: URL | string,
+  init: RequestInit = {},
+  timeoutMs = REQUEST_TIMEOUT_MS
+) {
   const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
+  const timeout = setTimeout(() => controller.abort(), timeoutMs);
 
   try {
     const response = await fetch(input, {
