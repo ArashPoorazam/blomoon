@@ -1,7 +1,7 @@
 "use client";
 
 import type { ThreeEvent } from "@react-three/fiber";
-import { useFrame } from "@react-three/fiber";
+import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import * as THREE from "three";
@@ -39,6 +39,8 @@ type PointMarkersProps = {
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 };
+
+const MIN_CAMERA_FACING_DOT = 0.01;
 
 export function PointMarkers({
   markerColor,
@@ -117,8 +119,10 @@ function MarkerHitInstances({
   onSelect: (point: TerraPoint) => void;
 }) {
   const meshRef = useRef<THREE.InstancedMesh>(null);
+  const camera = useThree((state) => state.camera);
   const hoveredPointId = useRef<string | null>(null);
   const instanceCapacity = useMemo(() => getInstanceCapacity(points.length), [points.length]);
+  const markerNormals = useMemo(() => getMarkerNormals(points), [points]);
 
   useScaledMarkerInstances(meshRef, points);
 
@@ -129,8 +133,14 @@ function MarkerHitInstances({
 
   function handlePointerMove(event: ThreeEvent<PointerEvent>) {
     const point = getPointFromEvent(event);
+    const normal = typeof event.instanceId === "number" ? markerNormals[event.instanceId] : null;
 
-    if (!point || hoveredPointId.current === point.id) {
+    if (!point || !normal || !isMarkerFacingCamera(normal, camera)) {
+      clearHover();
+      return;
+    }
+
+    if (hoveredPointId.current === point.id) {
       return;
     }
 
@@ -140,16 +150,21 @@ function MarkerHitInstances({
     onHover(point);
   }
 
-  function handlePointerOut() {
+  function clearHover() {
     hoveredPointId.current = null;
     document.body.style.cursor = "";
     onHover(null);
   }
 
+  function handlePointerOut() {
+    clearHover();
+  }
+
   function handleClick(event: ThreeEvent<MouseEvent>) {
     const point = getPointFromEvent(event);
+    const normal = typeof event.instanceId === "number" ? markerNormals[event.instanceId] : null;
 
-    if (!point) {
+    if (!point || !normal || !isMarkerFacingCamera(normal, camera)) {
       return;
     }
 
@@ -189,9 +204,11 @@ function SelectedPointMarker({
   onSelect: (point: TerraPoint) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
-  const { position, quaternion } = useMemo(() => {
+  const camera = useThree((state) => state.camera);
+  const { normal, position, quaternion } = useMemo(() => {
     const normal = latLonToVector3(point.latitude, point.longitude, 1).normalize();
     return {
+      normal,
       position: normal.clone().multiplyScalar(GLOBE_RADIUS * MARKER_ALTITUDE),
       quaternion: new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 0, 1), normal)
     };
@@ -200,6 +217,10 @@ function SelectedPointMarker({
   useScaledMarkerGroup(groupRef);
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
+    if (!isMarkerFacingCamera(normal, camera)) {
+      return;
+    }
+
     event.stopPropagation();
     onSelect(point);
   }
@@ -215,6 +236,10 @@ function SelectedPointMarker({
         onHover(null);
       }}
       onPointerOver={(event) => {
+        if (!isMarkerFacingCamera(normal, camera)) {
+          return;
+        }
+
         event.stopPropagation();
         document.body.style.cursor = "pointer";
         onHover(point);
@@ -318,6 +343,14 @@ function getMarkerTransforms(points: TerraPoint[]): MarkerTransform[] {
       quaternion: new THREE.Quaternion().setFromUnitVectors(outward, normal)
     };
   });
+}
+
+function getMarkerNormals(points: TerraPoint[]) {
+  return points.map((point) => latLonToVector3(point.latitude, point.longitude, 1).normalize());
+}
+
+function isMarkerFacingCamera(normal: THREE.Vector3, camera: THREE.Camera) {
+  return normal.dot(camera.position.clone().normalize()) > MIN_CAMERA_FACING_DOT;
 }
 
 function createMarkerWriteContext(): MarkerWriteContext {

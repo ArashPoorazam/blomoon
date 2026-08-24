@@ -40,6 +40,11 @@ export type RadioBrowserStation = {
   geo_long?: number | string | null;
 };
 
+export type RadioBrowserStats = {
+  stations?: number | string;
+  stations_broken?: number | string;
+};
+
 export type RadioBrowserTag = {
   name?: string;
   stationcount?: number | string;

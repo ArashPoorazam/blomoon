@@ -1,8 +1,8 @@
 "use client";
 
-import { Globe2, Search, X } from "lucide-react";
-import { useMemo } from "react";
-import { findCountryByCode, formatDateTime, getKnownCountries, type CountryInfo } from "@/lib/geo";
+import { ChevronDown, Globe2, LoaderCircle, Search, X } from "lucide-react";
+import { useId, useMemo, useState } from "react";
+import { formatDateTime, getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
 
 type SideDrawerListProps = {
@@ -105,11 +105,14 @@ export function SideDrawerList({
       <FilterControls
         activeMode={activeMode}
         countries={countries}
+        hasMorePoints={hasMorePoints}
+        isLoadingMorePoints={isLoadingMorePoints}
         selectedCountry={selectedCountry}
         showListedOnGlobe={showListedOnGlobe}
         sortId={sortId}
         onCountryFilterChange={onCountryFilterChange}
         onClearCountrySelection={onClearCountrySelection}
+        onLoadMoreRemotePoints={onLoadMoreRemotePoints}
         onSortChange={onSortChange}
         onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
       />
@@ -138,18 +141,11 @@ export function SideDrawerList({
           ))
         )}
         {hasMorePoints ? (
-          <button
+          <LoadMoreButton
             className="point-list-more"
-            disabled={isLoadingMorePoints}
-            type="button"
-            onClick={() => {
-              if (onLoadMoreRemotePoints) {
-                onLoadMoreRemotePoints();
-              }
-            }}
-          >
-            {isLoadingMorePoints ? "Loading" : "Show 50 more"}
-          </button>
+            isLoading={isLoadingMorePoints}
+            onLoadMore={onLoadMoreRemotePoints}
+          />
         ) : null}
       </div>
     </>
@@ -159,51 +155,168 @@ export function SideDrawerList({
 function FilterControls({
   activeMode,
   countries,
+  hasMorePoints,
+  isLoadingMorePoints,
   selectedCountry,
   showListedOnGlobe,
   sortId,
   onCountryFilterChange,
   onClearCountrySelection,
+  onLoadMoreRemotePoints,
   onSortChange,
   onToggleShowListedOnGlobe
 }: {
   activeMode: TerraMode;
   countries: CountryInfo[];
+  hasMorePoints: boolean;
+  isLoadingMorePoints: boolean;
   selectedCountry: CountryInfo | null;
   showListedOnGlobe: boolean;
   sortId: string;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
+  onLoadMoreRemotePoints?: () => void;
   onSortChange: (sortId: string) => void;
   onToggleShowListedOnGlobe: () => void;
 }) {
+  const [countryMenuOpen, setCountryMenuOpen] = useState(false);
+  const [sortMenuOpen, setSortMenuOpen] = useState(false);
+  const [countryQuery, setCountryQuery] = useState("");
+  const countryMenuId = useId();
+  const sortMenuId = useId();
+  const selectedSort = activeMode.sortOptions.find((option) => option.id === sortId) ?? activeMode.sortOptions[0];
+  const filteredCountries = useMemo(() => {
+    const terms = countryQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
+
+    if (terms.length === 0) {
+      return countries;
+    }
+
+    return countries.filter((country) => {
+      const searchValue = `${country.name} ${country.code}`.toLowerCase();
+      return terms.every((term) => searchValue.includes(term));
+    });
+  }, [countries, countryQuery]);
+
+  function selectCountry(country: CountryInfo | null) {
+    onCountryFilterChange(country);
+    setCountryMenuOpen(false);
+  }
+
+  function selectSort(nextSortId: string) {
+    onSortChange(nextSortId);
+    setSortMenuOpen(false);
+  }
+
   return (
     <div className="filter-panel">
-      <label className="filter-field">
-        <span>Country</span>
-        <select
-          value={selectedCountry?.code ?? ""}
-          onChange={(event) => onCountryFilterChange(findCountryByCode(event.target.value))}
-        >
-          <option value="">All countries</option>
-          {countries.map((country) => (
-            <option key={country.code} value={country.code}>
-              {country.name}
-            </option>
-          ))}
-        </select>
-      </label>
+      <div className="filter-grid">
+        <div
+          className="filter-menu-field"
+          onBlur={(event) => {
+            const nextTarget = event.relatedTarget;
 
-      <label className="filter-field">
-        <span>Sort</span>
-        <select value={sortId} onChange={(event) => onSortChange(event.target.value)}>
-          {activeMode.sortOptions.map((option) => (
-            <option key={option.id} value={option.id}>
-              {option.label}
-            </option>
-          ))}
-        </select>
-      </label>
+            if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+              setCountryMenuOpen(false);
+            }
+          }}
+        >
+          <span className="filter-label">Country</span>
+          <button
+            aria-controls={countryMenuId}
+            aria-expanded={countryMenuOpen}
+            className="filter-menu-trigger"
+            type="button"
+            onClick={() => setCountryMenuOpen((open) => !open)}
+          >
+            <span>{selectedCountry?.name ?? "All countries"}</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+          {countryMenuOpen ? (
+            <div className="filter-menu country-menu" id={countryMenuId}>
+              <div className="filter-menu-search">
+                <Search size={14} aria-hidden="true" />
+                <input
+                  autoFocus
+                  placeholder="Search countries"
+                  type="search"
+                  value={countryQuery}
+                  onChange={(event) => setCountryQuery(event.target.value)}
+                  onKeyDown={(event) => {
+                    if (event.key === "Escape") {
+                      setCountryMenuOpen(false);
+                    }
+                  }}
+                />
+              </div>
+              <div className="filter-menu-options">
+                <button
+                  className={!selectedCountry ? "selected" : ""}
+                  type="button"
+                  onMouseDown={(event) => event.preventDefault()}
+                  onClick={() => selectCountry(null)}
+                >
+                  All countries
+                </button>
+                {filteredCountries.map((country) => (
+                  <button
+                    className={selectedCountry?.code === country.code ? "selected" : ""}
+                    key={country.code}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectCountry(country)}
+                  >
+                    {country.name}
+                  </button>
+                ))}
+                {filteredCountries.length === 0 ? (
+                  <div className="filter-menu-empty">No countries found</div>
+                ) : null}
+              </div>
+            </div>
+          ) : null}
+        </div>
+
+        <div
+          className="filter-menu-field"
+          onBlur={(event) => {
+            const nextTarget = event.relatedTarget;
+
+            if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
+              setSortMenuOpen(false);
+            }
+          }}
+        >
+          <span className="filter-label">Sort</span>
+          <button
+            aria-controls={sortMenuId}
+            aria-expanded={sortMenuOpen}
+            className="filter-menu-trigger"
+            type="button"
+            onClick={() => setSortMenuOpen((open) => !open)}
+          >
+            <span>{selectedSort?.label ?? "Sort"}</span>
+            <ChevronDown size={14} aria-hidden="true" />
+          </button>
+          {sortMenuOpen ? (
+            <div className="filter-menu sort-menu" id={sortMenuId}>
+              <div className="filter-menu-options">
+                {activeMode.sortOptions.map((option) => (
+                  <button
+                    className={option.id === sortId ? "selected" : ""}
+                    key={option.id}
+                    type="button"
+                    onMouseDown={(event) => event.preventDefault()}
+                    onClick={() => selectSort(option.id)}
+                  >
+                    {option.label}
+                  </button>
+                ))}
+              </div>
+            </div>
+          ) : null}
+        </div>
+      </div>
 
       <div className="filter-actions">
         {selectedCountry ? (
@@ -219,10 +332,49 @@ function FilterControls({
           onClick={onToggleShowListedOnGlobe}
         >
           <Globe2 size={15} aria-hidden="true" />
-          Listed on globe
+          Display on globe
         </button>
+        {hasMorePoints ? (
+          <LoadMoreButton
+            className="filter-load-more"
+            isLoading={isLoadingMorePoints}
+            onLoadMore={onLoadMoreRemotePoints}
+          />
+        ) : null}
       </div>
     </div>
+  );
+}
+
+function LoadMoreButton({
+  className,
+  isLoading,
+  onLoadMore
+}: {
+  className: string;
+  isLoading: boolean;
+  onLoadMore?: () => void;
+}) {
+  return (
+    <button
+      className={className}
+      disabled={isLoading}
+      type="button"
+      onClick={() => {
+        if (onLoadMore) {
+          onLoadMore();
+        }
+      }}
+    >
+      {isLoading ? (
+        <>
+          <LoaderCircle className="loading-status-icon spinning" size={14} aria-hidden="true" />
+          Loading
+        </>
+      ) : (
+        "Show 50 more"
+      )}
+    </button>
   );
 }
 
@@ -278,8 +430,8 @@ function formatVisibleCount({
   if (totalKind === "lowerBound") {
     return loadingMore
       ? `${listedCount} listed, loading more`
-      : `${listedCount} listed, more available`;
+      : `${listedCount} listed, ${totalCount}+ available`;
   }
 
-  return `${listedCount} listed from ${totalCount} stations`;
+  return `${listedCount} listed, ${totalCount} available`;
 }

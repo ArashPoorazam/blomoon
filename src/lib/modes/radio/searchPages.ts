@@ -8,6 +8,7 @@ import type {
   RadioBrowserCountRecord,
   RadioBrowserLanguage,
   RadioBrowserStation,
+  RadioBrowserStats,
   RadioBrowserTag,
   RadioStationRecord
 } from "./types";
@@ -51,6 +52,7 @@ const radioListRecordCache = new Map<string, RadioListRecordCache>();
 let radioSearchVocabCache: { fetchedAt: number; vocab: RadioSearchVocab } | null = null;
 let radioSearchVocabRefresh: Promise<RadioSearchVocab> | null = null;
 let countryCountCache: { countsByCode: Map<string, number>; fetchedAt: number } | null = null;
+let globalStationCountCache: { count: number; fetchedAt: number } | null = null;
 
 export async function getLiveRadioRecordPage({
   countryCode,
@@ -114,8 +116,10 @@ async function fillRadioListRecordCache({
     return;
   }
 
-  if (alphaCode && !cache.query.query && cache.total === null) {
-    cache.total = await getLiveCountryStationCount(alphaCode);
+  if (!cache.query.query && cache.total === null) {
+    cache.total = alphaCode
+      ? await getLiveCountryStationCount(alphaCode)
+      : await getLiveGlobalStationCount();
   }
 
   while (cache.recordsById.size < targetCount && !cache.exhausted) {
@@ -357,6 +361,29 @@ async function getLiveCountryStationCount(alphaCode: string) {
   };
 
   return countsByCode.get(alphaCode.toUpperCase()) ?? null;
+}
+
+async function getLiveGlobalStationCount() {
+  const now = Date.now();
+
+  if (globalStationCountCache && now - globalStationCountCache.fetchedAt < STATION_CACHE_TTL_MS) {
+    return globalStationCountCache.count;
+  }
+
+  const stats = await fetchRadioBrowserJsonWithOptions<RadioBrowserStats>("/json/stats");
+  const stations = parseCount(stats.stations);
+  const brokenStations = parseCount(stats.stations_broken) ?? 0;
+
+  if (stations === null) {
+    return null;
+  }
+
+  globalStationCountCache = {
+    count: Math.max(0, stations - brokenStations),
+    fetchedAt: now
+  };
+
+  return globalStationCountCache.count;
 }
 
 function createCountryTokenMap() {

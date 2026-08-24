@@ -287,9 +287,9 @@ export function useModeDataset(
 
   const globePoints = useMemo(
     () => selectedCountryCode && mode.countryCatalog
-      ? mergePoints(points, countryMarkerPoints, selectedPoint ? [selectedPoint] : [])
-      : points,
-    [countryMarkerPoints, mode.countryCatalog, points, selectedCountryCode, selectedPoint]
+      ? mergePoints(points, countryMarkerPoints, visiblePoints, selectedPoint ? [selectedPoint] : [])
+      : mergePoints(points, visiblePoints, selectedPoint ? [selectedPoint] : []),
+    [countryMarkerPoints, mode.countryCatalog, points, selectedCountryCode, selectedPoint, visiblePoints]
   );
   const providerError = requestError
     ?? countryRequestError

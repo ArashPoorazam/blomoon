@@ -263,7 +263,7 @@ function getDetailSections(detail: TerraPointDetail | null, activeMode: TerraMod
       fields: [
         { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
         { label: "Votes", value: fieldValue("Votes") },
-        { label: "Last checked", value: formatDateTime(detail.timestamp) }
+        { label: "Last checked", value: formatCheckedDateTime(detail.timestamp) }
       ]
     },
     {
@@ -288,4 +288,16 @@ function getDetailFieldValue(detail: TerraPointDetail) {
 function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
   const value = point.metrics?.[label];
   return value === undefined || value === null ? fallback : String(value);
+}
+
+function formatCheckedDateTime(value?: string) {
+  if (!value) {
+    return "Unknown";
+  }
+
+  const date = new Date(value);
+  return [
+    new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date),
+    new Intl.DateTimeFormat("en", { timeStyle: "short" }).format(date)
+  ].join("\n");
 }

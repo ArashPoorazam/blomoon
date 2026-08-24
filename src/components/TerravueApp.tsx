@@ -1,8 +1,8 @@
 "use client";
 
 import { Palette } from "lucide-react";
-import { useCallback, useRef, useState, type MouseEvent } from "react";
-import { findCountryByCode, formatCoordinate, getCountryAtCoordinates, type CountryInfo } from "@/lib/geo";
+import { useCallback, useMemo, useRef, useState, type MouseEvent } from "react";
+import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
@@ -38,9 +38,12 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const drawerOpen = !drawerCollapsed;
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
-  const listedPointIds = new Set(modeState.visiblePoints.map((point) => point.id));
   const globePoints = showListedOnGlobe ? modeState.visiblePoints : modeState.globePoints;
-  const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && listedPointIds.has(modeState.selectedPoint.id))
+  const visiblePointIds = useMemo(
+    () => new Set(modeState.visiblePoints.map((point) => point.id)),
+    [modeState.visiblePoints]
+  );
+  const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && visiblePointIds.has(modeState.selectedPoint.id))
     ? modeState.selectedPoint
     : null;
   const globeMarkerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
@@ -55,7 +58,6 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
 
   const selectPoint = useCallback((point: TerraPoint) => {
     modeState.selectPoint(point);
-    setSelectedCountry(findCountryByCode(point.countryCode) ?? getCountryAtCoordinates(point.latitude, point.longitude));
     setDrawerCollapsed(false);
   }, [modeState.selectPoint]);
 
