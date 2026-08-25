@@ -9,7 +9,7 @@ entity: src/app/api/modes/radio
 
 # REST API Surface
 
-The public REST surface exposes radio mode points, search pages, country-specific pages, details, and playable stream resolution through Next.js App Router route handlers.
+The REST surface exposes public radio browsing/playback resources and authenticated account, favorites, theme, and station-click resources through Next.js App Router route handlers.
 
 ## Why This Shape
 
@@ -21,15 +21,18 @@ Route handlers are the boundary between client UI and unreliable provider data. 
 - `/api/modes/radio/search` validates `limit`, `offset`, `q`, `sort`, and optional `countryCode`, then returns a `TerraPointPage`.
 - `/api/modes/radio/points/[id]` uses async `params` and returns detail or 404.
 - `/api/modes/radio/points/[id]/playable` is a `POST`, uses async `params`, returns no-store playable audio, 404, or 502.
+- `/api/users/me`, `/api/users/me/theme`, and `/api/users/me/favourites` require `requireUser` and return no-store JSON.
+- `/api/users/me/favourites/[modeId]/[pointId]` uses async `params` and dispatches through the mode persistence registry.
+- `/api/modes/radio/points/[id]/click` requires login and records the click through the server persistence registry.
 - Country routes validate async `countryCode` params and query params before returning marker datasets or paginated country pages.
 
-Citations: `src/app/api/modes/radio/points/route.ts:5`, `src/app/api/modes/radio/search/route.ts:11`, `src/app/api/modes/radio/search/route.ts:28`, `src/app/api/modes/radio/points/[id]/route.ts:5`, `src/app/api/modes/radio/points/[id]/playable/route.ts:5`, `src/app/api/modes/radio/countries/[countryCode]/points/route.ts:6`, `src/app/api/modes/radio/countries/[countryCode]/search/route.ts:6`
+Citations: `src/app/api/modes/radio/points/route.ts:5`, `src/app/api/modes/radio/search/route.ts:11`, `src/app/api/modes/radio/search/route.ts:28`, `src/app/api/modes/radio/points/[id]/route.ts:5`, `src/app/api/modes/radio/points/[id]/playable/route.ts:5`, `src/app/api/modes/radio/countries/[countryCode]/points/route.ts:6`, `src/app/api/modes/radio/countries/[countryCode]/search/route.ts:6`, `src/app/api/users/me/route.ts:7`, `src/app/api/users/me/theme/route.ts:24`, `src/app/api/users/me/favourites/route.ts:47`, `src/app/api/users/me/favourites/route.ts:58`, `src/app/api/users/me/favourites/[modeId]/[pointId]/route.ts:93`, `src/app/api/modes/radio/points/[id]/click/route.ts:123`
 
 ## Connected To
 
-- **owns:** public radio resources and HTTP validation/status behavior.
-- **owned-by:** `src/app/api/modes/radio/**/route.ts`.
-- **joins:** radio adapter, radio API param parsers, client data hook, playback hook.
+- **owns:** public radio resources, authenticated user/favorites resources, and HTTP validation/status behavior.
+- **owned-by:** `src/app/api/modes/radio/**/route.ts`, `src/app/api/users/me/**/route.ts`, `src/app/api/auth/[...all]/route.ts`.
+- **joins:** radio adapter, radio API param parsers, Better Auth, persistence registry, client data/favorites hooks, playback hook.
 - **looks-like-but-is-not:** provider adapter; routes should not normalize provider payloads directly.
 
 ## If You Change This

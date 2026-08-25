@@ -42,7 +42,7 @@ button {
   transform: translateX(calc(var(--drawer-width) / -2));
 }
 
-.theme-toggle {
+.account-menu-trigger {
   position: absolute;
   top: 18px;
   left: 18px;
@@ -59,7 +59,7 @@ button {
   box-shadow: 0 12px 34px var(--shadow-tooltip);
 }
 
-.theme-toggle:hover {
+.account-menu-trigger:hover {
   background: var(--control-hover);
   color: var(--text);
 }

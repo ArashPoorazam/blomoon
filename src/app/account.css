@@ -1,0 +1,369 @@
+.account-menu {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 30;
+}
+
+.account-popover {
+  position: absolute;
+  top: 64px;
+  left: 18px;
+  width: min(340px, calc(100vw - 36px));
+  padding: 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 18px 42px var(--shadow-tooltip);
+  backdrop-filter: blur(var(--panel-blur));
+}
+
+.account-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 12px;
+}
+
+.account-tabs button,
+.logout-action,
+.primary-action,
+.secondary-action,
+.text-action {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.account-tabs button {
+  padding: 0 9px;
+  background: var(--control);
+  color: var(--muted-strong);
+}
+
+.account-tabs button:hover,
+.account-tabs button.active {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.account-panel,
+.theme-picker,
+.contact-panel {
+  display: grid;
+  gap: 10px;
+}
+
+.account-identity {
+  display: grid;
+  gap: 4px;
+  padding: 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.account-identity strong {
+  overflow: hidden;
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.account-identity span,
+.account-note,
+.form-status {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.account-methods,
+.password-form {
+  display: grid;
+  gap: 8px;
+}
+
+.account-method,
+.contact-panel div {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  font-size: 12px;
+}
+
+.account-method strong,
+.contact-panel strong {
+  color: var(--muted-strong);
+}
+
+.form-field {
+  display: grid;
+  gap: 5px;
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.form-field input {
+  min-height: 36px;
+  min-width: 0;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  outline: 0;
+  padding: 0 10px;
+  background: var(--surface);
+  color: var(--text);
+}
+
+.form-field input:focus {
+  border-color: var(--focus-ring);
+}
+
+.form-field input:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.primary-action {
+  width: 100%;
+  padding: 0 12px;
+  border-color: var(--info-border);
+  background: var(--info-control);
+  color: var(--text);
+}
+
+.secondary-action {
+  width: 100%;
+  padding: 0 12px;
+  background: var(--control);
+  color: var(--muted-strong);
+}
+
+.text-action {
+  width: 100%;
+  border: 0;
+  background: transparent;
+  color: var(--accent-strong);
+}
+
+.primary-action:hover:not(:disabled),
+.secondary-action:hover:not(:disabled),
+.text-action:hover:not(:disabled) {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.primary-action:disabled,
+.secondary-action:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
+.logout-action {
+  width: 100%;
+  margin-top: 12px;
+  background: var(--control);
+  color: var(--danger);
+}
+
+.theme-option {
+  display: grid;
+  min-height: 54px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.theme-option:hover,
+.theme-option.selected {
+  background: var(--control-hover);
+}
+
+.theme-option-main {
+  display: grid;
+  gap: 7px;
+}
+
+.theme-swatches {
+  display: flex;
+  gap: 5px;
+}
+
+.theme-swatch {
+  width: 22px;
+  height: 14px;
+  border: 1px solid var(--line);
+  border-radius: 4px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  display: grid;
+  place-items: center;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.48);
+}
+
+.auth-modal,
+.confirm-modal {
+  width: min(380px, 100%);
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel-solid);
+  box-shadow: 0 24px 68px var(--shadow-panel);
+}
+
+.auth-modal {
+  padding: 16px;
+}
+
+.confirm-modal {
+  padding: 18px;
+}
+
+.modal-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 14px;
+}
+
+.modal-header h2,
+.confirm-modal h2,
+.favourites-header h2 {
+  margin: 4px 0 0;
+  font-size: 20px;
+  line-height: 1.15;
+}
+
+.auth-form {
+  display: grid;
+  gap: 10px;
+}
+
+.form-error {
+  color: var(--danger);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.confirm-actions {
+  display: grid;
+  gap: 8px;
+  margin-top: 14px;
+}
+
+.favourites-drawer {
+  position: absolute;
+  top: 0;
+  right: var(--drawer-width);
+  z-index: 9;
+  width: min(340px, calc(100vw - var(--drawer-width)));
+  height: 100%;
+  border-left: 1px solid var(--panel-border);
+  background: var(--panel);
+  box-shadow: -18px 0 44px var(--shadow-panel);
+  backdrop-filter: blur(var(--panel-blur));
+}
+
+.favourites-header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 20px;
+  border-bottom: 1px solid var(--line);
+}
+
+.favourites-body {
+  height: calc(100% - 83px);
+  overflow: auto;
+  padding: 14px;
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+.favourite-group {
+  display: grid;
+  gap: 6px;
+}
+
+.favourite-group + .favourite-group {
+  margin-top: 18px;
+}
+
+.favourite-group-title {
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.favourite-row {
+  display: grid;
+  width: 100%;
+  min-height: 54px;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 9px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--text);
+  cursor: pointer;
+  text-align: left;
+}
+
+.favourite-row:hover {
+  background: var(--control-hover);
+}
+
+.favourite-row strong,
+.favourite-row span span {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.favourite-row span span {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+@media (max-width: 760px) {
+  .account-popover {
+    top: 62px;
+  }
+
+  .favourites-drawer {
+    right: 0;
+    z-index: 35;
+    width: min(360px, 92vw);
+  }
+}

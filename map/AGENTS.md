@@ -14,6 +14,7 @@ The application source and root `AGENTS.md` are authoritative. This map is a rou
 | Change radio provider, fallback, search, or playback resolution | `objects/modes/radio-provider-adapter.md`, then the relevant process card |
 | Change drawer, search UI, detail UI, or playback UI | `objects/surfaces/app-shell-and-drawer.md`, `objects/surfaces/playback.md` |
 | Change API route behavior | `objects/surfaces/rest-api.md` |
+| Change auth, account, database, theme persistence, favorites, or clicks | `objects/surfaces/account-auth-and-database.md`, `objects/surfaces/favourites-persistence.md` |
 | Add or remove a media mode | `processes/add-or-change-mode.md`, `objects/contracts/terra-mode.md` |
 | Check broad impact before editing | `effects/CONTEXT.md` |
 
@@ -30,6 +31,8 @@ The application source and root `AGENTS.md` are authoritative. This map is a rou
 | REST API routes | `objects/surfaces/rest-api.md` |
 | App shell and drawer | `objects/surfaces/app-shell-and-drawer.md` |
 | Playback | `objects/surfaces/playback.md` |
+| Account auth and database | `objects/surfaces/account-auth-and-database.md` |
+| Favourites persistence | `objects/surfaces/favourites-persistence.md` |
 
 ## Main Workflows
 

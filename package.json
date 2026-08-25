@@ -6,27 +6,37 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "vitest run",
+    "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate"
   },
   "dependencies": {
     "@react-three/drei": "latest",
     "@react-three/fiber": "latest",
     "@types/d3-geo": "^3.1.1",
+    "better-auth": "^1.7.1",
     "d3-geo": "^3.1.1",
+    "drizzle-orm": "^0.45.2",
     "lucide-react": "latest",
     "next": "latest",
+    "postgres": "^3.4.9",
     "react": "latest",
     "react-dom": "latest",
     "three": "^0.185.1",
     "topojson-client": "latest",
-    "world-atlas": "latest"
+    "world-atlas": "latest",
+    "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@next/env": "^16.3.2",
     "@types/node": "latest",
     "@types/react": "latest",
     "@types/react-dom": "latest",
     "@types/three": "latest",
     "@types/topojson-client": "latest",
-    "typescript": "latest"
+    "drizzle-kit": "^0.31.10",
+    "typescript": "latest",
+    "vitest": "^4.1.11"
   }
 }

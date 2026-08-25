@@ -1,14 +1,16 @@
 "use client";
 
-import { ChevronDown, Globe2, LoaderCircle, Search, X } from "lucide-react";
+import { ChevronDown, Globe2, LoaderCircle, Search, Star, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { formatDateTime, getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
+import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
 type SideDrawerListProps = {
   activeMode: TerraMode;
   activeModeId: TerraModeId;
   hasMoreRemotePoints?: boolean;
+  favouritePointIds: Set<string>;
   loading: boolean;
   loadingMoreRemotePoints?: boolean;
   modes: TerraMode[];
@@ -28,12 +30,15 @@ type SideDrawerListProps = {
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
+  onToggleFavourite: (point: TerraPoint) => void;
+  onOpenFavourites: () => void;
   onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawerList({
   activeMode,
   activeModeId,
+  favouritePointIds,
   hasMoreRemotePoints,
   loading,
   loadingMoreRemotePoints,
@@ -54,6 +59,8 @@ export function SideDrawerList({
   onPointSelect,
   onQueryChange,
   onSortChange,
+  onToggleFavourite,
+  onOpenFavourites,
   onToggleShowListedOnGlobe
 }: SideDrawerListProps) {
   const listedPoints = points;
@@ -72,6 +79,10 @@ export function SideDrawerList({
             modes={modes}
             onModeChange={onModeChange}
           />
+          <button className="drawer-favourites-button" type="button" onClick={onOpenFavourites}>
+            <Star size={14} aria-hidden="true" />
+            Favourites
+          </button>
           <p className="drawer-subtitle">
             {loading
               ? activeMode.loadingLabel
@@ -122,22 +133,24 @@ export function SideDrawerList({
           <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
         ) : (
           listedPoints.map((point) => (
-            <button
+            <div
               className={`point-row ${selectedId === point.id ? "selected" : ""}`}
               key={point.id}
-              type="button"
-              onClick={() => onPointSelect(point)}
             >
-              <span className="point-copy">
-                <span className="point-name">{point.name}</span>
-                <span className="point-meta">
-                  {point.summary} · {formatDateTime(point.timestamp)}
+              <button className="point-row-main" type="button" onClick={() => onPointSelect(point)}>
+                <span className="point-copy">
+                  <span className="point-name">{point.name}</span>
+                  <span className="point-meta">
+                    {point.summary} · {activeMode.formatPointMetric(point)} · {formatDateTime(point.timestamp)}
+                  </span>
                 </span>
-              </span>
-              <span className="point-metric">
-                {activeMode.formatPointMetric(point)}
-              </span>
-            </button>
+              </button>
+              <FavouriteStarButton
+                favourited={favouritePointIds.has(`${point.modeId}:${point.id}`)}
+                point={point}
+                onToggle={onToggleFavourite}
+              />
+            </div>
           ))
         )}
         {hasMorePoints ? (

@@ -64,6 +64,27 @@ export type RadioStationRecord = {
   votes: number;
 };
 
+export type RadioStationPersistenceSnapshot = {
+  bitrate: number | null;
+  clickCount: number;
+  codec: string | null;
+  country: string;
+  countryCode: string;
+  id: string;
+  language: string | null;
+  latitude: number;
+  locationPrecision: "station" | "country";
+  longitude: number;
+  metrics: Record<string, string | number | null>;
+  name: string;
+  sourceUrl: string | null;
+  streamUrl: string;
+  summary: string;
+  tags: string[];
+  timestamp: string | null;
+  votes: number;
+};
+
 export type PlayableCacheEntry = {
   fetchedAt: number;
   stream: TerraPlayableAudio;

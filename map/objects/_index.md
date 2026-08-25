@@ -12,3 +12,5 @@
 | verified | App shell and drawer | `surfaces/app-shell-and-drawer.md` | `src/components/TerravueApp.tsx`, `src/components/SideDrawer*.tsx` |
 | verified | Playback | `surfaces/playback.md` | `src/lib/modes/useAudioPlayback.ts`, radio playable route |
 | verified | Theme tokens | `surfaces/theme-tokens.md` | `src/lib/theme/` |
+| verified | Account auth and database | `surfaces/account-auth-and-database.md` | `src/db/`, `src/lib/auth/`, `src/lib/users/` |
+| verified | Favourites persistence | `surfaces/favourites-persistence.md` | `src/lib/persistence/`, favourite/click routes |

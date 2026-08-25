@@ -12,6 +12,7 @@ type SideDrawerProps = {
   collapsed: boolean;
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
+  favouritePointIds: Set<string>;
   hasMoreRemotePoints?: boolean;
   isLoadingDrawerTask: boolean;
   loading: boolean;
@@ -33,8 +34,10 @@ type SideDrawerProps = {
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
+  onOpenFavourites: () => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
+  onToggleFavourite: (point: TerraPoint) => void;
   onToggleCollapsed: () => void;
   onToggleShowListedOnGlobe: () => void;
 };
@@ -45,6 +48,7 @@ export function SideDrawer({
   collapsed,
   detail,
   detailAccessory,
+  favouritePointIds,
   hasMoreRemotePoints,
   isLoadingDrawerTask,
   loading,
@@ -65,9 +69,11 @@ export function SideDrawer({
   onClearSelection,
   onLoadMoreRemotePoints,
   onModeChange,
+  onOpenFavourites,
   onPointSelect,
   onQueryChange,
   onSortChange,
+  onToggleFavourite,
   onToggleCollapsed,
   onToggleShowListedOnGlobe
 }: SideDrawerProps) {
@@ -98,6 +104,7 @@ export function SideDrawer({
           <SideDrawerList
             activeMode={activeMode}
             activeModeId={activeModeId}
+            favouritePointIds={favouritePointIds}
             hasMoreRemotePoints={hasMoreRemotePoints}
             loading={loading}
             loadingMoreRemotePoints={loadingMoreRemotePoints}
@@ -115,9 +122,11 @@ export function SideDrawer({
             onClearCountrySelection={onClearCountrySelection}
             onLoadMoreRemotePoints={onLoadMoreRemotePoints}
             onModeChange={onModeChange}
+            onOpenFavourites={onOpenFavourites}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
             onSortChange={onSortChange}
+            onToggleFavourite={onToggleFavourite}
             onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
           />
         )}

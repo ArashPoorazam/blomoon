@@ -54,6 +54,17 @@ Open:
 
 Human check: verify stream resolution, play, pause, stop, and broken-stream error state.
 
+## If Changing Auth, Database, Favourites, Or Clicks
+
+Open:
+- `../objects/surfaces/account-auth-and-database.md`
+- `../objects/surfaces/favourites-persistence.md`
+- `../objects/surfaces/app-shell-and-drawer.md`
+- `../objects/surfaces/rest-api.md`
+- `../objects/modes/radio-provider-adapter.md`
+
+Human check: run `npm run typecheck`, `npm test`, `npm run build`, and browser-verify logged-out browsing plus authenticated flows when `DATABASE_URL` is available.
+
 ## If Adding Or Removing A Mode
 
 Open:

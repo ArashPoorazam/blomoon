@@ -47,6 +47,7 @@ export const terraModes = [
       }
     },
     detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
+    clickEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/click`,
     playback: {
       label: "Live audio",
       mediaKind: "audio",

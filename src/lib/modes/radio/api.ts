@@ -58,6 +58,10 @@ export function parseRadioSort(searchParams: URLSearchParams) {
     : { error: "sort must be votes_desc or votes_asc.", sort: "votes_desc" as RadioSortOption };
 }
 
+export function isRadioStationId(value: string) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(value);
+}
+
 function isRadioSortOption(value: string): value is RadioSortOption {
   return RADIO_SORT_OPTIONS.includes(value as RadioSortOption);
 }

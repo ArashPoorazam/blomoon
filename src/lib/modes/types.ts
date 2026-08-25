@@ -86,6 +86,7 @@ export type TerraMode = {
     searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => string;
   };
   detailEndpoint: (id: string) => string;
+  clickEndpoint?: (id: string) => string;
   playback?: TerraPlaybackConfig;
   loadingLabel: string;
   emptyLabel: string;
