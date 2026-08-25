@@ -8,6 +8,10 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 
 <!-- END:nextjs-agent-rules -->
 
+## ICM Workspace Map
+
+For cold-start navigation, change-impact routing, and task-scoped source loading, start at `map/AGENTS.md`. The source tree and this `AGENTS.md` remain authoritative; the map only cites them and routes later agents to the smallest useful set of files.
+
 ## Product Architecture
 
 Terravue is a globe-based live entertainment directory. Its purpose is to help people discover and play streamable media by geography: radio now, podcasts/live audio next, and TV/video only when the media contracts are ready.
