@@ -1,0 +1,342 @@
+"use client";
+
+import { LoaderCircle, Mail, X } from "lucide-react";
+import { useState, type FormEvent } from "react";
+import { authClient } from "@/lib/auth/client";
+import {
+  AuthFields,
+  RegisterProgress,
+  getAuthSubtitle,
+  getAuthTitle,
+  getPrimaryActionLabel,
+  type AuthMode,
+  type RegisterStep
+} from "./AuthCardView";
+
+type FormNotice = {
+  kind: "info" | "success";
+  message: string;
+};
+
+type AuthCardProps = {
+  googleAuthEnabled: boolean;
+  modeLabel: string;
+  onAuthenticated: () => void | Promise<void>;
+  onClose?: () => void;
+  serviceError?: string | null;
+  titleSuffix?: string;
+};
+
+export function AuthCard({
+  googleAuthEnabled,
+  modeLabel,
+  onAuthenticated,
+  onClose,
+  serviceError,
+  titleSuffix
+}: AuthCardProps) {
+  const [mode, setMode] = useState<AuthMode>("login");
+  const [registerStep, setRegisterStep] = useState<RegisterStep>("email");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [verificationCode, setVerificationCode] = useState("");
+  const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<FormNotice | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [rememberMe, setRememberMe] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
+  const isModal = Boolean(onClose);
+  const title = getAuthTitle(mode, registerStep);
+  const subtitle = getAuthSubtitle(mode, registerStep, titleSuffix, email);
+
+  async function submit(event: FormEvent<HTMLFormElement>) {
+    event.preventDefault();
+    setSubmitting(true);
+    clearMessages();
+
+    try {
+      if (mode === "login") {
+        await submitLogin();
+        return;
+      }
+
+      if (registerStep === "email") {
+        continueToPasswordStep();
+        return;
+      }
+
+      if (registerStep === "password") {
+        await createAccountAndSendCode();
+        return;
+      }
+
+      await verifyRegistrationCode();
+    } catch {
+      setError("Authentication failed.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function submitLogin() {
+    const normalizedEmail = normalizeEmail(email);
+    const result = await authClient.signIn.email({
+      callbackURL: "/?auth=verified",
+      email: normalizedEmail,
+      password,
+      rememberMe
+    });
+
+    if (result.error) {
+      if (isEmailVerificationError(result.error)) {
+        await sendVerificationCode(normalizedEmail);
+        setMode("register");
+        setRegisterStep("verify");
+        setVerificationEmail(normalizedEmail);
+        setNotice({
+          kind: "info",
+          message: "Enter the verification code we sent to your email."
+        });
+        return;
+      }
+
+      setError(result.error.message ?? "Authentication failed.");
+      return;
+    }
+
+    await finishAuthenticatedFlow();
+  }
+
+  function continueToPasswordStep() {
+    setEmail(normalizeEmail(email));
+    setRegisterStep("password");
+  }
+
+  async function createAccountAndSendCode() {
+    if (password !== confirmPassword) {
+      setError("Passwords must match.");
+      return;
+    }
+
+    const normalizedEmail = normalizeEmail(email);
+    const result = await authClient.signUp.email({
+      callbackURL: "/?auth=verified",
+      email: normalizedEmail,
+      name: normalizedEmail,
+      password
+    });
+
+    if (result.error) {
+      setError(result.error.message ?? "Could not create your account.");
+      return;
+    }
+
+    await sendVerificationCode(normalizedEmail);
+    setEmail(normalizedEmail);
+    setVerificationEmail(normalizedEmail);
+    setPassword("");
+    setConfirmPassword("");
+    setRegisterStep("verify");
+    setNotice({
+      kind: "success",
+      message: "Verification code sent. Check your email."
+    });
+  }
+
+  async function verifyRegistrationCode() {
+    const normalizedEmail = normalizeEmail(verificationEmail ?? email);
+    const result = await authClient.emailOtp.verifyEmail({
+      email: normalizedEmail,
+      otp: verificationCode.trim()
+    });
+
+    if (result.error) {
+      setError(result.error.message ?? "Verification failed.");
+      return;
+    }
+
+    setVerificationCode("");
+    await finishAuthenticatedFlow();
+  }
+
+  async function resendVerificationCode() {
+    const normalizedEmail = normalizeEmail(verificationEmail ?? email);
+
+    if (!normalizedEmail) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setResendingVerification(true);
+    clearMessages();
+
+    try {
+      await sendVerificationCode(normalizedEmail);
+      setVerificationEmail(normalizedEmail);
+      setNotice({
+        kind: "success",
+        message: "Verification code sent. Check your email."
+      });
+    } catch {
+      setError("Could not send a verification code.");
+    } finally {
+      setResendingVerification(false);
+    }
+  }
+
+  async function sendVerificationCode(normalizedEmail: string) {
+    const result = await authClient.emailOtp.sendVerificationOtp({
+      email: normalizedEmail,
+      type: "email-verification"
+    });
+
+    if (result.error) {
+      throw new Error(result.error.message ?? "Could not send a verification code.");
+    }
+  }
+
+  async function signInWithGoogle() {
+    setSubmitting(true);
+    clearMessages();
+
+    try {
+      const result = await authClient.signIn.social({
+        provider: "google",
+        callbackURL: "/"
+      });
+
+      if (result?.error) {
+        setError(result.error.message ?? "Google sign-in failed.");
+      }
+    } catch {
+      setError("Google sign-in is unavailable.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  async function finishAuthenticatedFlow() {
+    await onAuthenticated();
+    onClose?.();
+    setPassword("");
+    setConfirmPassword("");
+    setVerificationCode("");
+  }
+
+  function clearMessages() {
+    setError(null);
+    setNotice(null);
+  }
+
+  function switchMode() {
+    setMode(mode === "login" ? "register" : "login");
+    setRegisterStep("email");
+    setPassword("");
+    setConfirmPassword("");
+    setVerificationCode("");
+    setVerificationEmail(null);
+    clearMessages();
+  }
+
+  function goBackOneRegisterStep() {
+    clearMessages();
+    setRegisterStep(registerStep === "verify" ? "password" : "email");
+  }
+
+  return (
+    <div
+      className="auth-modal"
+      role={isModal ? "dialog" : undefined}
+      aria-modal={isModal ? "true" : undefined}
+      aria-labelledby="auth-title"
+    >
+      <div className="modal-header">
+        <div>
+          <div className="drawer-kicker">{modeLabel}</div>
+          <h2 id="auth-title">{title}</h2>
+          {subtitle ? <p className="auth-greeting">{subtitle}</p> : null}
+        </div>
+        {onClose ? (
+          <button className="icon-button" type="button" aria-label="Close" onClick={onClose}>
+            <X size={17} aria-hidden="true" />
+          </button>
+        ) : null}
+      </div>
+
+      {mode === "register" ? <RegisterProgress activeStep={registerStep} /> : null}
+
+      <form className="auth-form" onSubmit={submit}>
+        <AuthFields
+          confirmPassword={confirmPassword}
+          email={email}
+          mode={mode}
+          password={password}
+          registerStep={registerStep}
+          rememberMe={rememberMe}
+          verificationCode={verificationCode}
+          onConfirmPasswordChange={setConfirmPassword}
+          onEmailChange={(value) => {
+            setEmail(value);
+            setVerificationEmail(null);
+          }}
+          onPasswordChange={setPassword}
+          onRememberMeChange={setRememberMe}
+          onVerificationCodeChange={setVerificationCode}
+        />
+
+        {serviceError ? <div className="form-error">{serviceError}</div> : null}
+        {error ? <div className="form-error">{error}</div> : null}
+        {notice ? <div className={`form-status ${notice.kind}`}>{notice.message}</div> : null}
+
+        <div className={mode === "register" && registerStep !== "email" ? "auth-form-actions" : ""}>
+          {mode === "register" && registerStep !== "email" ? (
+            <button className="secondary-action" disabled={submitting || Boolean(serviceError)} type="button" onClick={goBackOneRegisterStep}>
+              Back
+            </button>
+          ) : null}
+          <button className="primary-action" disabled={submitting || Boolean(serviceError)} type="submit">
+            {submitting ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : null}
+            {getPrimaryActionLabel(mode, registerStep)}
+          </button>
+        </div>
+      </form>
+
+      <div className="auth-secondary-actions">
+        {mode === "register" && registerStep === "verify" ? (
+          <button
+            className="secondary-action"
+            disabled={resendingVerification || submitting || Boolean(serviceError)}
+            type="button"
+            onClick={resendVerificationCode}
+          >
+            {resendingVerification ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : null}
+            {!resendingVerification ? <Mail size={15} aria-hidden="true" /> : null}
+            Resend verification code
+          </button>
+        ) : null}
+
+        {googleAuthEnabled ? (
+          <button className="secondary-action" disabled={submitting || Boolean(serviceError)} type="button" onClick={signInWithGoogle}>
+            Continue with Google
+          </button>
+        ) : null}
+      </div>
+
+      <button className="text-action" type="button" onClick={switchMode}>
+        {mode === "login" ? "Create an account" : "Use an existing account"}
+      </button>
+    </div>
+  );
+}
+
+function normalizeEmail(value?: string | null) {
+  return (value ?? "").trim().toLowerCase();
+}
+
+function isEmailVerificationError(error: { code?: string; message?: string; status?: number }) {
+  return error.status === 403
+    || error.code === "EMAIL_NOT_VERIFIED"
+    || error.message?.toLowerCase().includes("email not verified") === true;
+}

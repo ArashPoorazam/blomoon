@@ -3,10 +3,11 @@ import "server-only";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
+import { emailOTP } from "better-auth/plugins";
 import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
-import { sendAccountVerificationEmail } from "@/lib/email/verification";
+import { sendAccountVerificationEmail, sendAccountVerificationOtp } from "@/lib/email/verification";
 import { logger } from "@/lib/server/logging";
 import type { TerraThemeId } from "@/lib/theme/themes";
 
@@ -161,8 +162,8 @@ function createAuth() {
     }),
     emailVerification: {
       autoSignInAfterVerification: true,
-      sendOnSignIn: true,
-      sendOnSignUp: true,
+      sendOnSignIn: false,
+      sendOnSignUp: false,
       sendVerificationEmail: async ({ user, url, token }) => {
         await sendAccountVerificationEmail({
           email: user.email,
@@ -175,7 +176,22 @@ function createAuth() {
       enabled: true,
       requireEmailVerification: true
     },
-    plugins: [nextCookies()],
+    plugins: [
+      emailOTP({
+        allowedAttempts: 5,
+        expiresIn: 600,
+        otpLength: 6,
+        sendVerificationOTP: async ({ email, otp, type }) => {
+          if (type !== "email-verification") {
+            return;
+          }
+
+          await sendAccountVerificationOtp({ email, otp });
+        },
+        storeOTP: "hashed"
+      }),
+      nextCookies()
+    ],
     secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
     socialProviders: createSocialProviders(),
     user: {
