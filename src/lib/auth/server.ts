@@ -13,7 +13,6 @@ export type SafeUser = {
   email: string;
   emailVerified: boolean;
   image: string | null;
-  name: string;
   selectedTheme: TerraThemeId;
 };
 
@@ -87,7 +86,6 @@ export function sanitizeUser(user: AuthSessionUser): SafeUser {
     email: String(user.email ?? ""),
     emailVerified: Boolean(user.emailVerified),
     image: user.image ? String(user.image) : null,
-    name: String(user.name ?? "Terravue user"),
     selectedTheme: normalizeThemeId(user.selectedTheme)
   };
 }
@@ -131,6 +129,9 @@ function createAuth() {
     secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,
     socialProviders: createSocialProviders(),
     user: {
+      fields: {
+        name: "email"
+      },
       additionalFields: {
         selectedTheme: {
           type: "string",

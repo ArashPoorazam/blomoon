@@ -1,7 +1,7 @@
 "use client";
 
 import { Code2, LoaderCircle, LogOut, Mail, MessageCircle, Palette, Shield, UserCircle } from "lucide-react";
-import { useState, type FormEvent } from "react";
+import { useState, type FormEvent, type ReactNode } from "react";
 import { authClient } from "@/lib/auth/client";
 import type { ContactLink } from "@/lib/app-config/types";
 import type { TerraThemeId } from "@/lib/theme/themes";
@@ -19,6 +19,11 @@ type AccountMenuProps = {
 };
 
 type MenuView = "account" | "themes" | "contact";
+type MenuAction = {
+  icon: ReactNode;
+  id: MenuView | "auth" | "logout";
+  label: string;
+};
 
 export function AccountMenu({
   contactLinks,
@@ -30,9 +35,10 @@ export function AccountMenu({
   user
 }: AccountMenuProps) {
   const [open, setOpen] = useState(false);
-  const [view, setView] = useState<MenuView>("account");
+  const [view, setView] = useState<MenuView | null>(null);
   const [confirmingLogout, setConfirmingLogout] = useState(false);
-  const activeView = view === "contact" && contactLinks.length === 0 ? "account" : view;
+  const activeView = view === "contact" && contactLinks.length === 0 ? null : view;
+  const actions = getMenuActions({ contactLinks, loading, user });
 
   return (
     <div className="account-menu">
@@ -41,34 +47,46 @@ export function AccountMenu({
         aria-label="Account menu"
         className="account-menu-trigger"
         type="button"
-        onClick={() => setOpen((value) => !value)}
+        onClick={() => {
+          setOpen((value) => {
+            if (!value) {
+              setView(null);
+            }
+
+            return !value;
+          });
+        }}
       >
         <UserCircle size={19} aria-hidden="true" />
       </button>
 
       {open ? (
         <div className="account-popover">
-          <div className="account-action-bar" role="tablist" aria-label="Account sections">
-            <button className={activeView === "account" ? "active" : ""} type="button" onClick={() => setView("account")}>
-              <Shield size={14} aria-hidden="true" />
-              Account
-            </button>
-            <button className={activeView === "themes" ? "active" : ""} type="button" onClick={() => setView("themes")}>
-              <Palette size={14} aria-hidden="true" />
-              Themes
-            </button>
-            {contactLinks.length > 0 ? (
-              <button className={activeView === "contact" ? "active" : ""} type="button" onClick={() => setView("contact")}>
-                <Mail size={14} aria-hidden="true" />
-                Contact
+          <div className="account-action-list" aria-label="Account options">
+            {actions.map((action) => (
+              <button
+                className={`${activeView === action.id ? "active" : ""} ${action.id === "logout" ? "logout-action" : ""}`}
+                key={action.id}
+                type="button"
+                onClick={() => {
+                  if (action.id === "auth") {
+                    onAuthOpen();
+                    setOpen(false);
+                    return;
+                  }
+
+                  if (action.id === "logout") {
+                    setConfirmingLogout(true);
+                    return;
+                  }
+
+                  setView(action.id);
+                }}
+              >
+                {action.icon}
+                <span>{action.label}</span>
               </button>
-            ) : null}
-            {user ? (
-              <button className="logout-tab" type="button" onClick={() => setConfirmingLogout(true)}>
-                <LogOut size={14} aria-hidden="true" />
-                Log out
-              </button>
-            ) : null}
+            ))}
           </div>
 
           {activeView === "account" ? (
@@ -109,6 +127,35 @@ export function AccountMenu({
   );
 }
 
+function getMenuActions({
+  contactLinks,
+  loading,
+  user
+}: {
+  contactLinks: ContactLink[];
+  loading: boolean;
+  user: ViewerDto | null;
+}): MenuAction[] {
+  if (!user && !loading) {
+    return [
+      { icon: <Shield size={15} aria-hidden="true" />, id: "auth", label: "Log in or register" },
+      { icon: <Palette size={15} aria-hidden="true" />, id: "themes", label: "Themes" },
+      ...(contactLinks.length > 0
+        ? [{ icon: <Mail size={15} aria-hidden="true" />, id: "contact" as const, label: "Contact us" }]
+        : [])
+    ];
+  }
+
+  return [
+    { icon: <Shield size={15} aria-hidden="true" />, id: "account", label: "Account info" },
+    { icon: <Palette size={15} aria-hidden="true" />, id: "themes", label: "Themes" },
+    ...(contactLinks.length > 0
+      ? [{ icon: <Mail size={15} aria-hidden="true" />, id: "contact" as const, label: "Contact us" }]
+      : []),
+    ...(user ? [{ icon: <LogOut size={15} aria-hidden="true" />, id: "logout" as const, label: "Log out" }] : [])
+  ];
+}
+
 function AccountPanel({
   loading,
   onAuthOpen,
@@ -140,10 +187,10 @@ function AccountPanel({
     <div className="account-panel">
       <div className="account-identity">
         <div className="account-avatar" aria-hidden="true">
-          {user.name.slice(0, 1).toUpperCase()}
+          {user.email.slice(0, 1).toUpperCase()}
         </div>
         <div>
-          <strong>{user.name}</strong>
+          <strong>Signed in</strong>
           <span>{user.email}</span>
         </div>
       </div>

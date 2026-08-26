@@ -11,7 +11,6 @@ export type ViewerDto = {
   email: string;
   emailVerified: boolean;
   image: string | null;
-  name: string;
   selectedTheme: TerraThemeId;
   authMethods: UserAuthMethod[];
   canChangeEmail: false;
@@ -24,7 +23,6 @@ export function toViewerDto(input: {
   emailVerified: boolean;
   id: string;
   image: string | null;
-  name: string;
   selectedTheme: string;
 }): ViewerDto {
   const providers = new Set(input.accountProviderIds);
@@ -35,7 +33,6 @@ export function toViewerDto(input: {
     email: input.email,
     emailVerified: input.emailVerified,
     image: input.image,
-    name: input.name,
     selectedTheme: input.selectedTheme === "atlas" ? "atlas" : "night",
     authMethods: availableProviderIds.map((providerId) => providerId === "credential"
       ? { id: "password", label: "Password", enabled: providers.has("credential") }

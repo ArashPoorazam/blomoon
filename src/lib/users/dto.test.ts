@@ -9,7 +9,6 @@ describe("toViewerDto", () => {
       emailVerified: true,
       id: "8bdb6947-f995-46c5-8266-c3c94f93fcd9",
       image: null,
-      name: "User",
       selectedTheme: "atlas"
     });
 
@@ -18,7 +17,6 @@ describe("toViewerDto", () => {
       email: "user@example.com",
       emailVerified: true,
       image: null,
-      name: "User",
       selectedTheme: "atlas",
       authMethods: [
         { id: "password", label: "Password", enabled: true },
@@ -35,7 +33,6 @@ describe("toViewerDto", () => {
       emailVerified: false,
       id: "8bdb6947-f995-46c5-8266-c3c94f93fcd9",
       image: null,
-      name: "User",
       selectedTheme: "unknown"
     }).selectedTheme).toBe("night");
   });
@@ -48,7 +45,6 @@ describe("toViewerDto", () => {
       emailVerified: false,
       id: "8bdb6947-f995-46c5-8266-c3c94f93fcd9",
       image: null,
-      name: "User",
       selectedTheme: "night"
     }).authMethods).toEqual([
       { id: "password", label: "Password", enabled: true }

@@ -15,7 +15,6 @@ export async function getViewer(user: SafeUser): Promise<ViewerDto> {
         emailVerified: schema.users.emailVerified,
         id: schema.users.id,
         image: schema.users.image,
-        name: schema.users.name,
         selectedTheme: schema.users.selectedTheme
       })
       .from(schema.users)
@@ -34,7 +33,6 @@ export async function getViewer(user: SafeUser): Promise<ViewerDto> {
     emailVerified: profile?.emailVerified ?? user.emailVerified,
     id: profile?.id ?? user.id,
     image: profile?.image ?? user.image,
-    name: profile?.name ?? user.name,
     selectedTheme: profile?.selectedTheme ?? user.selectedTheme
   });
 }

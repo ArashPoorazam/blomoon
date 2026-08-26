@@ -4,6 +4,8 @@ import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X 
 import { useEffect, useState } from "react";
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
+import type { FavouriteGroupDto } from "@/lib/persistence/types";
+import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
 import { SideDrawerList } from "./SideDrawerList";
 
 type SideDrawerProps = {
@@ -13,6 +15,8 @@ type SideDrawerProps = {
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
   favouritePointIds: Set<string>;
+  favouriteGroups: FavouriteGroupDto[];
+  favouritesLoading: boolean;
   hasMoreRemotePoints?: boolean;
   isLoadingDrawerTask: boolean;
   loading: boolean;
@@ -28,9 +32,12 @@ type SideDrawerProps = {
   sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
+  view: "list" | "favourites";
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
+  onCloseFavourites: () => void;
+  onFavouriteSelect: (modeId: TerraModeId, point: TerraPoint) => void;
   onLoadMoreRemotePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
@@ -49,6 +56,8 @@ export function SideDrawer({
   detail,
   detailAccessory,
   favouritePointIds,
+  favouriteGroups,
+  favouritesLoading,
   hasMoreRemotePoints,
   isLoadingDrawerTask,
   loading,
@@ -64,9 +73,12 @@ export function SideDrawer({
   sortId,
   totalPoints,
   totalPointsKind,
+  view,
   onCountryFilterChange,
   onClearCountrySelection,
   onClearSelection,
+  onCloseFavourites,
+  onFavouriteSelect,
   onLoadMoreRemotePoints,
   onModeChange,
   onOpenFavourites,
@@ -78,6 +90,7 @@ export function SideDrawer({
   onToggleShowListedOnGlobe
 }: SideDrawerProps) {
   const isDetail = Boolean(selectedId);
+  const isFavourites = !isDetail && view === "favourites";
 
   return (
     <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label={`${activeMode.label} data`}>
@@ -99,6 +112,16 @@ export function SideDrawer({
             detail={detail}
             detailAccessory={detailAccessory}
             onClearSelection={onClearSelection}
+          />
+        ) : isFavourites ? (
+          <FavouritesDrawer
+            groups={favouriteGroups}
+            loading={favouritesLoading}
+            showOnGlobe={showListedOnGlobe}
+            onBackToList={onCloseFavourites}
+            onFavouriteSelect={onFavouriteSelect}
+            onToggleFavourite={onToggleFavourite}
+            onToggleShowOnGlobe={onToggleShowListedOnGlobe}
           />
         ) : (
           <SideDrawerList

@@ -2,7 +2,8 @@
 
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
-import { DrawerListToolbar, LoadMoreButton } from "./drawer/DrawerListToolbar";
+import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
+import { LoadMoreButton } from "./drawer/LoadMoreButton";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
 type SideDrawerListProps = {
@@ -86,6 +87,7 @@ export function SideDrawerList({
         totalPointsKind={totalPointsKind}
         onCountryFilterChange={onCountryFilterChange}
         onClearCountrySelection={onClearCountrySelection}
+        onLoadMorePoints={onLoadMoreRemotePoints}
         onModeChange={onModeChange}
         onOpenFavourites={onOpenFavourites}
         onQueryChange={onQueryChange}

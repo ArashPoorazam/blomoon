@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronDown, Globe2, LoaderCircle, Search, Star, X } from "lucide-react";
+import { ChevronDown, Globe2, Search, Star, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
+import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerListToolbarProps = {
   activeMode: TerraMode;
@@ -23,6 +24,7 @@ type DrawerListToolbarProps = {
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
+  onLoadMorePoints?: () => void;
   onModeChange: (modeId: TerraModeId) => void;
   onOpenFavourites: () => void;
   onQueryChange: (value: string) => void;
@@ -48,6 +50,7 @@ export function DrawerListToolbar({
   totalPointsKind,
   onCountryFilterChange,
   onClearCountrySelection,
+  onLoadMorePoints,
   onModeChange,
   onOpenFavourites,
   onQueryChange,
@@ -107,11 +110,13 @@ export function DrawerListToolbar({
         activeMode={activeMode}
         countries={countries}
         hasMorePoints={hasMorePoints}
+        isLoadingMorePoints={isLoadingMorePoints}
         selectedCountry={selectedCountry}
         showListedOnGlobe={showListedOnGlobe}
         sortId={sortId}
         onCountryFilterChange={onCountryFilterChange}
         onClearCountrySelection={onClearCountrySelection}
+        onLoadMorePoints={onLoadMorePoints}
         onSortChange={onSortChange}
         onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
       />
@@ -123,22 +128,26 @@ function FilterControls({
   activeMode,
   countries,
   hasMorePoints,
+  isLoadingMorePoints,
   selectedCountry,
   showListedOnGlobe,
   sortId,
   onCountryFilterChange,
   onClearCountrySelection,
+  onLoadMorePoints,
   onSortChange,
   onToggleShowListedOnGlobe
 }: {
   activeMode: TerraMode;
   countries: CountryInfo[];
   hasMorePoints: boolean;
+  isLoadingMorePoints: boolean;
   selectedCountry: CountryInfo | null;
   showListedOnGlobe: boolean;
   sortId: string;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
+  onLoadMorePoints?: () => void;
   onSortChange: (sortId: string) => void;
   onToggleShowListedOnGlobe: () => void;
 }) {
@@ -297,41 +306,15 @@ function FilterControls({
           <Globe2 size={15} aria-hidden="true" />
           Display on globe
         </button>
-        {hasMorePoints ? <span className="filter-more-count">More available</span> : null}
+        {hasMorePoints ? (
+          <LoadMoreButton
+            className="filter-load-more"
+            isLoading={isLoadingMorePoints}
+            onLoadMore={onLoadMorePoints}
+          />
+        ) : null}
       </div>
     </div>
-  );
-}
-
-export function LoadMoreButton({
-  className,
-  isLoading,
-  onLoadMore
-}: {
-  className: string;
-  isLoading: boolean;
-  onLoadMore?: () => void;
-}) {
-  return (
-    <button
-      className={className}
-      disabled={isLoading}
-      type="button"
-      onClick={() => {
-        if (onLoadMore) {
-          onLoadMore();
-        }
-      }}
-    >
-      {isLoading ? (
-        <>
-          <LoaderCircle className="loading-status-icon spinning" size={14} aria-hidden="true" />
-          Loading
-        </>
-      ) : (
-        "Show 50 more"
-      )}
-    </button>
   );
 }
 

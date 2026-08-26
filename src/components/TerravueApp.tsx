@@ -15,9 +15,8 @@ import {
   type TerraThemeId
 } from "@/lib/theme/themes";
 import { AccountMenu } from "./account/AccountMenu";
-import { AuthModal } from "./account/AuthModal";
+import { AuthGate, AuthModal } from "./account/AuthModal";
 import { useViewer } from "./account/useViewer";
-import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
 import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
@@ -36,7 +35,8 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [favouritesOpen, setFavouritesOpen] = useState(false);
+  const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
+  const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -53,12 +53,17 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
   });
   const drawerOpen = !drawerCollapsed;
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
-  const globePoints = showListedOnGlobe ? modeState.visiblePoints : modeState.globePoints;
-  const visiblePointIds = useMemo(
-    () => new Set(modeState.visiblePoints.map((point) => point.id)),
-    [modeState.visiblePoints]
+  const favouritePoints = useMemo(
+    () => favourites.groups.flatMap((group) => group.favourites.map((favourite) => favourite.point)),
+    [favourites.groups]
   );
-  const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && visiblePointIds.has(modeState.selectedPoint.id))
+  const activeDrawerPoints = drawerView === "favourites" && !modeState.selectedId ? favouritePoints : modeState.visiblePoints;
+  const globePoints = showListedOnGlobe ? activeDrawerPoints : modeState.globePoints;
+  const visiblePointIds = useMemo(
+    () => new Set(activeDrawerPoints.map(getPointKey)),
+    [activeDrawerPoints]
+  );
+  const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && visiblePointIds.has(getPointKey(modeState.selectedPoint)))
     ? modeState.selectedPoint
     : null;
   const globeMarkerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
@@ -77,9 +82,19 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
     }
   }, [viewer.user?.selectedTheme]);
 
+  useEffect(() => {
+    if (!pendingFavouriteSelection || pendingFavouriteSelection.modeId !== activeModeId) {
+      return;
+    }
+
+    modeState.selectPoint(pendingFavouriteSelection.point);
+    setPendingFavouriteSelection(null);
+  }, [activeModeId, modeState.selectPoint, pendingFavouriteSelection]);
+
   const selectPoint = useCallback((point: TerraPoint) => {
     modeState.selectPoint(point);
     setDrawerCollapsed(false);
+    setDrawerView("list");
 
     if (viewer.user && activeMode.clickEndpoint) {
       void fetch(activeMode.clickEndpoint(point.id), { method: "POST" });
@@ -89,6 +104,7 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
   const selectMode = useCallback((modeId: TerraModeId) => {
     setActiveModeId(modeId);
     setDrawerCollapsed(false);
+    setDrawerView("list");
     setHoveredPoint(null);
   }, []);
 
@@ -96,6 +112,7 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
     setDrawerCollapsed(false);
+    setDrawerView("list");
     setHoveredPoint(null);
   }, [selectedCountry?.code]);
 
@@ -123,10 +140,32 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
 
   const selectFavourite = useCallback((modeId: TerraModeId, point: TerraPoint) => {
     setActiveModeId(modeId);
-    modeState.selectPoint(point);
-    setFavouritesOpen(false);
+    setPendingFavouriteSelection({ modeId, point });
+    setDrawerView("list");
     setDrawerCollapsed(false);
-  }, [modeState.selectPoint]);
+  }, []);
+
+  if (viewer.loading) {
+    return (
+      <main className="auth-gate">
+        <div className="auth-modal auth-loading" role="status" aria-live="polite">
+          <LoaderMessage />
+        </div>
+      </main>
+    );
+  }
+
+  if (!viewer.user) {
+    return (
+      <AuthGate
+        googleAuthEnabled={appConfig.googleAuthEnabled}
+        serviceError={viewer.error}
+        onAuthenticated={async () => {
+          await viewer.refresh();
+        }}
+      />
+    );
+  }
 
   return (
     <main
@@ -183,6 +222,8 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
         detail={modeState.detail}
         detailAccessory={detailAccessory}
         favouritePointIds={favourites.favouriteIds}
+        favouriteGroups={favourites.groups}
+        favouritesLoading={favourites.loading}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
         isLoadingDrawerTask={modeState.isLoadingDrawerTask}
         loading={modeState.listLoading}
@@ -198,18 +239,21 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
         sortId={modeState.sortId}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
+        view={drawerView}
         onCountryFilterChange={selectCountry}
         onClearCountrySelection={clearCountrySelection}
-        onClearSelection={modeState.clearSelection}
+        onClearSelection={() => {
+          modeState.clearSelection();
+          setDrawerView("list");
+        }}
+        onCloseFavourites={() => setDrawerView("list")}
+        onFavouriteSelect={selectFavourite}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
         onModeChange={selectMode}
         onOpenFavourites={() => {
-          if (viewer.user) {
-            setFavouritesOpen(true);
-            return;
-          }
-
-          setAuthModalOpen(true);
+          modeState.clearSelection();
+          setDrawerView("favourites");
+          setDrawerCollapsed(false);
         }}
         onPointSelect={selectPoint}
         onQueryChange={modeState.setQuery}
@@ -219,14 +263,6 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
         }}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
         onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
-      />
-
-      <FavouritesDrawer
-        groups={favourites.groups}
-        loading={favourites.loading}
-        open={favouritesOpen}
-        onClose={() => setFavouritesOpen(false)}
-        onFavouriteSelect={selectFavourite}
       />
 
       <AuthModal
@@ -243,4 +279,17 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
       ) : null}
     </main>
   );
+}
+
+function LoaderMessage() {
+  return (
+    <div className="auth-loading-content">
+      <div className="drawer-kicker">Terravue</div>
+      <h2>Loading account</h2>
+    </div>
+  );
+}
+
+function getPointKey(point: TerraPoint) {
+  return `${point.modeId}:${point.id}`;
 }
