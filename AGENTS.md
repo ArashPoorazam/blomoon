@@ -7,27 +7,6 @@ This version has breaking changes — APIs, conventions, and file structure may 
 This block is written and re-added by `next dev` — verify at `node_modules/next/dist/server/lib/generate-agent-files.js`. Removing it from a diff only re-creates the uncommitted change; committing it with your work keeps the tree clean.
 
 <!-- END:nextjs-agent-rules -->
-
-## ICM Workspace Map
-
-For cold-start navigation, change-impact routing, and task-scoped source loading, start at `map/AGENTS.md`. The source tree and this `AGENTS.md` remain authoritative; the map only cites them and routes later agents to the smallest useful set of files.
-
-Use the map as a routing layer, not as permission to skip source inspection:
-
-- For change work, open `map/AGENTS.md`, then `map/effects/CONTEXT.md`, then only the object/process cards and cited source files needed for the task.
-- For understanding work, open the specific object or process card that matches the question, then follow its `See` links into source.
-- Before editing, verify at least one load-bearing citation from every map card you relied on. If a card and source disagree, trust the source.
-- Do not load the whole `map/objects/` or `map/processes/` tree by default. The map exists to reduce context, not add another thing to slurp.
-- Do not treat `ghost` or `leftover` map entries as implemented behavior. They are warnings, not available features.
-
-Keep the map current only when the repo's durable shape changes:
-
-- Add or update map cards when adding a durable subsystem, media mode, shared contract, public route family, provider workflow, playback workflow, persistence/auth/data ownership path, or cross-boundary process that future agents must know before editing safely.
-- Update an existing card when changing its cited behavior, ownership, first-order impact, or source paths.
-- Mark a card `stale` or update it in the same change when cited source no longer supports its load-bearing claims.
-- Do not add map cards for isolated bug fixes, copy changes, styling tweaks, minor component-local state changes, refactors inside an already mapped object, or speculative features that are not wired into the app.
-- Prefer updating one existing card over creating a new card unless a new durable noun or real process now exists.
-
 ## Product Architecture
 
 Terravue is a globe-based live entertainment directory. Its purpose is to help people discover and play streamable media by geography: radio now, podcasts/live audio next, and TV/video only when the media contracts are ready.
