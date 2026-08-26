@@ -1,12 +1,14 @@
 import "server-only";
 
 import { and, desc, eq, sql } from "drizzle-orm";
-import { getDb, schema } from "@/db";
+import { getDb, schema, type TerravueDb } from "@/db";
 import { getRadioStationPersistenceSnapshot } from "@/lib/modes/radio";
 import { isRadioStationId } from "@/lib/modes/radio/api";
 import type { RadioStationPersistenceSnapshot } from "@/lib/modes/radio/types";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { FavouriteDto, ModePersistenceAdapter } from "./types";
+
+type TerravueTransaction = Parameters<Parameters<TerravueDb["transaction"]>[0]>[0];
 
 export const radioPersistenceAdapter: ModePersistenceAdapter = {
   label: "Radio",
@@ -168,7 +170,7 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
   }
 };
 
-async function upsertStation(tx: any, snapshot: RadioStationPersistenceSnapshot) {
+async function upsertStation(tx: TerravueTransaction, snapshot: RadioStationPersistenceSnapshot) {
   await tx
     .insert(schema.stations)
     .values({

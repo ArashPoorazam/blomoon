@@ -3,7 +3,7 @@ type: object
 cluster: surfaces
 universe: live
 status: verified
-verified: 2026-08-25
+verified: 2026-08-26
 entity: src/components/TerravueApp.tsx
 ---
 
@@ -17,13 +17,13 @@ The shell is the interaction join between generic globe behavior and mode-owned 
 
 ## Shape
 
-- `TerravueApp` holds active mode id, drawer collapsed state, hovered point, selected country, listed-on-globe toggle, account/auth modal state, favourites drawer state, and theme id.
+- `TerravueApp` receives server-derived app config for Google auth visibility/contact links and holds active mode id, drawer collapsed state, hovered point, selected country, listed-on-globe toggle, account/auth modal state, favourites drawer state, and theme id.
 - It calls `useModeDataset` and `useAudioPlayback`, then passes generic point/country callbacks into `GlobeScene` and list/detail props into `SideDrawer`.
 - It calls `useViewer` and `useFavourites` for sanitized account/favourite state and persists logged-in theme changes through `/api/users/me/theme`.
 - `SideDrawer` switches between list and detail views based on selected id and displays a loading status panel.
-- `SideDrawerList` owns search input, mode switcher, favourites entry button, country menu, sort menu, listed-on-globe toggle, load-more controls, provider notice, station row selection, sibling star controls, and visible count copy.
+- `SideDrawerList` renders station rows and delegates the compact list command surface to `DrawerListToolbar`, which owns search input, mode switcher, prominent favourites entry, country menu, sort menu, listed-on-globe toggle, provider notice, and visible count copy.
 
-Citations: `src/components/TerravueApp.tsx:29`, `src/components/TerravueApp.tsx:36`, `src/components/TerravueApp.tsx:43`, `src/components/TerravueApp.tsx:68`, `src/components/TerravueApp.tsx:74`, `src/components/TerravueApp.tsx:96`, `src/components/TerravueApp.tsx:172`, `src/components/TerravueApp.tsx:217`, `src/components/TerravueApp.tsx:225`, `src/components/SideDrawer.tsx:42`, `src/components/SideDrawer.tsx:89`, `src/components/SideDrawerList.tsx:34`, `src/components/SideDrawerList.tsx:82`, `src/components/SideDrawerList.tsx:136`, `src/components/SideDrawerList.tsx:148`
+Citations: `src/components/TerravueApp.tsx:30`, `src/components/TerravueApp.tsx:38`, `src/components/TerravueApp.tsx:48`, `src/components/TerravueApp.tsx:75`, `src/components/TerravueApp.tsx:105`, `src/components/TerravueApp.tsx:154`, `src/components/TerravueApp.tsx:183`, `src/components/TerravueApp.tsx:231`, `src/components/SideDrawer.tsx:42`, `src/components/SideDrawer.tsx:89`, `src/components/SideDrawerList.tsx:35`, `src/components/SideDrawerList.tsx:64`, `src/components/drawer/DrawerListToolbar.tsx:34`, `src/components/drawer/DrawerListToolbar.tsx:75`, `src/components/drawer/DrawerListToolbar.tsx:181`
 
 ## Connected To
 
@@ -51,3 +51,4 @@ Citations: `src/components/TerravueApp.tsx:29`, `src/components/TerravueApp.tsx:
 - Source: `src/components/TerravueApp.tsx`
 - Source: `src/components/SideDrawer.tsx`
 - Source: `src/components/SideDrawerList.tsx`
+- Source: `src/components/drawer/DrawerListToolbar.tsx`

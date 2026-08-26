@@ -99,7 +99,6 @@ export const stations = pgTable("stations", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  uniqueIndex("stations_provider_station_id_unique").on(table.providerStationId),
   index("stations_country_code_idx").on(table.countryCode),
   index("stations_star_count_idx").on(table.starCount),
   index("stations_click_count_idx").on(table.clickCount),

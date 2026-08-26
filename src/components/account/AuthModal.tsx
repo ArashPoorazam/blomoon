@@ -7,12 +7,13 @@ import { authClient } from "@/lib/auth/client";
 type AuthMode = "login" | "register";
 
 type AuthModalProps = {
+  googleAuthEnabled: boolean;
   open: boolean;
   onClose: () => void;
   onAuthenticated: () => void;
 };
 
-export function AuthModal({ open, onAuthenticated, onClose }: AuthModalProps) {
+export function AuthModal({ googleAuthEnabled, open, onAuthenticated, onClose }: AuthModalProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [email, setEmail] = useState("");
   const [name, setName] = useState("");
@@ -30,9 +31,11 @@ export function AuthModal({ open, onAuthenticated, onClose }: AuthModalProps) {
     setError(null);
 
     try {
+      const normalizedEmail = email.trim().toLowerCase();
+      const displayName = name.trim() || normalizedEmail;
       const result = mode === "login"
-        ? await authClient.signIn.email({ email, password, rememberMe: true })
-        : await authClient.signUp.email({ email, name: name || email, password });
+        ? await authClient.signIn.email({ email: normalizedEmail, password, rememberMe: true })
+        : await authClient.signUp.email({ email: normalizedEmail, name: displayName, password });
 
       if (result.error) {
         setError(result.error.message ?? "Authentication failed.");
@@ -119,9 +122,11 @@ export function AuthModal({ open, onAuthenticated, onClose }: AuthModalProps) {
           </button>
         </form>
 
-        <button className="secondary-action" disabled={submitting} type="button" onClick={signInWithGoogle}>
-          Continue with Google
-        </button>
+        {googleAuthEnabled ? (
+          <button className="secondary-action" disabled={submitting} type="button" onClick={signInWithGoogle}>
+            Continue with Google
+          </button>
+        ) : null}
 
         <button
           className="text-action"

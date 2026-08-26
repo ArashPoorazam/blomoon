@@ -548,21 +548,6 @@
         }
       },
       "indexes": {
-        "stations_provider_station_id_unique": {
-          "name": "stations_provider_station_id_unique",
-          "columns": [
-            {
-              "expression": "provider_station_id",
-              "isExpression": false,
-              "asc": true,
-              "nulls": "last"
-            }
-          ],
-          "isUnique": true,
-          "concurrently": false,
-          "method": "btree",
-          "with": {}
-        },
         "stations_country_code_idx": {
           "name": "stations_country_code_idx",
           "columns": [

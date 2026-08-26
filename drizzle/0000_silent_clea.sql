@@ -112,7 +112,6 @@ CREATE INDEX "accounts_provider_id_idx" ON "accounts" USING btree ("provider_id"
 CREATE INDEX "sessions_user_id_idx" ON "sessions" USING btree ("user_id");--> statement-breakpoint
 CREATE INDEX "sessions_token_idx" ON "sessions" USING btree ("token");--> statement-breakpoint
 CREATE INDEX "station_clicks_station_id_idx" ON "station_clicks" USING btree ("station_id");--> statement-breakpoint
-CREATE UNIQUE INDEX "stations_provider_station_id_unique" ON "stations" USING btree ("provider_station_id");--> statement-breakpoint
 CREATE INDEX "stations_country_code_idx" ON "stations" USING btree ("country_code");--> statement-breakpoint
 CREATE INDEX "stations_star_count_idx" ON "stations" USING btree ("star_count");--> statement-breakpoint
 CREATE INDEX "stations_click_count_idx" ON "stations" USING btree ("click_count");--> statement-breakpoint

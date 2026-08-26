@@ -5,6 +5,7 @@ import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
+import { ensureDatabaseReady } from "@/db/readiness";
 import type { TerraThemeId } from "@/lib/theme/themes";
 
 export type SafeUser = {
@@ -55,6 +56,8 @@ export async function getOptionalUser(): Promise<SafeUser | null> {
     return null;
   }
 
+  await ensureDatabaseReady();
+
   const session = await (auth as AuthLike).api.getSession({
     headers: await headers()
   });
@@ -66,6 +69,8 @@ export async function requireUser(): Promise<SafeUser> {
   if (!isDatabaseConfigured()) {
     throw new AuthUnavailableError();
   }
+
+  await ensureDatabaseReady();
 
   const user = await getOptionalUser();
 
@@ -87,6 +92,10 @@ export function sanitizeUser(user: AuthSessionUser): SafeUser {
   };
 }
 
+export function isGoogleAuthConfigured() {
+  return Boolean(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET);
+}
+
 function createAuth() {
   if (!isDatabaseConfigured()) {
     return {
@@ -103,6 +112,7 @@ function createAuth() {
         generateId: "uuid"
       }
     },
+    baseURL: process.env.BETTER_AUTH_URL,
     database: drizzleAdapter(getDb(), {
       provider: "pg",
       schema: {
@@ -134,14 +144,17 @@ function createAuth() {
 }
 
 function createSocialProviders() {
-  if (!process.env.GOOGLE_CLIENT_ID || !process.env.GOOGLE_CLIENT_SECRET) {
+  const googleClientId = process.env.GOOGLE_CLIENT_ID;
+  const googleClientSecret = process.env.GOOGLE_CLIENT_SECRET;
+
+  if (!googleClientId || !googleClientSecret) {
     return {};
   }
 
   return {
     google: {
-      clientId: process.env.GOOGLE_CLIENT_ID,
-      clientSecret: process.env.GOOGLE_CLIENT_SECRET
+      clientId: googleClientId,
+      clientSecret: googleClientSecret
     }
   };
 }

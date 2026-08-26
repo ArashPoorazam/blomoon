@@ -39,4 +39,19 @@ describe("toViewerDto", () => {
       selectedTheme: "unknown"
     }).selectedTheme).toBe("night");
   });
+
+  it("omits unavailable auth methods", () => {
+    expect(toViewerDto({
+      accountProviderIds: ["credential"],
+      availableProviderIds: ["credential"],
+      email: "user@example.com",
+      emailVerified: false,
+      id: "8bdb6947-f995-46c5-8266-c3c94f93fcd9",
+      image: null,
+      name: "User",
+      selectedTheme: "night"
+    }).authMethods).toEqual([
+      { id: "password", label: "Password", enabled: true }
+    ]);
+  });
 });

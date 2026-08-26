@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
+import type { AppClientConfig } from "@/lib/app-config/types";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
@@ -23,10 +24,11 @@ import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
 import { SideDrawer } from "./SideDrawer";
 
 type TerravueAppProps = {
+  appConfig: AppClientConfig;
   initialDatasets?: Partial<Record<TerraModeId, TerraDataset>>;
 };
 
-export function TerravueApp({ initialDatasets }: TerravueAppProps) {
+export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
@@ -149,6 +151,7 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
       </div>
 
       <AccountMenu
+        contactLinks={appConfig.contactLinks}
         loading={viewer.loading}
         selectedThemeId={themeId}
         user={viewer.user}
@@ -227,11 +230,11 @@ export function TerravueApp({ initialDatasets }: TerravueAppProps) {
       />
 
       <AuthModal
+        googleAuthEnabled={appConfig.googleAuthEnabled}
         open={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
         onAuthenticated={async () => {
           await viewer.refresh();
-          await favourites.refresh();
         }}
       />
 

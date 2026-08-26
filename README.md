@@ -18,10 +18,20 @@ Future modes should stay inside the entertainment/media product: podcasts/live a
 
 ```bash
 npm install
+npm run db:migrate
+npm run db:check
 npm run dev
 ```
 
 Then open `http://localhost:3000`.
+
+Create `.env.local` from `.env.example` before running the app. Account features require:
+
+- `DATABASE_URL`
+- `BETTER_AUTH_URL`, for example `http://localhost:3000`
+- `BETTER_AUTH_SECRET`, generated with `openssl rand -base64 32`
+
+Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Account-menu contact rows are read from `TERRAVUE_CONTACT_GITHUB_URL`, `TERRAVUE_CONTACT_TELEGRAM_URL`, and `TERRAVUE_CONTACT_EMAIL`; unset values are hidden.
 
 ## Data Sources
 

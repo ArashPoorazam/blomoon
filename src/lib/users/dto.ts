@@ -19,6 +19,7 @@ export type ViewerDto = {
 
 export function toViewerDto(input: {
   accountProviderIds: string[];
+  availableProviderIds?: Array<"credential" | "google">;
   email: string;
   emailVerified: boolean;
   id: string;
@@ -27,6 +28,7 @@ export function toViewerDto(input: {
   selectedTheme: string;
 }): ViewerDto {
   const providers = new Set(input.accountProviderIds);
+  const availableProviderIds = input.availableProviderIds ?? ["credential", "google"];
 
   return {
     id: input.id,
@@ -35,10 +37,10 @@ export function toViewerDto(input: {
     image: input.image,
     name: input.name,
     selectedTheme: input.selectedTheme === "atlas" ? "atlas" : "night",
-    authMethods: [
-      { id: "password", label: "Password", enabled: providers.has("credential") },
-      { id: "google", label: "Google", enabled: providers.has("google") }
-    ],
+    authMethods: availableProviderIds.map((providerId) => providerId === "credential"
+      ? { id: "password", label: "Password", enabled: providers.has("credential") }
+      : { id: "google", label: "Google", enabled: providers.has("google") }
+    ),
     canChangeEmail: false
   };
 }
