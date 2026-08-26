@@ -1,90 +1,98 @@
 import "server-only";
 
 import { and, desc, eq, sql } from "drizzle-orm";
-import { getDb, schema, type TerravueDb } from "@/db";
+import { getDb, schema, type BlomoonDb } from "@/db";
 import { getRadioStationPersistenceSnapshot } from "@/lib/modes/radio";
 import { isRadioStationId } from "@/lib/modes/radio/api";
 import type { RadioStationPersistenceSnapshot } from "@/lib/modes/radio/types";
 import type { TerraPoint } from "@/lib/modes/types";
+import { logger } from "@/lib/server/logging";
 import type { FavouriteDto, ModePersistenceAdapter } from "./types";
 
-type TerravueTransaction = Parameters<Parameters<TerravueDb["transaction"]>[0]>[0];
+type BlomoonTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 
 export const radioPersistenceAdapter: ModePersistenceAdapter = {
   label: "Radio",
   modeId: "radio",
   async addFavourite(userId, pointId) {
-    if (!isRadioStationId(pointId)) {
-      return null;
-    }
-
-    const snapshot = await getRadioStationPersistenceSnapshot(pointId);
-
-    if (!snapshot) {
-      return null;
-    }
-
-    const db = getDb();
-
-    return db.transaction(async (tx) => {
-      await upsertStation(tx, snapshot);
-
-      const [inserted] = await tx
-        .insert(schema.usersFavourites)
-        .values({
-          userId,
-          stationId: snapshot.id,
-          updatedAt: new Date()
-        })
-        .onConflictDoNothing()
-        .returning({
-          createdAt: schema.usersFavourites.createdAt
-        });
-
-      if (inserted) {
-        await tx
-          .update(schema.stations)
-          .set({
-            starCount: sql`${schema.stations.starCount} + 1`,
-            updatedAt: new Date()
-          })
-          .where(eq(schema.stations.id, snapshot.id));
+    return logger.measure("persistence.radio.favourite.add", {
+      pointId,
+      userId
+    }, async () => {
+      if (!isRadioStationId(pointId)) {
+        return null;
       }
 
-      return {
-        modeId: "radio",
-        pointId: snapshot.id,
-        createdAt: (inserted?.createdAt ?? new Date()).toISOString(),
-        point: stationSnapshotToPoint(snapshot)
-      };
+      const snapshot = await getRadioStationPersistenceSnapshot(pointId);
+
+      if (!snapshot) {
+        return null;
+      }
+
+      const db = getDb();
+
+      return db.transaction(async (tx) => {
+        await upsertStation(tx, snapshot);
+
+        const [inserted] = await tx
+          .insert(schema.usersFavourites)
+          .values({
+            userId,
+            stationId: snapshot.id,
+            updatedAt: new Date()
+          })
+          .onConflictDoNothing()
+          .returning({
+            createdAt: schema.usersFavourites.createdAt
+          });
+
+        if (inserted) {
+          await tx
+            .update(schema.stations)
+            .set({
+              starCount: sql`${schema.stations.starCount} + 1`,
+              updatedAt: new Date()
+            })
+            .where(eq(schema.stations.id, snapshot.id));
+        }
+
+        return {
+          modeId: "radio",
+          pointId: snapshot.id,
+          createdAt: (inserted?.createdAt ?? new Date()).toISOString(),
+          point: stationSnapshotToPoint(snapshot)
+        };
+      });
     });
   },
   async listFavourites(userId) {
-    const rows = await getDb()
-      .select({
-        bitrate: schema.stations.bitrate,
-        codec: schema.stations.codec,
-        country: schema.stations.country,
-        countryCode: schema.stations.countryCode,
-        createdAt: schema.usersFavourites.createdAt,
-        id: schema.stations.id,
-        language: schema.stations.language,
-        latitude: schema.stations.latitude,
-        locationPrecision: schema.stations.locationPrecision,
-        longitude: schema.stations.longitude,
-        name: schema.stations.name,
-        providerClicks: schema.stations.providerClicks,
-        providerMetadata: schema.stations.providerMetadata,
-        providerUpdatedAt: schema.stations.providerUpdatedAt,
-        providerVotes: schema.stations.providerVotes,
-        starCount: schema.stations.starCount,
-        summary: schema.stations.summary,
-        tags: schema.stations.tags
-      })
-      .from(schema.usersFavourites)
-      .innerJoin(schema.stations, eq(schema.usersFavourites.stationId, schema.stations.id))
-      .where(eq(schema.usersFavourites.userId, userId))
-      .orderBy(desc(schema.usersFavourites.updatedAt));
+    const rows = await logger.measure("persistence.radio.favourites.list", {
+      userId
+    }, () => getDb()
+        .select({
+          bitrate: schema.stations.bitrate,
+          codec: schema.stations.codec,
+          country: schema.stations.country,
+          countryCode: schema.stations.countryCode,
+          createdAt: schema.usersFavourites.createdAt,
+          id: schema.stations.id,
+          language: schema.stations.language,
+          latitude: schema.stations.latitude,
+          locationPrecision: schema.stations.locationPrecision,
+          longitude: schema.stations.longitude,
+          name: schema.stations.name,
+          providerClicks: schema.stations.providerClicks,
+          providerMetadata: schema.stations.providerMetadata,
+          providerUpdatedAt: schema.stations.providerUpdatedAt,
+          providerVotes: schema.stations.providerVotes,
+          starCount: schema.stations.starCount,
+          summary: schema.stations.summary,
+          tags: schema.stations.tags
+        })
+        .from(schema.usersFavourites)
+        .innerJoin(schema.stations, eq(schema.usersFavourites.stationId, schema.stations.id))
+        .where(eq(schema.usersFavourites.userId, userId))
+        .orderBy(desc(schema.usersFavourites.updatedAt)));
 
     return rows.map((row) => ({
       modeId: "radio" as const,
@@ -94,83 +102,93 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
     }));
   },
   async removeFavourite(userId, pointId) {
-    if (!isRadioStationId(pointId)) {
-      return false;
-    }
-
-    const db = getDb();
-
-    return db.transaction(async (tx) => {
-      const [deleted] = await tx
-        .delete(schema.usersFavourites)
-        .where(and(
-          eq(schema.usersFavourites.userId, userId),
-          eq(schema.usersFavourites.stationId, pointId)
-        ))
-        .returning({ stationId: schema.usersFavourites.stationId });
-
-      if (!deleted) {
+    return logger.measure("persistence.radio.favourite.remove", {
+      pointId,
+      userId
+    }, async () => {
+      if (!isRadioStationId(pointId)) {
         return false;
       }
 
-      await tx
-        .update(schema.stations)
-        .set({
-          starCount: sql`greatest(${schema.stations.starCount} - 1, 0)`,
-          updatedAt: new Date()
-        })
-        .where(eq(schema.stations.id, deleted.stationId));
+      const db = getDb();
 
-      return true;
+      return db.transaction(async (tx) => {
+        const [deleted] = await tx
+          .delete(schema.usersFavourites)
+          .where(and(
+            eq(schema.usersFavourites.userId, userId),
+            eq(schema.usersFavourites.stationId, pointId)
+          ))
+          .returning({ stationId: schema.usersFavourites.stationId });
+
+        if (!deleted) {
+          return false;
+        }
+
+        await tx
+          .update(schema.stations)
+          .set({
+            starCount: sql`greatest(${schema.stations.starCount} - 1, 0)`,
+            updatedAt: new Date()
+          })
+          .where(eq(schema.stations.id, deleted.stationId));
+
+        return true;
+      });
     });
   },
   async recordClick(userId, pointId) {
-    if (!isRadioStationId(pointId)) {
-      return null;
-    }
+    return logger.measure("persistence.radio.click.record", {
+      pointId,
+      userId
+    }, async () => {
+      if (!isRadioStationId(pointId)) {
+        return null;
+      }
 
-    const snapshot = await getRadioStationPersistenceSnapshot(pointId);
+      const snapshot = await getRadioStationPersistenceSnapshot(pointId);
 
-    if (!snapshot) {
-      return null;
-    }
+      if (!snapshot) {
+        return null;
+      }
 
-    const db = getDb();
+      const db = getDb();
 
-    return db.transaction(async (tx) => {
-      await upsertStation(tx, snapshot);
+      return db.transaction(async (tx) => {
+        await upsertStation(tx, snapshot);
 
-      const [clickRow] = await tx
-        .insert(schema.stationClicks)
-        .values({
-          userId,
-          stationId: snapshot.id,
-          clickCount: 1,
-          lastClickedAt: new Date()
-        })
-        .onConflictDoUpdate({
-          target: [schema.stationClicks.userId, schema.stationClicks.stationId],
-          set: {
-            clickCount: sql`${schema.stationClicks.clickCount} + 1`,
+        const [clickRow] = await tx
+          .insert(schema.stationClicks)
+          .values({
+            userId,
+            stationId: snapshot.id,
+            clickCount: 1,
             lastClickedAt: new Date()
-          }
-        })
-        .returning({ clickCount: schema.stationClicks.clickCount });
+          })
+          .onConflictDoUpdate({
+            target: [schema.stationClicks.userId, schema.stationClicks.stationId],
+            set: {
+              clickCount: sql`${schema.stationClicks.clickCount} + 1`,
+              lastClickedAt: new Date()
+            }
+          })
+          .returning({ clickCount: schema.stationClicks.clickCount });
 
-      await tx
-        .update(schema.stations)
-        .set({
-          clickCount: sql`${schema.stations.clickCount} + 1`,
-          updatedAt: new Date()
-        })
-        .where(eq(schema.stations.id, snapshot.id));
+        await tx
+          .update(schema.stations)
+          .set({
+            clickCount: sql`${schema.stations.clickCount} + 1`,
+            updatedAt: new Date()
+          })
+          .where(eq(schema.stations.id, snapshot.id));
 
-      return { clickCount: clickRow?.clickCount ?? 1 };
+        return { clickCount: clickRow?.clickCount ?? 1 };
+      });
     });
   }
 };
 
-async function upsertStation(tx: TerravueTransaction, snapshot: RadioStationPersistenceSnapshot) {
+async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersistenceSnapshot) {
   await tx
     .insert(schema.stations)
     .values({

@@ -1,11 +1,12 @@
 import { getRadioPlayableStream } from "@/lib/modes/radio";
+import { withApiLogging } from "@/lib/server/logging/api";
 
 export const dynamic = "force-dynamic";
 
-export async function POST(
+export const POST = withApiLogging("api.modes.radio.points.playable", async (
   _request: Request,
   { params }: { params: Promise<{ id: string }> }
-) {
+) => {
   const { id } = await params;
 
   try {
@@ -23,4 +24,9 @@ export async function POST(
   } catch {
     return Response.json({ error: "Station stream is not playable right now." }, { status: 502 });
   }
-}
+}, {
+  context: async (_request, { params }) => {
+    const { id } = await params;
+    return { pointId: id };
+  }
+});

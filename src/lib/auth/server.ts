@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
+import { logger } from "@/lib/server/logging";
 import type { TerraThemeId } from "@/lib/theme/themes";
 
 export type SafeUser = {
@@ -52,6 +53,9 @@ export const auth = createAuth();
 
 export async function getOptionalUser(): Promise<SafeUser | null> {
   if (!isDatabaseConfigured()) {
+    logger.info("auth.session.skipped", {
+      message: "Optional auth session lookup skipped because DATABASE_URL is not configured"
+    });
     return null;
   }
 
@@ -61,11 +65,23 @@ export async function getOptionalUser(): Promise<SafeUser | null> {
     headers: await headers()
   });
 
-  return session?.user ? sanitizeUser(session.user) : null;
+  const user = session?.user ? sanitizeUser(session.user) : null;
+  logger.info("auth.session.lookup", {
+    context: {
+      authenticated: Boolean(user),
+      userId: user?.id
+    },
+    message: "Auth session lookup completed"
+  });
+
+  return user;
 }
 
 export async function requireUser(): Promise<SafeUser> {
   if (!isDatabaseConfigured()) {
+    logger.warn("auth.required.unavailable", {
+      message: "Required auth session failed because DATABASE_URL is not configured"
+    });
     throw new AuthUnavailableError();
   }
 
@@ -74,8 +90,18 @@ export async function requireUser(): Promise<SafeUser> {
   const user = await getOptionalUser();
 
   if (!user) {
+    logger.warn("auth.required.unauthorized", {
+      message: "Required auth session failed because no user is authenticated"
+    });
     throw new UnauthorizedError();
   }
+
+  logger.info("auth.required.authorized", {
+    context: {
+      userId: user.id
+    },
+    message: "Required auth session completed"
+  });
 
   return user;
 }
@@ -96,6 +122,9 @@ export function isGoogleAuthConfigured() {
 
 function createAuth() {
   if (!isDatabaseConfigured()) {
+    logger.warn("auth.init.unavailable", {
+      message: "Auth initialized without database-backed account data"
+    });
     return {
       api: {
         getSession: async () => null
@@ -103,6 +132,13 @@ function createAuth() {
       handler: async () => Response.json({ error: "Account data is unavailable." }, { status: 503 })
     } satisfies AuthLike;
   }
+
+  logger.info("auth.init", {
+    context: {
+      googleAuthConfigured: isGoogleAuthConfigured()
+    },
+    message: "Initializing auth"
+  });
 
   return betterAuth({
     advanced: {

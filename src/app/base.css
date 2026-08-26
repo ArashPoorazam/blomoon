@@ -23,7 +23,7 @@ button {
   color: inherit;
 }
 
-.terravue-shell {
+.blomoon-shell {
   position: relative;
   width: 100vw;
   height: 100vh;
@@ -38,7 +38,7 @@ button {
   transition: transform 260ms ease;
 }
 
-.terravue-shell.drawer-open .globe-stage {
+.blomoon-shell.drawer-open .globe-stage {
   transform: translateX(calc(var(--drawer-width) / -2));
 }
 
@@ -96,7 +96,7 @@ button {
 }
 
 @media (max-width: 760px) {
-  .terravue-shell {
+  .blomoon-shell {
     min-height: 100svh;
   }
 }

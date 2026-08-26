@@ -18,6 +18,7 @@ import { getLiveRadioRecordPage } from "./searchPages";
 import type { RadioSortOption } from "./api";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
 import { fetchRadioBrowserJson } from "./provider";
+import { logger } from "@/lib/server/logging";
 import type {
   PlayableCacheEntry,
   RadioBrowserStation,
@@ -70,7 +71,12 @@ export async function getRadioCountryMarkerDataset(countryCode: string): Promise
       source: createLiveSource(),
       points: records.map((record) => record.point)
     };
-  } catch {
+  } catch (error) {
+    logger.warn("radio.catalog.country_markers.fallback", {
+      context: { countryCode },
+      error,
+      message: "Radio country marker request fell back to cached catalog"
+    });
     const catalog = await getRadioCatalog();
     const records = catalog.recordsByCountry.get(countryCode) ?? [];
 
@@ -111,7 +117,17 @@ export async function getRadioCountryPointPage({
       total: page.total,
       totalKind: page.totalKind
     };
-  } catch {
+  } catch (error) {
+    logger.warn("radio.catalog.country_page.fallback", {
+      context: {
+        countryCode,
+        limit,
+        offset,
+        queryPresent: query.length > 0
+      },
+      error,
+      message: "Radio country page request fell back to cached catalog"
+    });
     const catalog = await getRadioCatalog();
     return getFallbackCountryPointPage(catalog, {
       countryCode,
@@ -154,7 +170,18 @@ export async function getRadioPointPage({
       total: page.total,
       totalKind: page.totalKind
     };
-  } catch {
+  } catch (error) {
+    logger.warn("radio.catalog.point_page.fallback", {
+      context: {
+        countryCode,
+        limit,
+        offset,
+        queryPresent: query.length > 0,
+        sort
+      },
+      error,
+      message: "Radio point page request fell back to cached catalog"
+    });
     const catalog = await getRadioCatalog();
     return getFallbackRadioPointPage(catalog, {
       countryCode,
@@ -173,21 +200,47 @@ export async function getRadioDetail(id: string) {
 
 export async function getRadioPlayableStream(id: string): Promise<TerraPlayableAudio | null> {
   const now = Date.now();
+  const startedAt = performance.now();
   const cached = playableCache.get(id);
 
   if (cached && now - cached.fetchedAt < STREAM_CACHE_TTL_MS) {
+    logger.info("radio.playback.cache_hit", {
+      context: { pointId: id },
+      message: "Radio playable stream cache hit"
+    });
     return cached.stream;
   }
 
   const record = await getRadioStationRecord(id);
 
   if (!record) {
+    logger.warn("radio.playback.not_found", {
+      context: { pointId: id },
+      message: "Radio playable stream station was not found"
+    });
     return null;
   }
 
   const clickedUrl = await resolveClickedStationUrl(id);
   const streamUrl = clickedUrl ?? record.streamUrl;
-  const validation = await validateStreamUrl(streamUrl);
+  let validation: Awaited<ReturnType<typeof validateStreamUrl>>;
+
+  try {
+    validation = await validateStreamUrl(streamUrl);
+  } catch (error) {
+    logger.warn("radio.playback.validation_failed", {
+      context: {
+        host: getUrlHost(streamUrl),
+        pointId: id,
+        usedClickedUrl: Boolean(clickedUrl)
+      },
+      durationMs: elapsedMs(startedAt),
+      error,
+      message: "Radio playable stream validation failed"
+    });
+    throw error;
+  }
+
   const stream: TerraPlayableAudio = {
     checkedAt: new Date().toISOString(),
     contentType: validation.contentType,
@@ -199,6 +252,17 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
   playableCache.set(id, {
     fetchedAt: now,
     stream
+  });
+
+  logger.info("radio.playback.resolved", {
+    context: {
+      contentType: validation.contentType,
+      host: getUrlHost(streamUrl),
+      pointId: id,
+      usedClickedUrl: Boolean(clickedUrl)
+    },
+    durationMs: elapsedMs(startedAt),
+    message: "Radio playable stream resolved"
   });
 
   return stream;
@@ -239,7 +303,18 @@ async function refreshRadioCatalog(fetchedAt: number) {
     }
 
     catalogCache = createRadioCatalog(records, createLiveSource(), fetchedAt, false);
-  } catch {
+    logger.info("radio.catalog.refresh", {
+      context: {
+        records: catalogCache.records.length,
+        worldRecords: catalogCache.worldRecords.length
+      },
+      message: "Radio catalog refreshed from live provider"
+    });
+  } catch (error) {
+    logger.warn("radio.catalog.refresh_fallback", {
+      error,
+      message: "Radio catalog refresh failed; using cached or fixture data"
+    });
     catalogCache = catalogCache && !catalogCache.isFallback
       ? catalogCache
       : createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, fetchedAt, true);
@@ -280,7 +355,12 @@ async function getRadioStationRecord(id: string) {
       addRecordToCatalog(catalogCache, record);
       return record;
     }
-  } catch {
+  } catch (error) {
+    logger.warn("radio.catalog.detail_fetch_failed", {
+      context: { pointId: id },
+      error,
+      message: "Radio station detail fetch failed"
+    });
     return null;
   }
 
@@ -527,7 +607,12 @@ async function resolveClickedStationUrl(id: string) {
   try {
     const response = await fetchRadioBrowserJson<RadioClickResponse>(`/json/url/${encodeURIComponent(id)}`);
     return response.ok && isSafeStreamUrl(response.url) ? response.url : null;
-  } catch {
+  } catch (error) {
+    logger.warn("radio.playback.click_url_failed", {
+      context: { pointId: id },
+      error,
+      message: "Radio clicked URL resolution failed; using catalog stream URL"
+    });
     return null;
   }
 }
@@ -575,12 +660,32 @@ async function probeStream(streamUrl: string, method: "GET" | "HEAD") {
       ok: response.ok || response.status === 206,
       contentType: response.headers.get("content-type") ?? undefined
     };
-  } catch {
+  } catch (error) {
+    logger.debug("radio.playback.probe_failed", {
+      context: {
+        host: getUrlHost(streamUrl),
+        method
+      },
+      error,
+      message: "Radio stream probe failed"
+    });
     return {
       ok: false,
       contentType: undefined
     };
   } finally {
     clearTimeout(timeout);
+  }
+}
+
+function elapsedMs(startedAt: number) {
+  return Math.round(performance.now() - startedAt);
+}
+
+function getUrlHost(value: string) {
+  try {
+    return new URL(value).host;
+  } catch {
+    return "invalid-url";
   }
 }

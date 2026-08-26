@@ -1,12 +1,13 @@
 import { getRadioCountryMarkerDataset, COUNTRY_MARKER_LIMIT } from "@/lib/modes/radio";
 import { normalizeRadioCountryCode, parseIntegerParam } from "@/lib/modes/radio/api";
+import { withApiLogging } from "@/lib/server/logging/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(
+export const GET = withApiLogging("api.modes.radio.countries.points", async (
   request: Request,
   { params }: { params: Promise<{ countryCode: string }> }
-) {
+) => {
   const { countryCode } = await params;
   const normalizedCountryCode = normalizeRadioCountryCode(countryCode);
 
@@ -35,4 +36,9 @@ export async function GET(
       "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600"
     }
   });
-}
+}, {
+  context: async (_request, { params }) => {
+    const { countryCode } = await params;
+    return { countryCode };
+  }
+});

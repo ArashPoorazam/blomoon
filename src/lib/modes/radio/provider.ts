@@ -5,6 +5,7 @@ import {
   REQUEST_TIMEOUT_MS,
   STATION_CACHE_TTL_MS
 } from "./config";
+import { logger } from "@/lib/server/logging";
 import type { RadioBrowserServer } from "./types";
 
 type RadioBrowserJsonOptions = {
@@ -33,9 +34,25 @@ export async function fetchRadioBrowserJsonWithOptions<T>(
       return await fetchRadioBrowserHostJson<T>(host, path, params, options);
     } catch (error) {
       lastError = error instanceof Error ? error : new Error("Radio Browser request failed");
+      logger.warn("provider.radio.host_failed", {
+        context: {
+          host,
+          path
+        },
+        error: lastError,
+        message: "Radio Browser host request failed"
+      });
     }
   }
 
+  logger.error("provider.radio.request_failed", {
+    context: {
+      hostCount: hosts.length,
+      path
+    },
+    error: lastError,
+    message: "Radio Browser request failed for all hosts"
+  });
   throw lastError ?? new Error("Radio Browser request failed");
 }
 
@@ -63,6 +80,12 @@ export async function getRadioBrowserHosts() {
   const now = Date.now();
 
   if (serverCache && now - serverCache.fetchedAt < STATION_CACHE_TTL_MS) {
+    logger.debug("provider.radio.hosts.cache_hit", {
+      context: {
+        hostCount: serverCache.hosts.length
+      },
+      message: "Radio Browser host directory cache hit"
+    });
     return serverCache.hosts;
   }
 
@@ -85,9 +108,22 @@ export async function getRadioBrowserHosts() {
         fetchedAt: now,
         hosts
       };
+      logger.info("provider.radio.hosts.loaded", {
+        context: {
+          hostCount: hosts.length
+        },
+        message: "Loaded Radio Browser hosts"
+      });
       return hosts;
     }
-  } catch {
+  } catch (error) {
+    logger.warn("provider.radio.hosts.fallback", {
+      context: {
+        fallbackHostCount: RADIO_BROWSER_FALLBACK_HOSTS.length
+      },
+      error,
+      message: "Radio Browser host directory failed; using fallback hosts"
+    });
     // Fall through to stable public mirrors.
   }
 
@@ -101,11 +137,23 @@ async function fetchJsonWithTimeout<T>(
 ) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), timeoutMs);
+  const startedAt = performance.now();
+  const url = typeof input === "string" ? new URL(input) : input;
 
   try {
-    const response = await fetch(input, {
+    const response = await fetch(url, {
       ...init,
       signal: controller.signal
+    });
+
+    logger.debug("provider.radio.fetch", {
+      context: {
+        host: url.host,
+        path: url.pathname,
+        status: response.status
+      },
+      durationMs: elapsedMs(startedAt),
+      message: "Radio Browser fetch completed"
     });
 
     if (!response.ok) {
@@ -113,6 +161,17 @@ async function fetchJsonWithTimeout<T>(
     }
 
     return (await response.json()) as T;
+  } catch (error) {
+    logger.warn("provider.radio.fetch_failed", {
+      context: {
+        host: url.host,
+        path: url.pathname
+      },
+      durationMs: elapsedMs(startedAt),
+      error,
+      message: "Radio Browser fetch failed"
+    });
+    throw error;
   } finally {
     clearTimeout(timeout);
   }
@@ -130,4 +189,8 @@ export async function fetchWithTimeout(input: URL | string, init: RequestInit = 
   } finally {
     clearTimeout(timeout);
   }
+}
+
+function elapsedMs(startedAt: number) {
+  return Math.round(performance.now() - startedAt);
 }

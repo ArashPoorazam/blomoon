@@ -11,9 +11,9 @@ export function getAppClientConfig(): AppClientConfig {
 
 function getContactLinks(): ContactLink[] {
   return [
-    getUrlContactLink("github", "GitHub", process.env.TERRAVUE_CONTACT_GITHUB_URL),
-    getUrlContactLink("telegram", "Telegram", process.env.TERRAVUE_CONTACT_TELEGRAM_URL),
-    getEmailContactLink(process.env.TERRAVUE_CONTACT_EMAIL)
+    getUrlContactLink("github", "GitHub", process.env.BLOMOON_CONTACT_GITHUB_URL),
+    getUrlContactLink("telegram", "Telegram", process.env.BLOMOON_CONTACT_TELEGRAM_URL),
+    getEmailContactLink(process.env.BLOMOON_CONTACT_EMAIL)
   ].filter((link): link is ContactLink => Boolean(link));
 }
 

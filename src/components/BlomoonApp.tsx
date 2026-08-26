@@ -22,12 +22,12 @@ import { GlobeScene } from "./GlobeScene";
 import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
 import { SideDrawer } from "./SideDrawer";
 
-type TerravueAppProps = {
+type BlomoonAppProps = {
   appConfig: AppClientConfig;
   initialDatasets?: Partial<Record<TerraModeId, TerraDataset>>;
 };
 
-export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
+export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
@@ -169,7 +169,7 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
 
   return (
     <main
-      className={`terravue-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}
+      className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}
       data-theme={activeTheme.id}
       onMouseMove={handleMouseMove}
     >
@@ -284,7 +284,7 @@ export function TerravueApp({ appConfig, initialDatasets }: TerravueAppProps) {
 function LoaderMessage() {
   return (
     <div className="auth-loading-content">
-      <div className="drawer-kicker">Terravue</div>
+      <div className="drawer-kicker">Blomoon</div>
       <h2>Loading account</h2>
     </div>
   );

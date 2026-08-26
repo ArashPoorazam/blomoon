@@ -17,6 +17,7 @@ import {
   fetchRadioBrowserJsonWithOptions,
   getRadioBrowserHosts
 } from "./provider";
+import { logger } from "@/lib/server/logging";
 import type {
   RadioBrowserStation,
   RadioStationRecord
@@ -269,9 +270,21 @@ export function compareRadioRecords(a: RadioStationRecord, b: RadioStationRecord
 }
 
 function normalizeStations(stations: RadioBrowserStation[]) {
-  return stations
-    .map(normalizeStation)
-    .filter((record): record is RadioStationRecord => Boolean(record));
+  const normalized = stations.map(normalizeStation);
+  const records = normalized.filter((record): record is RadioStationRecord => Boolean(record));
+  const droppedCount = stations.length - records.length;
+
+  if (droppedCount > 0) {
+    logger.warn("provider.radio.normalization_dropped", {
+      context: {
+        droppedCount,
+        stationCount: stations.length
+      },
+      message: "Radio Browser stations were dropped during normalization"
+    });
+  }
+
+  return records;
 }
 
 async function fillCountryQueryRecordCache({

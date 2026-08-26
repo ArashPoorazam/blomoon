@@ -63,7 +63,7 @@ export function DrawerListToolbar({
     <div className="drawer-list-toolbar">
       <div className="drawer-compact-header">
         <div className="drawer-heading-copy">
-          <div className="drawer-kicker">Terravue</div>
+          <div className="drawer-kicker">Blomoon</div>
           <h1 className="drawer-title">{activeMode.label}</h1>
           <p className="drawer-subtitle">
             {loading

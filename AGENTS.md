@@ -9,9 +9,9 @@ This block is written and re-added by `next dev` — verify at `node_modules/nex
 <!-- END:nextjs-agent-rules -->
 ## Product Architecture
 
-Terravue is a globe-based live entertainment directory. Its purpose is to help people discover and play streamable media by geography: radio now, podcasts/live audio next, and TV/video only when the media contracts are ready.
+Blomoon is a globe-based live entertainment directory. Its purpose is to help people discover and play streamable media by geography: radio now, podcasts/live audio next, and TV/video only when the media contracts are ready.
 
-Terravue has one reusable globe core and removable media modes/plugins. The globe core owns map rendering, country interaction, point rendering, camera behavior, shared visual effects, and extension hooks. A media mode/plugin owns its provider adapter, REST endpoints, labels, filtering/search rules, sorting rules, detail content, playback resolution, and fixtures.
+Blomoon has one reusable globe core and removable media modes/plugins. The globe core owns map rendering, country interaction, point rendering, camera behavior, shared visual effects, and extension hooks. A media mode/plugin owns its provider adapter, REST endpoints, labels, filtering/search rules, sorting rules, detail content, playback resolution, and fixtures.
 
 The quality bar is that a media mode can be added, disabled, or removed without changing unrelated modes or adding mode-specific branches to the globe core.
 
@@ -53,7 +53,7 @@ If code does not clearly belong to one owner, define the boundary before impleme
 - A mode starts with the shared contract. Update `TerraMode`, `TerraPoint`, `TerraDataset`, or related types only when the capability is genuinely shared.
 - Each mode must define its registry entry, endpoints, labels, loading/empty/fallback copy, marker color strategy, metric formatter, matcher, sorter, provider adapter, playback behavior when applicable, and fixtures.
 - Valid mode families are streamable entertainment/media domains: radio, podcasts/live audio, and TV/video. Reject modes that are not part of the media discovery and playback product.
-- Provider adapters must normalize external data into Terravue types before UI code sees it.
+- Provider adapters must normalize external data into Blomoon types before UI code sees it.
 - Search, sorting, country matching, and display metrics belong to the mode unless they are truly generic.
 - Mode removal must be mechanical: unregister the mode, remove its route/provider/fixture files, and leave the app compiling without touching unrelated modes.
 - Do not duplicate a provider adapter pattern by copy/paste. Extract a small helper only after the second real use proves the shared shape.

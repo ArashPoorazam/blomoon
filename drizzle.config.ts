@@ -8,7 +8,7 @@ export default defineConfig({
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {
-    url: process.env.DATABASE_URL ?? "postgres://user:password@localhost:5432/terravue"
+    url: process.env.DATABASE_URL ?? "postgres://user:password@localhost:5432/blomoon"
   },
   strict: true,
   verbose: true

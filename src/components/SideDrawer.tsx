@@ -210,7 +210,7 @@ function DetailView({
     <>
       <div className="drawer-header">
         <div>
-          <div className="drawer-kicker">Terravue · {activeMode.label}</div>
+          <div className="drawer-kicker">Blomoon · {activeMode.label}</div>
           <h1 className="drawer-title">{detail?.name ?? "Loading"}</h1>
           <p className="drawer-subtitle">{detail?.summary ?? ""}</p>
         </div>

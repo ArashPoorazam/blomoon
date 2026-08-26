@@ -1,16 +1,12 @@
 import { requireUser } from "@/lib/auth/server";
-import { apiError } from "@/lib/server/responses";
+import { withApiLogging } from "@/lib/server/logging/api";
 import { getViewer } from "@/lib/users/repository";
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
-  try {
-    const user = await requireUser();
-    const viewer = await getViewer(user);
+export const GET = withApiLogging("api.users.me.get", async () => {
+  const user = await requireUser();
+  const viewer = await getViewer(user);
 
-    return Response.json({ user: viewer }, { headers: { "Cache-Control": "no-store" } });
-  } catch (error) {
-    return apiError(error);
-  }
-}
+  return Response.json({ user: viewer }, { headers: { "Cache-Control": "no-store" } });
+});

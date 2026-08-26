@@ -1,5 +1,5 @@
 :root,
-.terravue-shell[data-theme="night"] {
+.blomoon-shell[data-theme="night"] {
   --background: #050509;
   --panel: rgba(22, 22, 30, 0.94);
   --panel-solid: #1a1b26;
@@ -35,7 +35,7 @@
   --panel-blur: 20px;
 }
 
-.terravue-shell[data-theme="atlas"] {
+.blomoon-shell[data-theme="atlas"] {
   --background: #102a43;
   --panel: rgba(250, 247, 239, 0.94);
   --panel-solid: #f5efe2;

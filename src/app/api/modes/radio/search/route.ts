@@ -5,10 +5,11 @@ import {
   parseRadioQuery,
   parseRadioSort
 } from "@/lib/modes/radio/api";
+import { withApiLogging } from "@/lib/server/logging/api";
 
 export const dynamic = "force-dynamic";
 
-export async function GET(request: Request) {
+export const GET = withApiLogging("api.modes.radio.search", async (request: Request) => {
   const { searchParams } = new URL(request.url);
   const limit = parseIntegerParam(searchParams, "limit", {
     defaultValue: COUNTRY_PAGE_LIMIT,
@@ -46,4 +47,4 @@ export async function GET(request: Request) {
       "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600"
     }
   });
-}
+});

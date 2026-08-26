@@ -1,9 +1,9 @@
-# Terravue
+# Blomoon
 Explore live entertainment streams through an interactive 3D globe.
 
 ## Phase 1
 
-Terravue currently implements the first usable slice of the product:
+Blomoon currently implements the first usable slice of the product:
 
 - a monochrome interactive 3D globe
 - simplified country border lines
@@ -31,7 +31,7 @@ Create `.env.local` from `.env.example` before running the app. Account features
 - `BETTER_AUTH_URL`, for example `http://localhost:3000`
 - `BETTER_AUTH_SECRET`, generated with `openssl rand -base64 32`
 
-Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Account-menu contact rows are read from `TERRAVUE_CONTACT_GITHUB_URL`, `TERRAVUE_CONTACT_TELEGRAM_URL`, and `TERRAVUE_CONTACT_EMAIL`; unset values are hidden.
+Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Account-menu contact rows are read from `BLOMOON_CONTACT_GITHUB_URL`, `BLOMOON_CONTACT_TELEGRAM_URL`, and `BLOMOON_CONTACT_EMAIL`; unset values are hidden.
 
 ## Data Sources
 

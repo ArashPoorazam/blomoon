@@ -6,7 +6,7 @@ export const RADIO_BROWSER_FALLBACK_HOSTS = [
   "at1.api.radio-browser.info"
 ] as const;
 
-export const RADIO_BROWSER_USER_AGENT = "Terravue/0.1 (+https://github.com/daedalus/terravue)";
+export const RADIO_BROWSER_USER_AGENT = "Blomoon/0.1 (+https://github.com/daedalus/blomoon)";
 
 export const STATION_CACHE_TTL_MS = 30 * 60 * 1000;
 export const FALLBACK_CACHE_TTL_MS = 2 * 60 * 1000;

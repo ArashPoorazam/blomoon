@@ -22,7 +22,7 @@ export function AuthModal({ googleAuthEnabled, open, onAuthenticated, onClose }:
     <div className="modal-backdrop" role="presentation">
       <AuthCard
         googleAuthEnabled={googleAuthEnabled}
-        modeLabel="Terravue account"
+        modeLabel="Blomoon account"
         onAuthenticated={onAuthenticated}
         onClose={onClose}
       />
@@ -43,7 +43,7 @@ export function AuthGate({
     <main className="auth-gate">
       <AuthCard
         googleAuthEnabled={googleAuthEnabled}
-        modeLabel="Welcome to Terravue"
+        modeLabel="Welcome to Blomoon"
         serviceError={serviceError}
         titleSuffix="Explore live streams by place after you sign in."
         onAuthenticated={onAuthenticated}
