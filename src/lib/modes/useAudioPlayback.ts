@@ -1,20 +1,24 @@
 "use client";
 
 import { useCallback, useEffect, useRef, useState } from "react";
-import type { TerraPlaybackConfig, TerraPointDetail } from "./types";
+import { appendPlaybackHistory, takePreviousPlaybackPoint } from "./playbackNavigation";
+import type { TerraPlaybackConfig, TerraPoint } from "./types";
 
 export type AudioPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
 
 export type AudioPlaybackState = {
   error: string | null;
-  point: TerraPointDetail | null;
+  point: TerraPoint | null;
   pointId: string | null;
   status: AudioPlaybackStatus;
 };
 
 export type AudioPlaybackController = AudioPlaybackState & {
+  canPlayPrevious: boolean;
   pause: () => void;
-  play: (point: TerraPointDetail) => Promise<void>;
+  play: (point: TerraPoint) => Promise<void>;
+  playPrevious: () => Promise<void>;
+  reportError: (message: string) => void;
   stop: () => void;
 };
 
@@ -24,13 +28,40 @@ type PlayableAudioResponse = {
 
 export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPlaybackController {
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const historyRef = useRef<TerraPoint[]>([]);
   const playRequestRef = useRef(0);
+  const stateRef = useRef<AudioPlaybackState>({
+    error: null,
+    point: null,
+    pointId: null,
+    status: "idle"
+  });
   const [state, setState] = useState<AudioPlaybackState>({
     error: null,
     point: null,
     pointId: null,
     status: "idle"
   });
+  const [history, setHistory] = useState<TerraPoint[]>([]);
+
+  const setPlaybackState = useCallback((nextState: AudioPlaybackState | ((current: AudioPlaybackState) => AudioPlaybackState)) => {
+    if (typeof nextState !== "function") {
+      stateRef.current = nextState;
+      setState(nextState);
+      return;
+    }
+
+    setState((currentState) => {
+      const resolvedState = nextState(currentState);
+      stateRef.current = resolvedState;
+      return resolvedState;
+    });
+  }, []);
+
+  const replaceHistory = useCallback((nextHistory: TerraPoint[]) => {
+    historyRef.current = nextHistory;
+    setHistory(nextHistory);
+  }, []);
 
   const stop = useCallback(() => {
     playRequestRef.current += 1;
@@ -39,13 +70,14 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
     disposeAudio(audio);
 
     audioRef.current = null;
-    setState({
+    replaceHistory([]);
+    setPlaybackState({
       error: null,
       point: null,
       pointId: null,
       status: "idle"
     });
-  }, []);
+  }, [replaceHistory, setPlaybackState]);
 
   const pause = useCallback(() => {
     const audio = audioRef.current;
@@ -55,30 +87,31 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
     }
 
     audio.pause();
-    setState((current) => ({
+    setPlaybackState((current) => ({
       ...current,
       status: "paused"
     }));
-  }, []);
+  }, [setPlaybackState]);
 
-  const play = useCallback(async (point: TerraPointDetail) => {
+  const playPoint = useCallback(async (point: TerraPoint, { recordHistory = true }: { recordHistory?: boolean } = {}) => {
     if (!playback) {
       return;
     }
 
+    const currentState = stateRef.current;
     const existingAudio = audioRef.current;
 
-    if (existingAudio && state.pointId === point.id && state.status === "paused") {
+    if (existingAudio && currentState.pointId === point.id && currentState.status === "paused") {
       try {
         await existingAudio.play();
-        setState({
+        setPlaybackState({
           error: null,
           point,
           pointId: point.id,
           status: "playing"
         });
       } catch {
-        setState({
+        setPlaybackState({
           error: "Playback was blocked. Press play again.",
           point,
           pointId: point.id,
@@ -88,8 +121,12 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
       return;
     }
 
-    if (existingAudio && state.pointId === point.id && state.status === "playing") {
+    if (existingAudio && currentState.pointId === point.id && currentState.status === "playing") {
       return;
+    }
+
+    if (recordHistory) {
+      replaceHistory(appendPlaybackHistory(historyRef.current, currentState.point, point));
     }
 
     const requestId = playRequestRef.current + 1;
@@ -99,7 +136,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
     disposeAudio(currentAudio);
     audioRef.current = null;
 
-    setState({
+    setPlaybackState({
       error: null,
       point,
       pointId: point.id,
@@ -129,7 +166,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
           return;
         }
 
-        setState({
+        setPlaybackState({
           error: null,
           point,
           pointId: point.id,
@@ -141,7 +178,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
           return;
         }
 
-        setState((current) => current.pointId === point.id && current.status === "playing"
+        setPlaybackState((current) => current.pointId === point.id && current.status === "playing"
           ? {
               ...current,
               status: "paused"
@@ -153,7 +190,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
           return;
         }
 
-        setState({
+        setPlaybackState({
           error: "The stream stopped or could not be decoded by this browser.",
           point,
           pointId: point.id,
@@ -169,14 +206,34 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
       }
 
       audioRef.current = null;
-      setState({
+      setPlaybackState({
         error: error instanceof Error ? error.message : "This stream is not playable right now.",
         point,
         pointId: point.id,
         status: "error"
       });
     }
-  }, [playback, state.pointId, state.status]);
+  }, [playback, replaceHistory, setPlaybackState]);
+
+  const play = useCallback((point: TerraPoint) => playPoint(point), [playPoint]);
+
+  const playPrevious = useCallback(async () => {
+    const result = takePreviousPlaybackPoint(historyRef.current, stateRef.current.pointId);
+
+    replaceHistory(result.history);
+
+    if (result.point) {
+      await playPoint(result.point, { recordHistory: false });
+    }
+  }, [playPoint, replaceHistory]);
+
+  const reportError = useCallback((message: string) => {
+    setPlaybackState((current) => ({
+      ...current,
+      error: message,
+      status: current.point ? "error" : "idle"
+    }));
+  }, [setPlaybackState]);
 
   useEffect(() => {
     if (!playback) {
@@ -192,8 +249,11 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
 
   return {
     ...state,
+    canPlayPrevious: history.length > 0,
     pause,
     play,
+    playPrevious,
+    reportError,
     stop
   };
 }

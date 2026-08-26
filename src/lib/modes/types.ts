@@ -47,10 +47,17 @@ export type TerraPointPage = TerraDataset & {
   totalKind: "exact" | "lowerBound";
 };
 
+export type TerraRandomPoint = {
+  modeId: TerraModeId;
+  point: TerraPoint;
+  source: DataSourceInfo;
+};
+
 export type TerraPlaybackConfig = {
   label: string;
   mediaKind: "audio";
   playableEndpoint: (id: string) => string;
+  randomPointEndpoint?: string;
 };
 
 export type TerraModeSortOption = {

@@ -1,4 +1,4 @@
-import type { DataSourceInfo, TerraDataset, TerraPlayableAudio, TerraPointPage } from "../types";
+import type { DataSourceInfo, TerraDataset, TerraPlayableAudio, TerraPointPage, TerraRandomPoint } from "../types";
 import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "../fixtures/radio";
 import {
   COUNTRY_MARKER_LIMIT,
@@ -196,6 +196,46 @@ export async function getRadioPointPage({
 export async function getRadioDetail(id: string) {
   const record = await getRadioStationRecord(id);
   return record?.detail ?? null;
+}
+
+export async function getRandomRadioPoint(): Promise<TerraRandomPoint | null> {
+  try {
+    const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/search", {
+      hidebroken: "true",
+      limit: "1",
+      order: "random"
+    });
+    const record = normalizeStation(stations[0]);
+
+    if (!record) {
+      throw new Error("Radio Browser returned no usable random station");
+    }
+
+    if (catalogCache) {
+      addRecordToCatalog(catalogCache, record);
+    }
+
+    return {
+      modeId: "radio",
+      point: record.point,
+      source: createLiveSource()
+    };
+  } catch (error) {
+    logger.warn("radio.catalog.random_fallback", {
+      error,
+      message: "Radio random station request fell back to cached catalog"
+    });
+    const catalog = await getRadioCatalog();
+    const record = getRandomCatalogRecord(catalog.records);
+
+    return record
+      ? {
+        modeId: "radio",
+        point: record.point,
+        source: createFallbackSource(catalog.source)
+      }
+      : null;
+  }
 }
 
 export async function getRadioPlayableStream(id: string): Promise<TerraPlayableAudio | null> {
@@ -426,6 +466,14 @@ function createCountryIndex(records: RadioStationRecord[]) {
 
 function selectWorldRecords(records: RadioStationRecord[]) {
   return records;
+}
+
+function getRandomCatalogRecord(records: RadioStationRecord[]) {
+  if (records.length === 0) {
+    return null;
+  }
+
+  return records[Math.floor(Math.random() * records.length)] ?? null;
 }
 
 function getFallbackCountryPointPage(

@@ -23,6 +23,7 @@
 }
 
 .radio-player-copy {
+  flex: 1 1 auto;
   min-width: 0;
 }
 
@@ -35,6 +36,7 @@
 }
 
 .radio-player-title {
+  display: block;
   overflow: hidden;
   margin-top: 4px;
   color: var(--text);
@@ -43,6 +45,25 @@
   line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.radio-player-title-button {
+  width: 100%;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  cursor: pointer;
+  text-align: left;
+}
+
+.radio-player-title-button:hover {
+  color: var(--info);
+}
+
+.radio-player-title-button:focus-visible {
+  border-radius: 4px;
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .radio-player-status {
@@ -84,6 +105,11 @@
   border-color: var(--info-border);
   background: var(--info-control);
   color: var(--text);
+}
+
+.radio-control.icon-only {
+  width: 36px;
+  padding: 0;
 }
 
 .radio-control:hover:not(:disabled) {

@@ -4,7 +4,8 @@ import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } fr
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
-import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
+import { getNextPlaybackPoint } from "@/lib/modes/playbackNavigation";
+import type { TerraDataset, TerraModeId, TerraPoint, TerraRandomPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { resolvePointMarkerColor } from "@/lib/theme/globe";
@@ -36,6 +37,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
+  const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
+  const [loadingRandomStation, setLoadingRandomStation] = useState(false);
   const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
@@ -57,7 +60,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     () => favourites.groups.flatMap((group) => group.favourites.map((favourite) => favourite.point)),
     [favourites.groups]
   );
+  const activeModeFavouritePoints = useMemo(
+    () => favourites.groups
+      .filter((group) => group.modeId === activeModeId)
+      .flatMap((group) => group.favourites.map((favourite) => favourite.point)),
+    [activeModeId, favourites.groups]
+  );
   const activeDrawerPoints = drawerView === "favourites" && !modeState.selectedId ? favouritePoints : modeState.visiblePoints;
+  const playbackQueuePoints = playbackQueueSource === "favourites" ? activeModeFavouritePoints : modeState.visiblePoints;
   const globePoints = showListedOnGlobe ? activeDrawerPoints : modeState.globePoints;
   const visiblePointIds = useMemo(
     () => new Set(activeDrawerPoints.map(getPointKey)),
@@ -73,7 +83,15 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     : defaultMarkerColor;
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
-      <RadioPlaybackPanel detail={modeState.detail} playback={audioPlayback} playbackLabel={activeMode.playback.label} />
+      <RadioPlaybackPanel
+        detail={modeState.detail}
+        favourited={favourites.favouriteIds.has(getPointKey(modeState.detail))}
+        playback={audioPlayback}
+        playbackLabel={activeMode.playback.label}
+        onToggleFavourite={(point) => {
+          void favourites.toggleFavourite(point);
+        }}
+      />
     ) : null;
 
   useEffect(() => {
@@ -95,6 +113,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     modeState.selectPoint(point);
     setDrawerCollapsed(false);
     setDrawerView("list");
+    setPlaybackQueueSource("list");
 
     if (viewer.user && activeMode.clickEndpoint) {
       void fetch(activeMode.clickEndpoint(point.id), { method: "POST" });
@@ -105,6 +124,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setActiveModeId(modeId);
     setDrawerCollapsed(false);
     setDrawerView("list");
+    setPlaybackQueueSource("list");
     setHoveredPoint(null);
   }, []);
 
@@ -113,6 +133,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setSelectedCountry(nextCountry);
     setDrawerCollapsed(false);
     setDrawerView("list");
+    setPlaybackQueueSource("list");
     setHoveredPoint(null);
   }, [selectedCountry?.code]);
 
@@ -142,8 +163,54 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setActiveModeId(modeId);
     setPendingFavouriteSelection({ modeId, point });
     setDrawerView("list");
+    setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
   }, []);
+
+  const openPlaybackPoint = useCallback((point: TerraPoint) => {
+    setActiveModeId(point.modeId);
+    setDrawerCollapsed(false);
+
+    if (point.modeId === activeModeId) {
+      modeState.selectPoint(point);
+      return;
+    }
+
+    setPendingFavouriteSelection({ modeId: point.modeId, point });
+  }, [activeModeId, modeState.selectPoint]);
+
+  const playNextStation = useCallback(() => {
+    const nextPoint = getNextPlaybackPoint(playbackQueuePoints, audioPlayback.pointId);
+
+    if (nextPoint) {
+      void audioPlayback.play(nextPoint);
+    }
+  }, [audioPlayback, playbackQueuePoints]);
+
+  const shuffleStation = useCallback(async () => {
+    const endpoint = activeMode.playback?.randomPointEndpoint;
+
+    if (!endpoint || loadingRandomStation) {
+      return;
+    }
+
+    setLoadingRandomStation(true);
+
+    try {
+      const response = await fetch(endpoint, { cache: "no-store" });
+
+      if (!response.ok) {
+        throw new Error(`Request failed with ${response.status}`);
+      }
+
+      const randomPoint = (await response.json()) as TerraRandomPoint;
+      await audioPlayback.play(randomPoint.point);
+    } catch {
+      audioPlayback.reportError("Could not find a random station right now.");
+    } finally {
+      setLoadingRandomStation(false);
+    }
+  }, [activeMode.playback?.randomPointEndpoint, audioPlayback, loadingRandomStation]);
 
   if (viewer.loading) {
     return (
@@ -246,13 +313,17 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
           modeState.clearSelection();
           setDrawerView("list");
         }}
-        onCloseFavourites={() => setDrawerView("list")}
+        onCloseFavourites={() => {
+          setDrawerView("list");
+          setPlaybackQueueSource("list");
+        }}
         onFavouriteSelect={selectFavourite}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
         onModeChange={selectMode}
         onOpenFavourites={() => {
           modeState.clearSelection();
           setDrawerView("favourites");
+          setPlaybackQueueSource("favourites");
           setDrawerCollapsed(false);
         }}
         onPointSelect={selectPoint}
@@ -275,7 +346,18 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       />
 
       {activeMode.playback && audioPlayback.point ? (
-        <RadioMiniPlayer playback={audioPlayback} playbackLabel={activeMode.playback.label} />
+        <RadioMiniPlayer
+          canPlayNext={playbackQueuePoints.length > 0}
+          canShuffle={Boolean(activeMode.playback.randomPointEndpoint)}
+          loadingRandom={loadingRandomStation}
+          playback={audioPlayback}
+          playbackLabel={activeMode.playback.label}
+          onNext={playNextStation}
+          onPointOpen={openPlaybackPoint}
+          onShuffle={() => {
+            void shuffleStation();
+          }}
+        />
       ) : null}
     </main>
   );

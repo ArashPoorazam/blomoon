@@ -51,7 +51,8 @@ export const terraModes = [
     playback: {
       label: "Live audio",
       mediaKind: "audio",
-      playableEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/playable`
+      playableEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/playable`,
+      randomPointEndpoint: "/api/modes/radio/points/random"
     },
     loadingLabel: "Loading radio stations",
     emptyLabel: "No matching radio stations.",
