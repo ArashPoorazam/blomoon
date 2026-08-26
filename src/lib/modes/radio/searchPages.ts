@@ -363,7 +363,7 @@ async function getLiveCountryStationCount(alphaCode: string) {
   return countsByCode.get(alphaCode.toUpperCase()) ?? null;
 }
 
-async function getLiveGlobalStationCount() {
+export async function getLiveGlobalStationCount() {
   const now = Date.now();
 
   if (globalStationCountCache && now - globalStationCountCache.fetchedAt < STATION_CACHE_TTL_MS) {

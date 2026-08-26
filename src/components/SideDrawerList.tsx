@@ -9,6 +9,7 @@ import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 type SideDrawerListProps = {
   activeMode: TerraMode;
   activeModeId: TerraModeId;
+  activePlaybackPointKey: string | null;
   hasMoreRemotePoints?: boolean;
   favouritePointIds: Set<string>;
   loading: boolean;
@@ -38,6 +39,7 @@ type SideDrawerListProps = {
 export function SideDrawerList({
   activeMode,
   activeModeId,
+  activePlaybackPointKey,
   favouritePointIds,
   hasMoreRemotePoints,
   loading,
@@ -101,7 +103,7 @@ export function SideDrawerList({
         ) : (
           listedPoints.map((point) => (
             <div
-              className={`point-row ${selectedId === point.id ? "selected" : ""}`}
+              className={`point-row ${selectedId === point.id ? "selected" : ""} ${activePlaybackPointKey === getPointKey(point) ? "playback-active" : ""}`}
               key={point.id}
             >
               <button className="point-row-main" type="button" onClick={() => onPointSelect(point)}>
@@ -130,4 +132,8 @@ export function SideDrawerList({
       </div>
     </>
   );
+}
+
+function getPointKey(point: TerraPoint) {
+  return `${point.modeId}:${point.id}`;
 }

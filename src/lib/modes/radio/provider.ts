@@ -9,6 +9,7 @@ import { logger } from "@/lib/server/logging";
 import type { RadioBrowserServer } from "./types";
 
 type RadioBrowserJsonOptions = {
+  cache?: RequestCache;
   timeoutMs?: number;
 };
 
@@ -69,6 +70,7 @@ export async function fetchRadioBrowserHostJson<T>(
   }
 
   return fetchJsonWithTimeout<T>(url, {
+    cache: options.cache,
     headers: {
       accept: "application/json",
       "user-agent": RADIO_BROWSER_USER_AGENT

@@ -18,6 +18,8 @@ import { getLiveRadioRecordPage } from "./searchPages";
 import type { RadioSortOption } from "./api";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
 import { fetchRadioBrowserJson } from "./provider";
+import { getLiveRandomRadioRecord } from "./random";
+import { getRandomCatalogRecord } from "./randomSelection";
 import { logger } from "@/lib/server/logging";
 import type {
   PlayableCacheEntry,
@@ -198,18 +200,13 @@ export async function getRadioDetail(id: string) {
   return record?.detail ?? null;
 }
 
-export async function getRandomRadioPoint(): Promise<TerraRandomPoint | null> {
+export async function getRandomRadioPoint({
+  excludePointId
+}: {
+  excludePointId?: string | null;
+} = {}): Promise<TerraRandomPoint | null> {
   try {
-    const stations = await fetchRadioBrowserJson<RadioBrowserStation[]>("/json/stations/search", {
-      hidebroken: "true",
-      limit: "1",
-      order: "random"
-    });
-    const record = normalizeStation(stations[0]);
-
-    if (!record) {
-      throw new Error("Radio Browser returned no usable random station");
-    }
+    const record = await getLiveRandomRadioRecord({ excludePointId });
 
     if (catalogCache) {
       addRecordToCatalog(catalogCache, record);
@@ -222,11 +219,14 @@ export async function getRandomRadioPoint(): Promise<TerraRandomPoint | null> {
     };
   } catch (error) {
     logger.warn("radio.catalog.random_fallback", {
+      context: {
+        excludePointId
+      },
       error,
       message: "Radio random station request fell back to cached catalog"
     });
     const catalog = await getRadioCatalog();
-    const record = getRandomCatalogRecord(catalog.records);
+    const record = getRandomCatalogRecord(catalog.records, { excludePointId });
 
     return record
       ? {
@@ -466,14 +466,6 @@ function createCountryIndex(records: RadioStationRecord[]) {
 
 function selectWorldRecords(records: RadioStationRecord[]) {
   return records;
-}
-
-function getRandomCatalogRecord(records: RadioStationRecord[]) {
-  if (records.length === 0) {
-    return null;
-  }
-
-  return records[Math.floor(Math.random() * records.length)] ?? null;
 }
 
 function getFallbackCountryPointPage(

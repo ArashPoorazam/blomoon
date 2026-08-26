@@ -108,10 +108,42 @@
   line-height: 1.4;
 }
 
+.form-status.info,
+.form-status.success {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--surface-soft);
+  color: var(--muted-strong);
+}
+
 .account-methods,
 .password-form {
   display: grid;
   gap: 8px;
+}
+
+.account-verification {
+  display: grid;
+  gap: 8px;
+  padding: 10px;
+  border: 1px solid var(--warning-border, var(--panel-border));
+  border-radius: 8px;
+  background: var(--surface-soft);
+}
+
+.account-verification strong {
+  display: block;
+  margin-bottom: 3px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.account-verification span {
+  display: block;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.4;
 }
 
 .account-method {
@@ -422,6 +454,12 @@
 
 .favourite-row:hover {
   background: var(--control-hover);
+}
+
+.favourite-row.playback-active {
+  border-color: var(--info-border);
+  background: var(--info-surface);
+  box-shadow: inset 0 0 0 1px var(--info-border);
 }
 
 .favourite-row-main {

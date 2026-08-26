@@ -30,6 +30,10 @@ Create `.env.local` from `.env.example` before running the app. Account features
 - `DATABASE_URL`
 - `BETTER_AUTH_URL`, for example `http://localhost:3000`
 - `BETTER_AUTH_SECRET`, generated with `openssl rand -base64 32`
+- `RESEND_API_KEY`
+- `BLOMOON_AUTH_EMAIL_FROM`, for example `Blomoon <no-reply@example.com>`
+
+Password accounts require email verification before login. Use Resend's `onboarding@resend.dev` sender only for local testing; production senders should use a verified Resend domain.
 
 Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Account-menu contact rows are read from `BLOMOON_CONTACT_GITHUB_URL`, `BLOMOON_CONTACT_TELEGRAM_URL`, and `BLOMOON_CONTACT_EMAIL`; unset values are hidden.
 

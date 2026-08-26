@@ -5,6 +5,7 @@ import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
 import type { FavouriteGroupDto } from "@/lib/persistence/types";
 
 type FavouritesDrawerProps = {
+  activePlaybackPointKey: string | null;
   groups: FavouriteGroupDto[];
   loading: boolean;
   showOnGlobe: boolean;
@@ -15,6 +16,7 @@ type FavouritesDrawerProps = {
 };
 
 export function FavouritesDrawer({
+  activePlaybackPointKey,
   groups,
   loading,
   onBackToList,
@@ -67,7 +69,7 @@ export function FavouritesDrawer({
             </div>
             {group.favourites.map((favourite) => (
               <div
-                className="favourite-row"
+                className={`favourite-row ${activePlaybackPointKey === `${favourite.modeId}:${favourite.pointId}` ? "playback-active" : ""}`}
                 key={`${favourite.modeId}:${favourite.pointId}`}
               >
                 <button

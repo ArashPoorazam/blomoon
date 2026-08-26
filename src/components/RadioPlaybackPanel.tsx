@@ -195,7 +195,8 @@ function RadioPlaybackControls({
         <button
           aria-label="Shuffle stations"
           className="radio-control icon-only"
-          disabled={!canShuffle || isBusy || loadingRandom}
+          aria-busy={loadingRandom}
+          disabled={!canShuffle || isBusy}
           title="Shuffle"
           type="button"
           onClick={onShuffle}

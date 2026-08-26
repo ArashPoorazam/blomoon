@@ -1,10 +1,14 @@
 "use client";
 
-import { LoaderCircle, X } from "lucide-react";
+import { LoaderCircle, Mail, X } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
 
 type AuthMode = "login" | "register";
+type FormNotice = {
+  kind: "info" | "success";
+  message: string;
+};
 
 type AuthModalProps = {
   googleAuthEnabled: boolean;
@@ -71,27 +75,66 @@ function AuthCard({
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
+  const [notice, setNotice] = useState<FormNotice | null>(null);
+  const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [resendingVerification, setResendingVerification] = useState(false);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setSubmitting(true);
     setError(null);
+    setNotice(null);
 
     try {
       const normalizedEmail = email.trim().toLowerCase();
-      const result = mode === "login"
-        ? await authClient.signIn.email({ email: normalizedEmail, password, rememberMe: true })
-        : await authClient.signUp.email({ email: normalizedEmail, name: normalizedEmail, password });
+
+      if (mode === "login") {
+        const result = await authClient.signIn.email({
+          callbackURL: "/?auth=verified",
+          email: normalizedEmail,
+          password,
+          rememberMe: true
+        });
+
+        if (result.error) {
+          if (isEmailVerificationError(result.error)) {
+            setVerificationEmail(normalizedEmail);
+            setNotice({
+              kind: "info",
+              message: "Verify your email before logging in. We sent a new verification link."
+            });
+            return;
+          }
+
+          setError(result.error.message ?? "Authentication failed.");
+          return;
+        }
+
+        await onAuthenticated();
+        onClose?.();
+        setPassword("");
+        return;
+      }
+
+      const result = await authClient.signUp.email({
+        callbackURL: "/?auth=verified",
+        email: normalizedEmail,
+        name: normalizedEmail,
+        password
+      });
 
       if (result.error) {
         setError(result.error.message ?? "Authentication failed.");
         return;
       }
 
-      await onAuthenticated();
-      onClose?.();
+      setVerificationEmail(normalizedEmail);
       setPassword("");
+      setNotice({
+        kind: "success",
+        message: "Check your email for a verification link before logging in."
+      });
     } catch {
       setError("Authentication failed.");
     } finally {
@@ -99,9 +142,45 @@ function AuthCard({
     }
   }
 
+  async function resendVerificationEmail() {
+    const normalizedEmail = (verificationEmail ?? email).trim().toLowerCase();
+
+    if (!normalizedEmail) {
+      setError("Enter your email address first.");
+      return;
+    }
+
+    setResendingVerification(true);
+    setError(null);
+    setNotice(null);
+
+    try {
+      const result = await authClient.sendVerificationEmail({
+        callbackURL: "/?auth=verified",
+        email: normalizedEmail
+      });
+
+      if (result.error) {
+        setError(result.error.message ?? "Could not send a verification email.");
+        return;
+      }
+
+      setVerificationEmail(normalizedEmail);
+      setNotice({
+        kind: "success",
+        message: "Verification link sent. Check your email."
+      });
+    } catch {
+      setError("Could not send a verification email.");
+    } finally {
+      setResendingVerification(false);
+    }
+  }
+
   async function signInWithGoogle() {
     setSubmitting(true);
     setError(null);
+    setNotice(null);
 
     try {
       const result = await authClient.signIn.social({
@@ -142,7 +221,10 @@ function AuthCard({
             required
             type="email"
             value={email}
-            onChange={(event) => setEmail(event.target.value)}
+            onChange={(event) => {
+              setEmail(event.target.value);
+              setVerificationEmail(null);
+            }}
           />
         </label>
         <label className="form-field">
@@ -159,12 +241,26 @@ function AuthCard({
 
         {serviceError ? <div className="form-error">{serviceError}</div> : null}
         {error ? <div className="form-error">{error}</div> : null}
+        {notice ? <div className={`form-status ${notice.kind}`}>{notice.message}</div> : null}
 
         <button className="primary-action" disabled={submitting || Boolean(serviceError)} type="submit">
           {submitting ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : null}
           {mode === "login" ? "Log in" : "Create account"}
         </button>
       </form>
+
+      {verificationEmail ? (
+        <button
+          className="secondary-action"
+          disabled={resendingVerification || submitting || Boolean(serviceError)}
+          type="button"
+          onClick={resendVerificationEmail}
+        >
+          {resendingVerification ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : null}
+          {!resendingVerification ? <Mail size={15} aria-hidden="true" /> : null}
+          Resend verification email
+        </button>
+      ) : null}
 
       {googleAuthEnabled ? (
         <button className="secondary-action" disabled={submitting || Boolean(serviceError)} type="button" onClick={signInWithGoogle}>
@@ -178,10 +274,18 @@ function AuthCard({
         onClick={() => {
           setMode(mode === "login" ? "register" : "login");
           setError(null);
+          setNotice(null);
+          setVerificationEmail(null);
         }}
       >
         {mode === "login" ? "Create an account" : "Use an existing account"}
       </button>
     </div>
   );
+}
+
+function isEmailVerificationError(error: { code?: string; message?: string; status?: number }) {
+  return error.status === 403
+    || error.code === "EMAIL_NOT_VERIFIED"
+    || error.message?.toLowerCase().includes("email not verified") === true;
 }

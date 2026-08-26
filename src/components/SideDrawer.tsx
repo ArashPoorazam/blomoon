@@ -11,6 +11,7 @@ import { SideDrawerList } from "./SideDrawerList";
 type SideDrawerProps = {
   activeMode: TerraMode;
   activeModeId: TerraModeId;
+  activePlaybackPointKey: string | null;
   collapsed: boolean;
   detail: TerraPointDetail | null;
   detailAccessory?: React.ReactNode;
@@ -52,6 +53,7 @@ type SideDrawerProps = {
 export function SideDrawer({
   activeMode,
   activeModeId,
+  activePlaybackPointKey,
   collapsed,
   detail,
   detailAccessory,
@@ -115,6 +117,7 @@ export function SideDrawer({
           />
         ) : isFavourites ? (
           <FavouritesDrawer
+            activePlaybackPointKey={activePlaybackPointKey}
             groups={favouriteGroups}
             loading={favouritesLoading}
             showOnGlobe={showListedOnGlobe}
@@ -127,6 +130,7 @@ export function SideDrawer({
           <SideDrawerList
             activeMode={activeMode}
             activeModeId={activeModeId}
+            activePlaybackPointKey={activePlaybackPointKey}
             favouritePointIds={favouritePointIds}
             hasMoreRemotePoints={hasMoreRemotePoints}
             loading={loading}

@@ -6,6 +6,7 @@ import { nextCookies } from "better-auth/next-js";
 import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
+import { sendAccountVerificationEmail } from "@/lib/email/verification";
 import { logger } from "@/lib/server/logging";
 import type { TerraThemeId } from "@/lib/theme/themes";
 
@@ -158,8 +159,21 @@ function createAuth() {
       },
       transaction: true
     }),
+    emailVerification: {
+      autoSignInAfterVerification: true,
+      sendOnSignIn: true,
+      sendOnSignUp: true,
+      sendVerificationEmail: async ({ user, url, token }) => {
+        await sendAccountVerificationEmail({
+          email: user.email,
+          token,
+          url
+        });
+      }
+    },
     emailAndPassword: {
-      enabled: true
+      enabled: true,
+      requireEmailVerification: true
     },
     plugins: [nextCookies()],
     secret: process.env.BETTER_AUTH_SECRET ?? process.env.AUTH_SECRET,

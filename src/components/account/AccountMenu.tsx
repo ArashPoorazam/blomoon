@@ -190,10 +190,11 @@ function AccountPanel({
           {user.email.slice(0, 1).toUpperCase()}
         </div>
         <div>
-          <strong>Signed in</strong>
+          <strong>{user.emailVerified ? "Verified account" : "Email not verified"}</strong>
           <span>{user.email}</span>
         </div>
       </div>
+      {!user.emailVerified ? <EmailVerificationPanel email={user.email} /> : null}
       <div className="account-methods">
         {user.authMethods.map((method) => (
           <div className="account-method" key={method.id}>
@@ -204,6 +205,49 @@ function AccountPanel({
       </div>
       <PasswordChangeForm enabled={user.authMethods.some((method) => method.id === "password" && method.enabled)} />
       <div className="account-note">Email changes require verified transactional email before they can be enabled.</div>
+    </div>
+  );
+}
+
+function EmailVerificationPanel({ email }: { email: string }) {
+  const [status, setStatus] = useState<string | null>(null);
+  const [submitting, setSubmitting] = useState(false);
+
+  async function resendVerificationEmail() {
+    setSubmitting(true);
+    setStatus(null);
+
+    try {
+      const result = await authClient.sendVerificationEmail({
+        callbackURL: "/?auth=verified",
+        email
+      });
+
+      if (result.error) {
+        setStatus(result.error.message ?? "Could not send a verification email.");
+        return;
+      }
+
+      setStatus("Verification link sent. Check your email.");
+    } catch {
+      setStatus("Could not send a verification email.");
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <div className="account-verification">
+      <div>
+        <strong>Email verification required</strong>
+        <span>Verify this address to keep password access enabled.</span>
+      </div>
+      <button className="secondary-action" disabled={submitting} type="button" onClick={resendVerificationEmail}>
+        {submitting ? <LoaderCircle className="spin" size={14} aria-hidden="true" /> : null}
+        {!submitting ? <Mail size={14} aria-hidden="true" /> : null}
+        Resend verification email
+      </button>
+      {status ? <div className="form-status">{status}</div> : null}
     </div>
   );
 }
