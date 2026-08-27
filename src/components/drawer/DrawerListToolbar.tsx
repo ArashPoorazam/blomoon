@@ -1,20 +1,17 @@
 "use client";
 
-import { ChevronDown, Globe2, Search, Star, X } from "lucide-react";
+import { ChevronDown, Globe2, Search, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { getKnownCountries, type CountryInfo } from "@/lib/geo";
-import type { TerraMode, TerraModeId } from "@/lib/modes/types";
+import type { TerraMode } from "@/lib/modes/types";
 import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerListToolbarProps = {
   activeMode: TerraMode;
-  activeModeId: TerraModeId;
-  favouriteCount: number;
   hasMorePoints: boolean;
   isLoadingMorePoints: boolean;
   listedCount: number;
   loading: boolean;
-  modes: TerraMode[];
   providerError: string | null;
   query: string;
   selectedCountry: CountryInfo | null;
@@ -25,8 +22,6 @@ type DrawerListToolbarProps = {
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMorePoints?: () => void;
-  onModeChange: (modeId: TerraModeId) => void;
-  onOpenFavourites: () => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleShowListedOnGlobe: () => void;
@@ -34,13 +29,10 @@ type DrawerListToolbarProps = {
 
 export function DrawerListToolbar({
   activeMode,
-  activeModeId,
-  favouriteCount,
   hasMorePoints,
   isLoadingMorePoints,
   listedCount,
   loading,
-  modes,
   providerError,
   query,
   selectedCountry,
@@ -51,8 +43,6 @@ export function DrawerListToolbar({
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMorePoints,
-  onModeChange,
-  onOpenFavourites,
   onQueryChange,
   onSortChange,
   onToggleShowListedOnGlobe
@@ -63,9 +53,12 @@ export function DrawerListToolbar({
     <div className="drawer-list-toolbar">
       <div className="drawer-compact-header">
         <div className="drawer-heading-copy">
-          <div className="drawer-kicker">Blomoon</div>
-          <h1 className="drawer-title">{activeMode.label}</h1>
-          <p className="drawer-subtitle">
+          <h1 className="drawer-brand-title">Blomoon</h1>
+          <p className="drawer-subtitle">{activeMode.label} stations by geography</p>
+        </div>
+        <div className="drawer-count-card" aria-live="polite">
+          <span>{loading ? "Loading" : "Directory"}</span>
+          <strong>
             {loading
               ? activeMode.loadingLabel
               : formatVisibleCount({
@@ -74,20 +67,9 @@ export function DrawerListToolbar({
                 totalCount: totalPoints,
                 totalKind: totalPointsKind
               })}
-          </p>
+          </strong>
         </div>
-        <button className="drawer-favourites-button" type="button" onClick={onOpenFavourites}>
-          <Star size={15} aria-hidden="true" fill="currentColor" />
-          <span>Favourites</span>
-          <strong>{favouriteCount}</strong>
-        </button>
       </div>
-
-      <ModeSwitcher
-        activeModeId={activeModeId}
-        modes={modes}
-        onModeChange={onModeChange}
-      />
 
       <div className="search-row">
         <Search className="search-icon" size={16} aria-hidden="true" />
@@ -181,7 +163,11 @@ function FilterControls({
   }
 
   return (
-    <div className="filter-panel">
+    <div className="filter-panel" aria-label="Station filters">
+      <div className="filter-panel-header">
+        <span>Refine</span>
+        <strong>{selectedCountry?.name ?? "Worldwide"}</strong>
+      </div>
       <div className="filter-grid">
         <div
           className="filter-menu-field"
@@ -318,32 +304,6 @@ function FilterControls({
   );
 }
 
-function ModeSwitcher({
-  activeModeId,
-  modes,
-  onModeChange
-}: {
-  activeModeId: TerraModeId;
-  modes: TerraMode[];
-  onModeChange: (modeId: TerraModeId) => void;
-}) {
-  return (
-    <div className="mode-switcher" aria-label="Data mode">
-      {modes.map((mode) => (
-        <button
-          aria-pressed={activeModeId === mode.id}
-          className={activeModeId === mode.id ? "active" : ""}
-          key={mode.id}
-          type="button"
-          onClick={() => onModeChange(mode.id)}
-        >
-          {mode.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
 function ProviderNotice({ message }: { message: string | null }) {
   if (!message) {
     return null;
@@ -367,11 +327,16 @@ function formatVisibleCount({
     return "0 visible points";
   }
 
+  const listedLabel = numberFormatter.format(listedCount);
+  const totalLabel = numberFormatter.format(totalCount);
+
   if (totalKind === "lowerBound") {
     return loadingMore
-      ? `${listedCount} listed, loading more`
-      : `${listedCount} listed, ${totalCount}+ available`;
+      ? `${listedLabel} listed, loading more`
+      : `${listedLabel} listed, ${totalLabel}+ available`;
   }
 
-  return `${listedCount} listed, ${totalCount} available`;
+  return `${listedLabel} listed, ${totalLabel} available`;
 }
+
+const numberFormatter = new Intl.NumberFormat("en");

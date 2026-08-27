@@ -22,6 +22,7 @@ import { useViewer } from "./account/useViewer";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
 import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
+import { ModeComingSoonModal, ShellControlRail } from "./ShellControlRail";
 import { SideDrawer } from "./SideDrawer";
 
 type BlomoonAppProps = {
@@ -37,6 +38,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
+  const [modeNoticeOpen, setModeNoticeOpen] = useState(false);
   const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
   const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
   const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
@@ -128,14 +130,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     }
   }, [activeMode, modeState.selectPoint, viewer.user]);
 
-  const selectMode = useCallback((modeId: TerraModeId) => {
-    setActiveModeId(modeId);
-    setDrawerCollapsed(false);
-    setDrawerView("list");
-    setPlaybackQueueSource("list");
-    setHoveredPoint(null);
-  }, []);
-
   const selectCountry = useCallback((country: CountryInfo | null) => {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
@@ -144,6 +138,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setPlaybackQueueSource("list");
     setHoveredPoint(null);
   }, [selectedCountry?.code]);
+
+  const openFavourites = useCallback(() => {
+    modeState.clearSelection();
+    setDrawerView("favourites");
+    setPlaybackQueueSource("favourites");
+    setDrawerCollapsed(false);
+  }, [modeState.clearSelection]);
 
   const selectTheme = useCallback((nextThemeId: TerraThemeId) => {
     setThemeId(nextThemeId);
@@ -268,6 +269,12 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onThemeChange={selectTheme}
       />
 
+      <ShellControlRail
+        favouriteCount={favourites.favouriteIds.size}
+        onOpenFavourites={openFavourites}
+        onOpenModeNotice={() => setModeNoticeOpen(true)}
+      />
+
       {hoveredPoint ? (
         <div
           ref={tooltipRef}
@@ -283,7 +290,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
       <SideDrawer
         activeMode={activeMode}
-        activeModeId={activeModeId}
         activePlaybackPointKey={activePlaybackPointKey}
         collapsed={drawerCollapsed}
         detail={modeState.detail}
@@ -296,7 +302,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         loading={modeState.listLoading}
         loadingTaskLabel={modeState.loadingTaskLabel}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
-        modes={terraModes}
         points={modeState.visiblePoints}
         providerError={modeState.providerError}
         query={modeState.query}
@@ -319,13 +324,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         }}
         onFavouriteSelect={selectFavourite}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
-        onModeChange={selectMode}
-        onOpenFavourites={() => {
-          modeState.clearSelection();
-          setDrawerView("favourites");
-          setPlaybackQueueSource("favourites");
-          setDrawerCollapsed(false);
-        }}
         onPointSelect={selectPoint}
         onQueryChange={modeState.setQuery}
         onSortChange={modeState.setSortId}
@@ -335,6 +333,10 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
         onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
+
+      {modeNoticeOpen ? (
+        <ModeComingSoonModal onClose={() => setModeNoticeOpen(false)} />
+      ) : null}
 
       <AuthModal
         googleAuthEnabled={appConfig.googleAuthEnabled}

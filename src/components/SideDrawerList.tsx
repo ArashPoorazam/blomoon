@@ -1,20 +1,18 @@
 "use client";
 
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
-import type { TerraMode, TerraModeId, TerraPoint } from "@/lib/modes/types";
+import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
 type SideDrawerListProps = {
   activeMode: TerraMode;
-  activeModeId: TerraModeId;
   activePlaybackPointKey: string | null;
   hasMoreRemotePoints?: boolean;
   favouritePointIds: Set<string>;
   loading: boolean;
   loadingMoreRemotePoints?: boolean;
-  modes: TerraMode[];
   points: TerraPoint[];
   providerError: string | null;
   query: string;
@@ -27,24 +25,20 @@ type SideDrawerListProps = {
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
-  onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
-  onOpenFavourites: () => void;
   onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawerList({
   activeMode,
-  activeModeId,
   activePlaybackPointKey,
   favouritePointIds,
   hasMoreRemotePoints,
   loading,
   loadingMoreRemotePoints,
-  modes,
   points,
   providerError,
   query,
@@ -57,12 +51,10 @@ export function SideDrawerList({
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
-  onModeChange,
   onPointSelect,
   onQueryChange,
   onSortChange,
   onToggleFavourite,
-  onOpenFavourites,
   onToggleShowListedOnGlobe
 }: SideDrawerListProps) {
   const listedPoints = points;
@@ -73,13 +65,10 @@ export function SideDrawerList({
     <>
       <DrawerListToolbar
         activeMode={activeMode}
-        activeModeId={activeModeId}
-        favouriteCount={favouritePointIds.size}
         hasMorePoints={hasMorePoints}
         isLoadingMorePoints={isLoadingMorePoints}
         listedCount={listedPoints.length}
         loading={loading}
-        modes={modes}
         providerError={providerError}
         query={query}
         selectedCountry={selectedCountry}
@@ -90,8 +79,6 @@ export function SideDrawerList({
         onCountryFilterChange={onCountryFilterChange}
         onClearCountrySelection={onClearCountrySelection}
         onLoadMorePoints={onLoadMoreRemotePoints}
-        onModeChange={onModeChange}
-        onOpenFavourites={onOpenFavourites}
         onQueryChange={onQueryChange}
         onSortChange={onSortChange}
         onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}

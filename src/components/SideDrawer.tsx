@@ -10,7 +10,6 @@ import { SideDrawerList } from "./SideDrawerList";
 
 type SideDrawerProps = {
   activeMode: TerraMode;
-  activeModeId: TerraModeId;
   activePlaybackPointKey: string | null;
   collapsed: boolean;
   detail: TerraPointDetail | null;
@@ -23,7 +22,6 @@ type SideDrawerProps = {
   loading: boolean;
   loadingTaskLabel: string;
   loadingMoreRemotePoints?: boolean;
-  modes: TerraMode[];
   points: TerraPoint[];
   providerError: string | null;
   query: string;
@@ -40,9 +38,7 @@ type SideDrawerProps = {
   onCloseFavourites: () => void;
   onFavouriteSelect: (modeId: TerraModeId, point: TerraPoint) => void;
   onLoadMoreRemotePoints?: () => void;
-  onModeChange: (modeId: TerraModeId) => void;
   onPointSelect: (point: TerraPoint) => void;
-  onOpenFavourites: () => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
@@ -52,7 +48,6 @@ type SideDrawerProps = {
 
 export function SideDrawer({
   activeMode,
-  activeModeId,
   activePlaybackPointKey,
   collapsed,
   detail,
@@ -65,7 +60,6 @@ export function SideDrawer({
   loading,
   loadingTaskLabel,
   loadingMoreRemotePoints,
-  modes,
   points,
   providerError,
   query,
@@ -82,8 +76,6 @@ export function SideDrawer({
   onCloseFavourites,
   onFavouriteSelect,
   onLoadMoreRemotePoints,
-  onModeChange,
-  onOpenFavourites,
   onPointSelect,
   onQueryChange,
   onSortChange,
@@ -129,13 +121,11 @@ export function SideDrawer({
         ) : (
           <SideDrawerList
             activeMode={activeMode}
-            activeModeId={activeModeId}
             activePlaybackPointKey={activePlaybackPointKey}
             favouritePointIds={favouritePointIds}
             hasMoreRemotePoints={hasMoreRemotePoints}
             loading={loading}
             loadingMoreRemotePoints={loadingMoreRemotePoints}
-            modes={modes}
             points={points}
             providerError={providerError}
             query={query}
@@ -148,8 +138,6 @@ export function SideDrawer({
             onCountryFilterChange={onCountryFilterChange}
             onClearCountrySelection={onClearCountrySelection}
             onLoadMoreRemotePoints={onLoadMoreRemotePoints}
-            onModeChange={onModeChange}
-            onOpenFavourites={onOpenFavourites}
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
             onSortChange={onSortChange}
