@@ -1,6 +1,6 @@
 export type ContactLink = {
   href: string;
-  id: "email" | "github" | "telegram";
+  id: "email";
   label: string;
   value: string;
 };

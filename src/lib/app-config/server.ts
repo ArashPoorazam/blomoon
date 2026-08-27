@@ -1,5 +1,6 @@
 import "server-only";
 
+import { BLOMOON_SUPPORT_EMAIL } from "./public";
 import type { AppClientConfig, ContactLink } from "./types";
 
 export function getAppClientConfig(): AppClientConfig {
@@ -10,49 +11,10 @@ export function getAppClientConfig(): AppClientConfig {
 }
 
 function getContactLinks(): ContactLink[] {
-  return [
-    getUrlContactLink("github", "GitHub", process.env.BLOMOON_CONTACT_GITHUB_URL),
-    getUrlContactLink("telegram", "Telegram", process.env.BLOMOON_CONTACT_TELEGRAM_URL),
-    getEmailContactLink(process.env.BLOMOON_CONTACT_EMAIL)
-  ].filter((link): link is ContactLink => Boolean(link));
-}
-
-function getUrlContactLink(id: ContactLink["id"], label: string, value?: string) {
-  const trimmed = value?.trim();
-
-  if (!trimmed) {
-    return null;
-  }
-
-  try {
-    const url = new URL(trimmed);
-
-    if (url.protocol !== "https:" && url.protocol !== "http:") {
-      return null;
-    }
-
-    return {
-      href: url.toString(),
-      id,
-      label,
-      value: url.hostname.replace(/^www\./, "")
-    } satisfies ContactLink;
-  } catch {
-    return null;
-  }
-}
-
-function getEmailContactLink(value?: string) {
-  const email = value?.trim();
-
-  if (!email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-    return null;
-  }
-
-  return {
-    href: `mailto:${email}`,
+  return [{
+    href: `mailto:${BLOMOON_SUPPORT_EMAIL}`,
     id: "email",
     label: "Email",
-    value: email
-  } satisfies ContactLink;
+    value: BLOMOON_SUPPORT_EMAIL
+  }];
 }

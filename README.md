@@ -35,7 +35,7 @@ Create `.env.local` from `.env.example` before running the app. Account features
 
 Password accounts require email verification before login. Use Resend's `onboarding@resend.dev` sender only for local testing; production senders should use a verified Resend domain.
 
-Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Account-menu contact rows are read from `BLOMOON_CONTACT_GITHUB_URL`, `BLOMOON_CONTACT_TELEGRAM_URL`, and `BLOMOON_CONTACT_EMAIL`; unset values are hidden.
+Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Production Google OAuth should use `https://blomoon.ir` as `BETTER_AUTH_URL`, `blomoon.ir` as the authorized domain, `https://blomoon.ir` as the application home page, `https://blomoon.ir/privacy` as the privacy policy, `https://blomoon.ir/terms` as the terms of service, and `https://blomoon.ir/api/auth/callback/google` as the authorized redirect URI. Public support contact is `blomoon.support@gmail.com`.
 
 ## Data Sources
 

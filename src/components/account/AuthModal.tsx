@@ -1,7 +1,9 @@
 "use client";
 
 import Image from "next/image";
+import Link from "next/link";
 import loginBackground from "@/assets/images/backgrounds/blomoon_login_background.webp";
+import { BLOMOON_PRIVACY_PATH, BLOMOON_TERMS_PATH } from "@/lib/app-config/public";
 import { AuthCard } from "./AuthCard";
 
 type AuthModalProps = {
@@ -53,7 +55,11 @@ export function AuthGate({
         <div className="auth-brand">
           <div className="drawer-kicker">Live entertainment directory</div>
           <h1>Blomoon</h1>
-          <p>Find live radio on globe, save your favorites, and experience the world by sound.</p>
+          <p>Explore streamable live radio by geography on an interactive globe, save favorite stations, and tune into places through sound.</p>
+          <nav className="auth-policy-links" aria-label="Legal links">
+            <Link href={BLOMOON_PRIVACY_PATH}>Privacy</Link>
+            <Link href={BLOMOON_TERMS_PATH}>Terms</Link>
+          </nav>
         </div>
         <AuthCard
           googleAuthEnabled={googleAuthEnabled}

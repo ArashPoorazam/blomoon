@@ -397,6 +397,30 @@
   line-height: 1.55;
 }
 
+.auth-policy-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.auth-policy-links a {
+  min-height: 34px;
+  padding: 8px 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--panel);
+  color: var(--muted-strong);
+  font-size: 12px;
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.auth-policy-links a:hover,
+.auth-policy-links a:focus-visible {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
 .auth-gate > .auth-modal {
   z-index: 1;
 }

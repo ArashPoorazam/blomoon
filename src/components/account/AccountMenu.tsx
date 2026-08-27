@@ -1,6 +1,6 @@
 "use client";
 
-import { Code2, LoaderCircle, LogOut, Mail, MessageCircle, Palette, Shield, UserCircle } from "lucide-react";
+import { LoaderCircle, LogOut, Mail, Palette, Shield, UserCircle } from "lucide-react";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { authClient } from "@/lib/auth/client";
 import type { ContactLink } from "@/lib/app-config/types";
@@ -329,23 +329,11 @@ function ContactPanel({ links }: { links: ContactLink[] }) {
     <div className="contact-panel">
       {links.map((link) => (
         <a href={link.href} key={link.id} target={link.href.startsWith("mailto:") ? undefined : "_blank"} rel="noreferrer">
-          {getContactIcon(link.id)}
+          <Mail size={14} aria-hidden="true" />
           <span>{link.label}</span>
           <strong>{link.value}</strong>
         </a>
       ))}
     </div>
   );
-}
-
-function getContactIcon(id: ContactLink["id"]) {
-  if (id === "github") {
-    return <Code2 size={14} aria-hidden="true" />;
-  }
-
-  if (id === "telegram") {
-    return <MessageCircle size={14} aria-hidden="true" />;
-  }
-
-  return <Mail size={14} aria-hidden="true" />;
 }
