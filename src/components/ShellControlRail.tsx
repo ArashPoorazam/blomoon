@@ -1,12 +1,14 @@
 "use client";
 
-import { Radio, Star } from "lucide-react";
+import { Earth, Radio, Star } from "lucide-react";
+import type { MouseEvent } from "react";
 import { AccountModalShell } from "./account/AccountModalShell";
 
 type ShellControlRailProps = {
-  favouriteCount: number;
+  earthSpinEnabled: boolean;
   onOpenFavourites: () => void;
   onOpenModeNotice: () => void;
+  onToggleEarthSpin: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
 type ModeComingSoonModalProps = {
@@ -14,9 +16,10 @@ type ModeComingSoonModalProps = {
 };
 
 export function ShellControlRail({
-  favouriteCount,
+  earthSpinEnabled,
   onOpenFavourites,
-  onOpenModeNotice
+  onOpenModeNotice,
+  onToggleEarthSpin
 }: ShellControlRailProps) {
   return (
     <nav className="shell-control-rail" aria-label="Blomoon shortcuts">
@@ -27,12 +30,18 @@ export function ShellControlRail({
         title="Favourites"
         onClick={onOpenFavourites}
       >
-        <Star size={18} aria-hidden="true" fill="currentColor" />
-        {favouriteCount > 0 ? (
-          <span className="shell-control-badge" aria-label={`${favouriteCount} favourites`}>
-            {favouriteCount > 99 ? "99+" : favouriteCount}
-          </span>
-        ) : null}
+        <Star size={18} aria-hidden="true" />
+      </button>
+      <button
+        className="shell-square-control"
+        data-earth-spin-toggle
+        type="button"
+        aria-label={earthSpinEnabled ? "Stop globe spin" : "Start globe spin"}
+        aria-pressed={earthSpinEnabled}
+        title="Globe spin"
+        onClick={onToggleEarthSpin}
+      >
+        <Earth size={18} aria-hidden="true" />
       </button>
       <button
         className="shell-square-control active"

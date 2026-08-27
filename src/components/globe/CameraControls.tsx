@@ -8,10 +8,14 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { TerraPoint } from "@/lib/modes/types";
 import {
   DEFAULT_ROTATE_SPEED,
+  GLOBE_AUTO_SPIN_SPEED,
+  KEYBOARD_ORBIT_RADIANS_PER_SECOND,
   MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
+  getKeyboardOrbitIntent,
+  getKeyboardOrbitIntentFromKeys,
+  latLonToVector3,
   getRotateSpeed,
-  latLonToVector3
 } from "./globeMath";
 
 type CameraFocusTarget = {
@@ -68,8 +72,9 @@ export function CameraFocus({
   return null;
 }
 
-export function AdaptiveOrbitControls() {
+export function AdaptiveOrbitControls({ earthSpinEnabled }: { earthSpinEnabled: boolean }) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
+  const pressedKeyCodes = useRef(new Set<string>());
 
   useEffect(() => {
     if (!controlsRef.current) {
@@ -79,12 +84,52 @@ export function AdaptiveOrbitControls() {
     controlsRef.current.mouseButtons = RIGHT_MOUSE_ORBIT_BUTTONS;
   }, []);
 
-  useFrame(({ camera }) => {
+  useEffect(() => {
+    function handleKeyDown(event: KeyboardEvent) {
+      if (shouldIgnoreKeyboardOrbitEvent(event) || !getKeyboardOrbitIntent(event.code)) {
+        return;
+      }
+
+      event.preventDefault();
+      pressedKeyCodes.current.add(event.code);
+    }
+
+    function handleKeyUp(event: KeyboardEvent) {
+      pressedKeyCodes.current.delete(event.code);
+    }
+
+    function clearPressedKeys() {
+      pressedKeyCodes.current.clear();
+    }
+
+    window.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("keyup", handleKeyUp);
+    window.addEventListener("blur", clearPressedKeys);
+    return () => {
+      window.removeEventListener("keydown", handleKeyDown);
+      window.removeEventListener("keyup", handleKeyUp);
+      window.removeEventListener("blur", clearPressedKeys);
+    };
+  }, []);
+
+  useFrame(({ camera }, delta) => {
     if (!controlsRef.current) {
       return;
     }
 
-    controlsRef.current.rotateSpeed = getRotateSpeed(camera.position.length());
+    const controls = controlsRef.current;
+    const rotateSpeed = getRotateSpeed(camera.position.length());
+    controls.rotateSpeed = rotateSpeed;
+
+    const keyboardIntent = getKeyboardOrbitIntentFromKeys(pressedKeyCodes.current);
+
+    if (keyboardIntent.azimuth === 0 && keyboardIntent.polar === 0) {
+      return;
+    }
+
+    const keyboardAngle = KEYBOARD_ORBIT_RADIANS_PER_SECOND * rotateSpeed * delta;
+    controls.setAzimuthalAngle(controls.getAzimuthalAngle() + keyboardIntent.azimuth * keyboardAngle);
+    controls.setPolarAngle(controls.getPolarAngle() + keyboardIntent.polar * keyboardAngle);
   });
 
   return (
@@ -92,10 +137,26 @@ export function AdaptiveOrbitControls() {
       ref={controlsRef}
       enableDamping
       enablePan={false}
+      autoRotate={earthSpinEnabled}
+      autoRotateSpeed={GLOBE_AUTO_SPIN_SPEED}
       maxDistance={MAX_CAMERA_DISTANCE}
       minDistance={MIN_CAMERA_DISTANCE}
       mouseButtons={RIGHT_MOUSE_ORBIT_BUTTONS}
       rotateSpeed={DEFAULT_ROTATE_SPEED}
     />
   );
+}
+
+function shouldIgnoreKeyboardOrbitEvent(event: KeyboardEvent) {
+  if (event.altKey || event.ctrlKey || event.metaKey) {
+    return true;
+  }
+
+  const target = event.target;
+
+  if (!(target instanceof HTMLElement)) {
+    return false;
+  }
+
+  return target.isContentEditable || ["INPUT", "SELECT", "TEXTAREA"].includes(target.tagName);
 }

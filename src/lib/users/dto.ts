@@ -1,4 +1,4 @@
-import type { TerraThemeId } from "@/lib/theme/themes";
+import { isTerraThemeId, type TerraThemeId } from "@/lib/theme/ids";
 
 export type UserAuthMethod = {
   id: "password" | "google" | string;
@@ -33,7 +33,7 @@ export function toViewerDto(input: {
     email: input.email,
     emailVerified: input.emailVerified,
     image: input.image,
-    selectedTheme: input.selectedTheme === "atlas" ? "atlas" : "night",
+    selectedTheme: isTerraThemeId(input.selectedTheme) ? input.selectedTheme : "night",
     authMethods: availableProviderIds.map((providerId) => providerId === "credential"
       ? { id: "password", label: "Password", enabled: providers.has("credential") }
       : { id: "google", label: "Google", enabled: providers.has("google") }

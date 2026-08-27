@@ -56,7 +56,7 @@ export function DrawerListToolbar({
           <h1 className="drawer-brand-title">Blomoon</h1>
           <p className="drawer-subtitle">{activeMode.label} stations by geography</p>
         </div>
-        <div className="drawer-count-card" aria-live="polite">
+        <div className="drawer-count-line" aria-live="polite">
           <span>{loading ? "Loading" : "Directory"}</span>
           <strong>
             {loading

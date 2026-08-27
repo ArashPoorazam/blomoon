@@ -3,6 +3,11 @@
 import { Check } from "lucide-react";
 import { terraThemes, type TerraTheme, type TerraThemeId } from "@/lib/theme/themes";
 
+type ThemeSwatch = {
+  id: "ocean" | "land" | "radio" | "listed" | "selected";
+  color: string;
+};
+
 type ThemePickerProps = {
   selectedThemeId: TerraThemeId;
   onThemeChange: (themeId: TerraThemeId) => void;
@@ -20,13 +25,17 @@ export function ThemePicker({ onThemeChange, selectedThemeId }: ThemePickerProps
           onClick={() => onThemeChange(theme.id)}
         >
           <span className="theme-preview" aria-hidden="true">
-            {getThemeSwatches(theme).map((color, index) => (
-              <span className={`theme-swatch swatch-${index + 1}`} key={`${theme.id}-${color}`} style={{ background: color }} />
+            {getThemeSwatches(theme).map((swatch, index) => (
+              <span
+                className={`theme-swatch swatch-${index + 1}`}
+                key={`${theme.id}-${swatch.id}`}
+                style={{ background: swatch.color }}
+              />
             ))}
           </span>
           <span className="theme-option-main">
             <span>{theme.label}</span>
-            <span>{theme.id === "night" ? "Neon night globe with cool blue controls." : "Warm atlas land tones with crisp blue interface accents."}</span>
+            <span>{theme.description}</span>
           </span>
           <span className="theme-option-check" aria-hidden="true">
             {selectedThemeId === theme.id ? <Check size={16} /> : null}
@@ -37,12 +46,12 @@ export function ThemePicker({ onThemeChange, selectedThemeId }: ThemePickerProps
   );
 }
 
-function getThemeSwatches(theme: TerraTheme) {
+function getThemeSwatches(theme: TerraTheme): ThemeSwatch[] {
   return [
-    theme.globe.ocean,
-    theme.globe.land,
-    theme.globe.markers.tokens.radio,
-    theme.globe.markers.listed,
-    theme.globe.markers.selected
+    { id: "ocean", color: theme.globe.ocean },
+    { id: "land", color: theme.globe.land },
+    { id: "radio", color: theme.globe.markers.tokens.radio },
+    { id: "listed", color: theme.globe.markers.listed },
+    { id: "selected", color: theme.globe.markers.selected }
   ];
 }

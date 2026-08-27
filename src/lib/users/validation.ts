@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { terraThemeIds } from "@/lib/theme/ids";
 
 export const favouriteInputSchema = z.object({
   modeId: z.string().min(1).max(40),
@@ -6,5 +7,5 @@ export const favouriteInputSchema = z.object({
 });
 
 export const themeInputSchema = z.object({
-  themeId: z.enum(["night", "atlas"])
+  themeId: z.enum(terraThemeIds)
 });

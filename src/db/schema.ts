@@ -13,13 +13,14 @@ import {
   uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core";
+import { terraThemeIds } from "@/lib/theme/ids";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
   email: text("email").notNull().unique(),
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
-  selectedTheme: text("selected_theme", { enum: ["night", "atlas"] }).notNull().default("night"),
+  selectedTheme: text("selected_theme", { enum: terraThemeIds }).notNull().default("night"),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [

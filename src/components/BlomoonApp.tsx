@@ -30,11 +30,14 @@ type BlomoonAppProps = {
   initialDatasets?: Partial<Record<TerraModeId, TerraDataset>>;
 };
 
+const EARTH_SPIN_INTERRUPT_EVENTS = ["keydown", "mousedown", "pointerdown", "click"] as const;
+
 export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
+  const [earthSpinEnabled, setEarthSpinEnabled] = useState(false);
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -42,6 +45,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
   const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
   const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
+  const ignoreNextEarthSpinToggle = useRef(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -111,6 +115,30 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   }, [viewer.user?.selectedTheme]);
 
   useEffect(() => {
+    if (!earthSpinEnabled) {
+      return;
+    }
+
+    function stopEarthSpinOnInput(event: Event) {
+      if (shouldPreventEarthSpinToggleActivation(event)) {
+        event.preventDefault();
+      }
+
+      ignoreNextEarthSpinToggle.current ||= shouldIgnoreNextEarthSpinToggle(event);
+      setEarthSpinEnabled(false);
+    }
+
+    EARTH_SPIN_INTERRUPT_EVENTS.forEach((eventName) => {
+      window.addEventListener(eventName, stopEarthSpinOnInput, true);
+    });
+    return () => {
+      EARTH_SPIN_INTERRUPT_EVENTS.forEach((eventName) => {
+        window.removeEventListener(eventName, stopEarthSpinOnInput, true);
+      });
+    };
+  }, [earthSpinEnabled]);
+
+  useEffect(() => {
     if (!pendingFavouriteSelection || pendingFavouriteSelection.modeId !== activeModeId) {
       return;
     }
@@ -145,6 +173,15 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
   }, [modeState.clearSelection]);
+
+  const toggleEarthSpin = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+    if (ignoreNextEarthSpinToggle.current) {
+      ignoreNextEarthSpinToggle.current = false;
+      return;
+    }
+
+    setEarthSpinEnabled((value) => !value);
+  }, []);
 
   const selectTheme = useCallback((nextThemeId: TerraThemeId) => {
     setThemeId(nextThemeId);
@@ -241,6 +278,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     >
       <div className="globe-stage">
         <GlobeScene
+          earthSpinEnabled={earthSpinEnabled}
           focusKey={modeState.selectedId}
           markerColor={globeMarkerColor}
           markerColorMode={globeMarkerColorMode}
@@ -270,9 +308,10 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       />
 
       <ShellControlRail
-        favouriteCount={favourites.favouriteIds.size}
+        earthSpinEnabled={earthSpinEnabled}
         onOpenFavourites={openFavourites}
         onOpenModeNotice={() => setModeNoticeOpen(true)}
+        onToggleEarthSpin={toggleEarthSpin}
       />
 
       {hoveredPoint ? (
@@ -376,4 +415,26 @@ function LoaderMessage() {
 
 function getPointKey(point: TerraPoint) {
   return `${point.modeId}:${point.id}`;
+}
+
+function shouldIgnoreNextEarthSpinToggle(event: Event) {
+  if (!isEarthSpinToggleEvent(event)) {
+    return false;
+  }
+
+  if (event instanceof KeyboardEvent) {
+    return false;
+  }
+
+  return !(event instanceof MouseEvent) || event.button === 0;
+}
+
+function isEarthSpinToggleEvent(event: Event) {
+  return event.target instanceof Element && Boolean(event.target.closest("[data-earth-spin-toggle]"));
+}
+
+function shouldPreventEarthSpinToggleActivation(event: Event) {
+  return event instanceof KeyboardEvent
+    && isEarthSpinToggleEvent(event)
+    && (event.code === "Space" || event.code === "Enter");
 }

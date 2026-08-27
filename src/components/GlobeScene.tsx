@@ -10,6 +10,7 @@ import { Earth } from "./globe/Earth";
 import { PointMarkers } from "./globe/PointMarkers";
 
 type GlobeSceneProps = {
+  earthSpinEnabled: boolean;
   focusKey: string | null;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
@@ -24,6 +25,7 @@ type GlobeSceneProps = {
 };
 
 export const GlobeScene = memo(function GlobeScene({
+  earthSpinEnabled,
   focusKey,
   markerColor,
   markerColorMode,
@@ -56,8 +58,11 @@ export const GlobeScene = memo(function GlobeScene({
         onSelect={onPointSelect}
       />
 
-      <CameraFocus focusKey={focusKey} selectedPoint={selectedPoint} />
-      <AdaptiveOrbitControls />
+      <CameraFocus
+        focusKey={focusKey}
+        selectedPoint={selectedPoint}
+      />
+      <AdaptiveOrbitControls earthSpinEnabled={earthSpinEnabled} />
     </Canvas>
   );
 });

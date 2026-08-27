@@ -37,6 +37,17 @@ describe("toViewerDto", () => {
     }).selectedTheme).toBe("night");
   });
 
+  it("keeps any known stored theme", () => {
+    expect(toViewerDto({
+      accountProviderIds: [],
+      email: "user@example.com",
+      emailVerified: false,
+      id: "8bdb6947-f995-46c5-8266-c3c94f93fcd9",
+      image: null,
+      selectedTheme: "catppuccin"
+    }).selectedTheme).toBe("catppuccin");
+  });
+
   it("omits unavailable auth methods", () => {
     expect(toViewerDto({
       accountProviderIds: ["credential"],

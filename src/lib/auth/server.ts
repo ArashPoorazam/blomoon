@@ -9,7 +9,7 @@ import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
 import { sendAccountVerificationEmail, sendAccountVerificationOtp } from "@/lib/email/verification";
 import { logger } from "@/lib/server/logging";
-import type { TerraThemeId } from "@/lib/theme/themes";
+import { isTerraThemeId, type TerraThemeId } from "@/lib/theme/ids";
 
 export type SafeUser = {
   id: string;
@@ -235,5 +235,5 @@ function createSocialProviders() {
 }
 
 function normalizeThemeId(value?: string | null): TerraThemeId {
-  return value === "atlas" || value === "night" ? value : "night";
+  return isTerraThemeId(value) ? value : "night";
 }

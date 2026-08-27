@@ -1,10 +1,12 @@
 import { describe, expect, it } from "vitest";
+import { terraThemeIds } from "@/lib/theme/ids";
 import { favouriteInputSchema, themeInputSchema } from "./validation";
 
 describe("user API validation", () => {
   it("accepts known theme ids", () => {
-    expect(themeInputSchema.safeParse({ themeId: "night" }).success).toBe(true);
-    expect(themeInputSchema.safeParse({ themeId: "atlas" }).success).toBe(true);
+    for (const themeId of terraThemeIds) {
+      expect(themeInputSchema.safeParse({ themeId }).success).toBe(true);
+    }
   });
 
   it("rejects unknown theme ids", () => {

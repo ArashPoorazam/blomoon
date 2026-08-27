@@ -861,6 +861,10 @@
   text-align: left;
 }
 
+.favourite-row-main > svg {
+  color: var(--metric);
+}
+
 .favourite-row-main strong,
 .favourite-row-main span span {
   display: block;

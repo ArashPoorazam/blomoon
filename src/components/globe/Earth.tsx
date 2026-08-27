@@ -47,7 +47,8 @@ export function Earth({
 
   function handleClick(event: ThreeEvent<MouseEvent>) {
     event.stopPropagation();
-    const coordinates = vector3ToLatLon(event.point);
+    const localPoint = event.object.worldToLocal(event.point.clone());
+    const coordinates = vector3ToLatLon(localPoint);
     onCountrySelect(getCountryAtCoordinates(coordinates.latitude, coordinates.longitude));
   }
 
