@@ -15,7 +15,7 @@ export const GLOBE_AUTO_SPIN_SPEED = 0.4;
 export const MARKER_RADIUS = 0.0072;
 export const MARKER_ALTITUDE = 1.001;
 export const MIN_MARKER_SCALE = 0.4;
-export const MAX_MARKER_SCALE = 2.3;
+export const MAX_MARKER_SCALE = 2.0;
 
 type KeyboardOrbitIntent = {
   azimuth: number;
