@@ -259,6 +259,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         loading={viewer.loading}
         selectedThemeId={themeId}
         user={viewer.user}
+        onAccountUpdated={viewer.refresh}
         onAuthOpen={() => setAuthModalOpen(true)}
         onLogout={() => {
           void viewer.refresh();

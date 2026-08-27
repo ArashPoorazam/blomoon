@@ -13,7 +13,7 @@ export type ViewerDto = {
   image: string | null;
   selectedTheme: TerraThemeId;
   authMethods: UserAuthMethod[];
-  canChangeEmail: false;
+  canChangeEmail: boolean;
 };
 
 export function toViewerDto(input: {
@@ -38,6 +38,6 @@ export function toViewerDto(input: {
       ? { id: "password", label: "Password", enabled: providers.has("credential") }
       : { id: "google", label: "Google", enabled: providers.has("google") }
     ),
-    canChangeEmail: false
+    canChangeEmail: true
   };
 }

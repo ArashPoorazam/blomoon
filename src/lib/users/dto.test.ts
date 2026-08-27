@@ -22,7 +22,7 @@ describe("toViewerDto", () => {
         { id: "password", label: "Password", enabled: true },
         { id: "google", label: "Google", enabled: true }
       ],
-      canChangeEmail: false
+      canChangeEmail: true
     });
   });
 

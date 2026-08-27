@@ -179,14 +179,22 @@ function createAuth() {
     plugins: [
       emailOTP({
         allowedAttempts: 5,
+        changeEmail: {
+          enabled: true,
+          verifyCurrentEmail: false
+        },
         expiresIn: 600,
         otpLength: 6,
         sendVerificationOTP: async ({ email, otp, type }) => {
-          if (type !== "email-verification") {
+          if (type !== "email-verification" && type !== "change-email") {
             return;
           }
 
-          await sendAccountVerificationOtp({ email, otp });
+          await sendAccountVerificationOtp({
+            email,
+            otp,
+            purpose: type === "change-email" ? "email-change" : "email-verification"
+          });
         },
         storeOTP: "hashed"
       }),

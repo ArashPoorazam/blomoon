@@ -10,7 +10,7 @@ type ThemePickerProps = {
 
 export function ThemePicker({ onThemeChange, selectedThemeId }: ThemePickerProps) {
   return (
-    <div className="theme-picker">
+    <div className="theme-picker creative">
       {terraThemes.map((theme) => (
         <button
           aria-pressed={selectedThemeId === theme.id}
@@ -19,15 +19,18 @@ export function ThemePicker({ onThemeChange, selectedThemeId }: ThemePickerProps
           type="button"
           onClick={() => onThemeChange(theme.id)}
         >
+          <span className="theme-preview" aria-hidden="true">
+            {getThemeSwatches(theme).map((color, index) => (
+              <span className={`theme-swatch swatch-${index + 1}`} key={`${theme.id}-${color}`} style={{ background: color }} />
+            ))}
+          </span>
           <span className="theme-option-main">
             <span>{theme.label}</span>
-            <span className="theme-swatches" aria-hidden="true">
-              {getThemeSwatches(theme).map((color) => (
-                <span className="theme-swatch" key={color} style={{ background: color }} />
-              ))}
-            </span>
+            <span>{theme.id === "night" ? "Neon night globe with cool blue controls." : "Warm atlas land tones with crisp blue interface accents."}</span>
           </span>
-          {selectedThemeId === theme.id ? <Check size={16} aria-hidden="true" /> : null}
+          <span className="theme-option-check" aria-hidden="true">
+            {selectedThemeId === theme.id ? <Check size={16} /> : null}
+          </span>
         </button>
       ))}
     </div>

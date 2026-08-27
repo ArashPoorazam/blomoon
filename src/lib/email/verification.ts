@@ -13,6 +13,7 @@ type VerificationEmailInput = {
 type VerificationOtpInput = {
   email: string;
   otp: string;
+  purpose?: "email-verification" | "email-change";
 };
 
 let resendClient: Resend | null = null;
@@ -79,7 +80,7 @@ export async function sendAccountVerificationEmail({ email, token, url }: Verifi
   }
 }
 
-export async function sendAccountVerificationOtp({ email, otp }: VerificationOtpInput) {
+export async function sendAccountVerificationOtp({ email, otp, purpose = "email-verification" }: VerificationOtpInput) {
   const apiKey = process.env.RESEND_API_KEY?.trim();
   const from = resolveSender();
 
@@ -98,13 +99,13 @@ export async function sendAccountVerificationOtp({ email, otp }: VerificationOtp
   try {
     const result = await getResendClient(apiKey).emails.send({
       from,
-      html: renderVerificationOtpHtml(otp),
-      subject: "Your Blomoon verification code",
-      text: renderVerificationOtpText(otp),
+      html: renderVerificationOtpHtml(otp, purpose),
+      subject: purpose === "email-change" ? "Confirm your new Blomoon email" : "Your Blomoon verification code",
+      text: renderVerificationOtpText(otp, purpose),
       to: email
     }, {
       headers: {
-        "Idempotency-Key": `auth-email-otp-${hashToken(`${email}:${otp}`)}`
+        "Idempotency-Key": `auth-email-otp-${hashToken(`${email}:${purpose}:${otp}`)}`
       }
     });
 
@@ -186,23 +187,30 @@ function renderVerificationEmailHtml(url: string) {
   `;
 }
 
-function renderVerificationOtpText(otp: string) {
+function renderVerificationOtpText(otp: string, purpose: VerificationOtpInput["purpose"]) {
+  const title = purpose === "email-change" ? "Confirm your new Blomoon email address" : "Verify your Blomoon email address";
+  const action = purpose === "email-change" ? "Enter this code in Blomoon to finish changing your email." : "Enter this code in Blomoon to finish setting up your account.";
+
   return [
-    "Verify your Blomoon email address",
+    title,
     "",
     `Your verification code is: ${otp}`,
+    "",
+    action,
     "",
     "This code expires in 10 minutes. If you did not request this email, you can ignore it."
   ].join("\n");
 }
 
-function renderVerificationOtpHtml(otp: string) {
+function renderVerificationOtpHtml(otp: string, purpose: VerificationOtpInput["purpose"]) {
   const escapedOtp = escapeHtml(otp);
+  const title = purpose === "email-change" ? "Confirm your new Blomoon email address" : "Verify your Blomoon email address";
+  const action = purpose === "email-change" ? "Enter this code in Blomoon to finish changing your email." : "Enter this code in Blomoon to finish setting up your account.";
 
   return `
     <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
-      <h1 style="font-size: 20px; margin: 0 0 14px;">Verify your Blomoon email address</h1>
-      <p style="margin: 0 0 18px;">Enter this code in Blomoon to finish setting up your account.</p>
+      <h1 style="font-size: 20px; margin: 0 0 14px;">${escapeHtml(title)}</h1>
+      <p style="margin: 0 0 18px;">${escapeHtml(action)}</p>
       <p style="margin: 0 0 22px; font-size: 28px; font-weight: 800; letter-spacing: 6px;">${escapedOtp}</p>
       <p style="margin: 0 0 10px; color: #4b5563;">This code expires in 10 minutes.</p>
       <p style="margin: 0; color: #4b5563;">If you did not request this email, you can ignore it.</p>

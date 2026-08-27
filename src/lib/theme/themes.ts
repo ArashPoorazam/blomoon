@@ -11,7 +11,7 @@ export type TerraTheme = {
 export const terraThemes = [
   {
     id: "night",
-    label: "Night",
+    label: "Tokyo Night",
     globe: defaultGlobeTheme
   },
   {
