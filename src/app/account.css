@@ -197,10 +197,12 @@
 .contact-copy {
   display: grid;
   gap: 5px;
+  justify-items: start;
   padding: 12px;
   border: 1px solid var(--info-border);
   border-radius: 8px;
   background: var(--info-surface);
+  text-align: left;
 }
 
 .contact-panel a {

@@ -113,7 +113,7 @@ export function AccountMenu({
 
       {modalView === "contact" ? (
         <AccountModalShell
-          description="Blomoon is still in beta. Bug reports, rough edges, and feature ideas are genuinely useful while the app is evolving."
+          description="Email us if you have any problem with the app or need help with your account."
           kicker="Beta feedback"
           title="Contact us"
           onClose={closeModal}
