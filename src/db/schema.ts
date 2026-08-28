@@ -73,6 +73,21 @@ export const verifications = pgTable("verifications", {
   index("verifications_identifier_idx").on(table.identifier)
 ]);
 
+export const pendingRegistrations = pgTable("pending_registrations", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  email: text("email").notNull().unique(),
+  passwordHash: text("password_hash").notNull(),
+  otpHash: text("otp_hash").notNull(),
+  expiresAt: timestamp("expires_at", { withTimezone: true }).notNull(),
+  attempts: integer("attempts").notNull().default(0),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  uniqueIndex("pending_registrations_email_normalized_unique").on(sql`lower(${table.email})`),
+  index("pending_registrations_expires_at_idx").on(table.expiresAt),
+  check("pending_registrations_attempts_nonnegative", sql`${table.attempts} >= 0`)
+]);
+
 export const stations = pgTable("stations", {
   id: uuid("id").primaryKey(),
   providerStationId: uuid("provider_station_id").notNull().unique(),

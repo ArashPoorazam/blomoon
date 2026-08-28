@@ -6,6 +6,7 @@ import { logger } from "@/lib/server/logging";
 
 const requiredTables = [
   "accounts",
+  "pending_registrations",
   "sessions",
   "station_clicks",
   "stations",

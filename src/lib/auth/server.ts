@@ -4,6 +4,7 @@ import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
 import { emailOTP } from "better-auth/plugins";
+import { and, eq, ne } from "drizzle-orm";
 import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
@@ -108,6 +109,27 @@ export async function requireUser(): Promise<SafeUser> {
   return user;
 }
 
+export async function hasCompletedAuthentication(user: SafeUser | null): Promise<boolean> {
+  if (!user) {
+    return false;
+  }
+
+  if (user.emailVerified) {
+    return true;
+  }
+
+  const [socialAccount] = await getDb()
+    .select({ id: schema.accounts.id })
+    .from(schema.accounts)
+    .where(and(
+      eq(schema.accounts.userId, user.id),
+      ne(schema.accounts.providerId, "credential")
+    ))
+    .limit(1);
+
+  return Boolean(socialAccount);
+}
+
 export function sanitizeUser(user: AuthSessionUser): SafeUser {
   return {
     id: String(user.id ?? ""),
@@ -186,14 +208,18 @@ function createAuth() {
         expiresIn: 600,
         otpLength: 6,
         sendVerificationOTP: async ({ email, otp, type }) => {
-          if (type !== "email-verification" && type !== "change-email") {
+          if (type !== "email-verification" && type !== "change-email" && type !== "forget-password") {
             return;
           }
 
           await sendAccountVerificationOtp({
             email,
             otp,
-            purpose: type === "change-email" ? "email-change" : "email-verification"
+            purpose: type === "change-email"
+              ? "email-change"
+              : type === "forget-password"
+                ? "password-reset"
+                : "email-verification"
           });
         },
         storeOTP: "hashed"

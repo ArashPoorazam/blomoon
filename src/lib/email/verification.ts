@@ -13,7 +13,7 @@ type VerificationEmailInput = {
 type VerificationOtpInput = {
   email: string;
   otp: string;
-  purpose?: "email-verification" | "email-change";
+  purpose?: "email-verification" | "email-change" | "password-reset";
 };
 
 let resendClient: Resend | null = null;
@@ -100,7 +100,7 @@ export async function sendAccountVerificationOtp({ email, otp, purpose = "email-
     const result = await getResendClient(apiKey).emails.send({
       from,
       html: renderVerificationOtpHtml(otp, purpose),
-      subject: purpose === "email-change" ? "Confirm your new Blomoon email" : "Your Blomoon verification code",
+      subject: getOtpSubject(purpose),
       text: renderVerificationOtpText(otp, purpose),
       to: email
     }, {
@@ -188,8 +188,7 @@ function renderVerificationEmailHtml(url: string) {
 }
 
 function renderVerificationOtpText(otp: string, purpose: VerificationOtpInput["purpose"]) {
-  const title = purpose === "email-change" ? "Confirm your new Blomoon email address" : "Verify your Blomoon email address";
-  const action = purpose === "email-change" ? "Enter this code in Blomoon to finish changing your email." : "Enter this code in Blomoon to finish setting up your account.";
+  const { action, title } = getOtpCopy(purpose);
 
   return [
     title,
@@ -204,8 +203,7 @@ function renderVerificationOtpText(otp: string, purpose: VerificationOtpInput["p
 
 function renderVerificationOtpHtml(otp: string, purpose: VerificationOtpInput["purpose"]) {
   const escapedOtp = escapeHtml(otp);
-  const title = purpose === "email-change" ? "Confirm your new Blomoon email address" : "Verify your Blomoon email address";
-  const action = purpose === "email-change" ? "Enter this code in Blomoon to finish changing your email." : "Enter this code in Blomoon to finish setting up your account.";
+  const { action, title } = getOtpCopy(purpose);
 
   return `
     <div style="font-family: Arial, sans-serif; color: #111827; line-height: 1.5;">
@@ -216,6 +214,39 @@ function renderVerificationOtpHtml(otp: string, purpose: VerificationOtpInput["p
       <p style="margin: 0; color: #4b5563;">If you did not request this email, you can ignore it.</p>
     </div>
   `;
+}
+
+function getOtpSubject(purpose: VerificationOtpInput["purpose"]) {
+  if (purpose === "email-change") {
+    return "Confirm your new Blomoon email";
+  }
+
+  if (purpose === "password-reset") {
+    return "Reset your Blomoon password";
+  }
+
+  return "Your Blomoon verification code";
+}
+
+function getOtpCopy(purpose: VerificationOtpInput["purpose"]) {
+  if (purpose === "email-change") {
+    return {
+      action: "Enter this code in Blomoon to finish changing your email.",
+      title: "Confirm your new Blomoon email address"
+    };
+  }
+
+  if (purpose === "password-reset") {
+    return {
+      action: "Enter this code in Blomoon to reset your password.",
+      title: "Reset your Blomoon password"
+    };
+  }
+
+  return {
+    action: "Enter this code in Blomoon to finish setting up your account.",
+    title: "Verify your Blomoon email address"
+  };
 }
 
 function escapeHtml(value: string) {

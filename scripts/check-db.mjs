@@ -3,6 +3,7 @@ import postgres from "postgres";
 
 const requiredTables = [
   "accounts",
+  "pending_registrations",
   "sessions",
   "station_clicks",
   "stations",

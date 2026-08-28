@@ -10,7 +10,8 @@ import {
   getAuthTitle,
   getPrimaryActionLabel,
   type AuthMode,
-  type RegisterStep
+  type RegisterStep,
+  type ResetStep
 } from "./AuthCardView";
 
 type FormNotice = {
@@ -37,6 +38,7 @@ export function AuthCard({
 }: AuthCardProps) {
   const [mode, setMode] = useState<AuthMode>("login");
   const [registerStep, setRegisterStep] = useState<RegisterStep>("email");
+  const [resetStep, setResetStep] = useState<ResetStep>("email");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -44,12 +46,13 @@ export function AuthCard({
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<FormNotice | null>(null);
   const [verificationEmail, setVerificationEmail] = useState<string | null>(null);
+  const [registrationVerificationSource, setRegistrationVerificationSource] = useState<"pending" | "better-auth">("pending");
   const [rememberMe, setRememberMe] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [resendingVerification, setResendingVerification] = useState(false);
   const isModal = Boolean(onClose);
-  const title = getAuthTitle(mode, registerStep);
-  const subtitle = getAuthSubtitle(mode, registerStep, titleSuffix, email);
+  const title = getAuthTitle(mode, registerStep, resetStep);
+  const subtitle = getAuthSubtitle(mode, registerStep, resetStep, titleSuffix, email);
 
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -59,6 +62,16 @@ export function AuthCard({
     try {
       if (mode === "login") {
         await submitLogin();
+        return;
+      }
+
+      if (mode === "reset") {
+        if (resetStep === "email") {
+          await requestPasswordResetCode();
+          return;
+        }
+
+        await resetPasswordWithCode();
         return;
       }
 
@@ -94,6 +107,7 @@ export function AuthCard({
         await sendVerificationCode(normalizedEmail);
         setMode("register");
         setRegisterStep("verify");
+        setRegistrationVerificationSource("better-auth");
         setVerificationEmail(normalizedEmail);
         setNotice({
           kind: "info",
@@ -121,23 +135,13 @@ export function AuthCard({
     }
 
     const normalizedEmail = normalizeEmail(email);
-    const result = await authClient.signUp.email({
-      callbackURL: "/?auth=verified",
-      email: normalizedEmail,
-      name: normalizedEmail,
-      password
-    });
-
-    if (result.error) {
-      setError(result.error.message ?? "Could not create your account.");
+    if (!await requestPendingRegistrationCode(normalizedEmail)) {
       return;
     }
 
-    await sendVerificationCode(normalizedEmail);
     setEmail(normalizedEmail);
     setVerificationEmail(normalizedEmail);
-    setPassword("");
-    setConfirmPassword("");
+    setRegistrationVerificationSource("pending");
     setRegisterStep("verify");
     setNotice({
       kind: "success",
@@ -145,19 +149,75 @@ export function AuthCard({
     });
   }
 
-  async function verifyRegistrationCode() {
-    const normalizedEmail = normalizeEmail(verificationEmail ?? email);
-    const result = await authClient.emailOtp.verifyEmail({
-      email: normalizedEmail,
-      otp: verificationCode.trim()
+  async function requestPendingRegistrationCode(normalizedEmail: string) {
+    const response = await fetch("/api/auth/pending-registration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        confirmPassword,
+        email: normalizedEmail,
+        password
+      })
     });
 
-    if (result.error) {
-      setError(result.error.message ?? "Verification failed.");
+    if (!response.ok) {
+      const payload = await readErrorPayload(response);
+      setError(payload.error ?? "Could not create your account.");
+      return false;
+    }
+
+    return true;
+  }
+
+  async function verifyRegistrationCode() {
+    const normalizedEmail = normalizeEmail(verificationEmail ?? email);
+
+    if (registrationVerificationSource === "better-auth") {
+      const result = await authClient.emailOtp.verifyEmail({
+        email: normalizedEmail,
+        otp: verificationCode.trim()
+      });
+
+      if (result.error) {
+        setError(result.error.message ?? "Verification failed.");
+        return;
+      }
+
+      await finishAuthenticatedFlow();
       return;
     }
 
-    setVerificationCode("");
+    const response = await fetch("/api/auth/pending-registration/verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email: normalizedEmail,
+        otp: verificationCode.trim()
+      })
+    });
+
+    if (!response.ok) {
+      const payload = await readErrorPayload(response);
+      setError(payload.error ?? "Verification failed.");
+      return;
+    }
+
+    const signInResult = await authClient.signIn.email({
+      callbackURL: "/?auth=verified",
+      email: normalizedEmail,
+      password,
+      rememberMe: true
+    });
+
+    if (signInResult.error) {
+      setError(signInResult.error.message ?? "Account verified. Log in to continue.");
+      setMode("login");
+      setRegisterStep("email");
+      setConfirmPassword("");
+      setVerificationCode("");
+      return;
+    }
+
     await finishAuthenticatedFlow();
   }
 
@@ -173,7 +233,14 @@ export function AuthCard({
     clearMessages();
 
     try {
-      await sendVerificationCode(normalizedEmail);
+      if (registrationVerificationSource === "pending") {
+        if (!await requestPendingRegistrationCode(normalizedEmail)) {
+          return;
+        }
+      } else {
+        await sendVerificationCode(normalizedEmail);
+      }
+
       setVerificationEmail(normalizedEmail);
       setNotice({
         kind: "success",
@@ -217,6 +284,55 @@ export function AuthCard({
     }
   }
 
+  async function requestPasswordResetCode() {
+    const normalizedEmail = normalizeEmail(email);
+    const result = await authClient.emailOtp.requestPasswordReset({
+      email: normalizedEmail
+    });
+
+    if (result.error) {
+      setError(result.error.message ?? "Could not send a reset code.");
+      return;
+    }
+
+    setEmail(normalizedEmail);
+    setVerificationEmail(normalizedEmail);
+    setResetStep("verify");
+    setNotice({
+      kind: "success",
+      message: "Password reset code sent. Check your email."
+    });
+  }
+
+  async function resetPasswordWithCode() {
+    if (password !== confirmPassword) {
+      setError("Passwords must match.");
+      return;
+    }
+
+    const normalizedEmail = normalizeEmail(verificationEmail ?? email);
+    const result = await authClient.emailOtp.resetPassword({
+      email: normalizedEmail,
+      otp: verificationCode.trim(),
+      password
+    });
+
+    if (result.error) {
+      setError(result.error.message ?? "Could not reset your password.");
+      return;
+    }
+
+    setMode("login");
+    setResetStep("email");
+    setPassword("");
+    setConfirmPassword("");
+    setVerificationCode("");
+    setNotice({
+      kind: "success",
+      message: "Password reset. Log in with your new password."
+    });
+  }
+
   async function finishAuthenticatedFlow() {
     await onAuthenticated();
     onClose?.();
@@ -233,10 +349,12 @@ export function AuthCard({
   function switchMode() {
     setMode(mode === "login" ? "register" : "login");
     setRegisterStep("email");
+    setResetStep("email");
     setPassword("");
     setConfirmPassword("");
     setVerificationCode("");
     setVerificationEmail(null);
+    setRegistrationVerificationSource("pending");
     clearMessages();
   }
 
@@ -244,6 +362,28 @@ export function AuthCard({
     clearMessages();
     setRegisterStep(registerStep === "verify" ? "password" : "email");
   }
+
+  function startPasswordReset() {
+    setMode("reset");
+    setRegisterStep("email");
+    setResetStep("email");
+    setPassword("");
+    setConfirmPassword("");
+    setVerificationCode("");
+    setVerificationEmail(null);
+    setRegistrationVerificationSource("pending");
+    clearMessages();
+  }
+
+  function goBackOneResetStep() {
+    clearMessages();
+    setResetStep("email");
+    setPassword("");
+    setConfirmPassword("");
+    setVerificationCode("");
+  }
+
+  const showsBackButton = (mode === "register" && registerStep !== "email") || (mode === "reset" && resetStep !== "email");
 
   return (
     <div
@@ -274,6 +414,7 @@ export function AuthCard({
           mode={mode}
           password={password}
           registerStep={registerStep}
+          resetStep={resetStep}
           rememberMe={rememberMe}
           verificationCode={verificationCode}
           onConfirmPasswordChange={setConfirmPassword}
@@ -290,15 +431,26 @@ export function AuthCard({
         {error ? <div className="form-error">{error}</div> : null}
         {notice ? <div className={`form-status ${notice.kind}`}>{notice.message}</div> : null}
 
-        <div className={mode === "register" && registerStep !== "email" ? "auth-form-actions" : ""}>
-          {mode === "register" && registerStep !== "email" ? (
-            <button className="secondary-action" disabled={submitting || Boolean(serviceError)} type="button" onClick={goBackOneRegisterStep}>
+        {mode === "login" ? (
+          <button className="text-action inline" disabled={submitting || Boolean(serviceError)} type="button" onClick={startPasswordReset}>
+            Forgot password?
+          </button>
+        ) : null}
+
+        <div className={showsBackButton ? "auth-form-actions" : ""}>
+          {showsBackButton ? (
+            <button
+              className="secondary-action"
+              disabled={submitting || Boolean(serviceError)}
+              type="button"
+              onClick={mode === "reset" ? goBackOneResetStep : goBackOneRegisterStep}
+            >
               Back
             </button>
           ) : null}
           <button className="primary-action" disabled={submitting || Boolean(serviceError)} type="submit">
             {submitting ? <LoaderCircle className="spin" size={15} aria-hidden="true" /> : null}
-            {getPrimaryActionLabel(mode, registerStep)}
+            {getPrimaryActionLabel(mode, registerStep, resetStep)}
           </button>
         </div>
       </form>
@@ -333,6 +485,14 @@ export function AuthCard({
 
 function normalizeEmail(value?: string | null) {
   return (value ?? "").trim().toLowerCase();
+}
+
+async function readErrorPayload(response: Response): Promise<{ error?: string }> {
+  try {
+    return await response.json();
+  } catch {
+    return {};
+  }
 }
 
 function isEmailVerificationError(error: { code?: string; message?: string; status?: number }) {

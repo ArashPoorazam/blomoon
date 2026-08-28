@@ -589,6 +589,11 @@
   gap: 14px;
 }
 
+.auth-field-group {
+  display: grid;
+  gap: 14px;
+}
+
 .auth-step-list {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
@@ -751,6 +756,14 @@
 .auth-modal > .text-action {
   min-height: 36px;
   margin-top: 8px;
+}
+
+.auth-modal .text-action.inline {
+  width: max-content;
+  min-height: 24px;
+  justify-self: end;
+  padding: 0;
+  font-size: 12px;
 }
 
 .form-error {
