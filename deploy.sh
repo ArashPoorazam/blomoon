@@ -14,8 +14,13 @@ if [ ! -f "$ENV_FILE" ]; then
   exit 1
 fi
 
+case "$ENV_FILE" in
+  /* | ./* | ../*) ENV_PATH="$ENV_FILE" ;;
+  *) ENV_PATH="./$ENV_FILE" ;;
+esac
+
 set -a
-. "$ENV_FILE"
+. "$ENV_PATH"
 set +a
 
 if [ -n "$REGISTRY_IMAGE" ]; then
@@ -27,15 +32,15 @@ if [ -n "${GHCR_USERNAME:-}" ] && [ -n "${GHCR_TOKEN:-}" ]; then
   echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 fi
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" pull traefik postgres app migrate
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d postgres traefik
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" --profile migrate run --rm migrate
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" up -d app
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" pull traefik postgres app migrate
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" up -d postgres traefik
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" --profile migrate run --rm migrate
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" up -d app
 
 HEALTH_URL="${BLOMOON_HEALTH_URL:-https://${BLOMOON_DOMAIN:-localhost}/api/health}"
 for attempt in 1 2 3 4 5 6 7 8 9 10; do
   if curl -fsS "$HEALTH_URL" >/dev/null; then
-    docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" ps
+    docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" ps
     echo "Blomoon deployed: $HEALTH_URL"
     exit 0
   fi
@@ -43,5 +48,5 @@ for attempt in 1 2 3 4 5 6 7 8 9 10; do
   sleep 5
 done
 
-docker compose --env-file "$ENV_FILE" -f "$COMPOSE_FILE" logs --tail=120 app
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" logs --tail=120 app
 exit 1
