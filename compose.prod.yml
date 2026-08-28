@@ -2,7 +2,7 @@ name: blomoon
 
 services:
   traefik:
-    image: traefik:v3.1
+    image: traefik:v3.7.12
     command:
       - --providers.docker=true
       - --providers.docker.exposedbydefault=false
@@ -16,6 +16,8 @@ services:
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --accesslog=true
       - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+    environment:
+      DOCKER_API_VERSION: "1.40"
     ports:
       - "80:80"
       - "443:443"
