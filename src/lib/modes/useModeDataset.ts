@@ -91,7 +91,7 @@ export function useModeDataset(
       setRefreshingLivePoints(Boolean(seededDataset));
 
       try {
-        const response = await fetch(mode.dataEndpoint, { cache: "no-store" });
+        const response = await fetch(mode.dataEndpoint);
 
         if (!response.ok) {
           throw new Error(`Request failed with ${response.status}`);
@@ -142,7 +142,6 @@ export function useModeDataset(
 
       try {
         const response = await fetch(mode.countryCatalog.markerEndpoint(selectedCountryCode), {
-          cache: "no-store",
           signal: controller.signal
         });
 
@@ -254,7 +253,6 @@ export function useModeDataset(
 
       try {
         const response = await fetch(mode.detailEndpoint(selectedId), {
-          cache: "no-store",
           signal: controller.signal
         });
 
@@ -415,7 +413,6 @@ function getInitialDataset(mode: TerraMode, initialDataset?: TerraDataset) {
 
 async function fetchPointPage(endpoint: string, signal?: AbortSignal) {
   const response = await fetch(endpoint, {
-    cache: "no-store",
     signal
   });
 

@@ -14,6 +14,7 @@ import {
   getLiveWorldRecords,
   sortRadioRecords
 } from "./livePages";
+import { createRadioFallbackSource, createRadioLiveSource } from "./source";
 import { getLiveRadioRecordPage } from "./searchPages";
 import type { RadioSortOption } from "./api";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
@@ -70,7 +71,7 @@ export async function getRadioCountryMarkerDataset(countryCode: string): Promise
 
     return {
       modeId: "radio",
-      source: createLiveSource(),
+      source: createRadioLiveSource(),
       points: records.map((record) => record.point)
     };
   } catch (error) {
@@ -84,7 +85,7 @@ export async function getRadioCountryMarkerDataset(countryCode: string): Promise
 
     return {
       modeId: "radio",
-      source: createFallbackSource(catalog.source),
+      source: createRadioFallbackSource(catalog.source),
       points: records.slice(0, COUNTRY_MARKER_LIMIT).map((record) => record.point)
     };
   }
@@ -111,7 +112,7 @@ export async function getRadioCountryPointPage({
 
     return {
       modeId: "radio",
-      source: createLiveSource(),
+      source: createRadioLiveSource(),
       points: page.records.map((record) => record.point),
       limit,
       nextOffset: page.nextOffset,
@@ -164,7 +165,7 @@ export async function getRadioPointPage({
 
     return {
       modeId: "radio",
-      source: createLiveSource(),
+      source: createRadioLiveSource(),
       points: page.records.map((record) => record.point),
       limit,
       nextOffset: page.nextOffset,
@@ -215,7 +216,7 @@ export async function getRandomRadioPoint({
     return {
       modeId: "radio",
       point: record.point,
-      source: createLiveSource()
+      source: createRadioLiveSource()
     };
   } catch (error) {
     logger.warn("radio.catalog.random_fallback", {
@@ -232,7 +233,7 @@ export async function getRandomRadioPoint({
       ? {
         modeId: "radio",
         point: record.point,
-        source: createFallbackSource(catalog.source)
+        source: createRadioFallbackSource(catalog.source)
       }
       : null;
   }
@@ -342,7 +343,7 @@ async function refreshRadioCatalog(fetchedAt: number) {
       throw new Error("Radio Browser returned no usable stations");
     }
 
-    catalogCache = createRadioCatalog(records, createLiveSource(), fetchedAt, false);
+    catalogCache = createRadioCatalog(records, createRadioLiveSource(), fetchedAt, false);
     logger.info("radio.catalog.refresh", {
       context: {
         records: catalogCache.records.length,
@@ -361,22 +362,6 @@ async function refreshRadioCatalog(fetchedAt: number) {
   }
 
   return catalogCache;
-}
-
-function createLiveSource(): DataSourceInfo {
-  return {
-    name: "Radio Browser",
-    url: "https://www.radio-browser.info/",
-    attribution: "Community radio station data provided by Radio Browser.",
-    lastUpdated: new Date().toISOString()
-  };
-}
-
-function createFallbackSource(source: DataSourceInfo): DataSourceInfo {
-  return {
-    ...source,
-    isFallback: true
-  };
 }
 
 async function getRadioStationRecord(id: string) {
@@ -490,7 +475,7 @@ function getFallbackCountryPointPage(
 
   return {
     modeId: "radio",
-    source: createFallbackSource(catalog.source),
+    source: createRadioFallbackSource(catalog.source),
     points,
     limit,
     nextOffset,
@@ -527,7 +512,7 @@ function getFallbackRadioPointPage(
 
   return {
     modeId: "radio",
-    source: createFallbackSource(catalog.source),
+    source: createRadioFallbackSource(catalog.source),
     points,
     limit,
     nextOffset,

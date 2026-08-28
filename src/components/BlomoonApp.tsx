@@ -17,7 +17,7 @@ import {
   type TerraThemeId
 } from "@/lib/theme/themes";
 import { AccountMenu } from "./account/AccountMenu";
-import { AuthGate, AuthModal } from "./account/AuthModal";
+import { AuthModal } from "./account/AuthModal";
 import { useViewer } from "./account/useViewer";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
@@ -248,28 +248,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     await audioPlayback.play(randomPoint);
   }, [activeMode.playback?.randomPointEndpoint, audioPlayback, randomPlaybackPoint]);
 
-  if (viewer.loading) {
-    return (
-      <main className="auth-gate">
-        <div className="auth-modal auth-loading" role="status" aria-live="polite">
-          <LoaderMessage />
-        </div>
-      </main>
-    );
-  }
-
-  if (!viewer.user) {
-    return (
-      <AuthGate
-        googleAuthEnabled={appConfig.googleAuthEnabled}
-        serviceError={viewer.error}
-        onAuthenticated={async () => {
-          await viewer.refresh();
-        }}
-      />
-    );
-  }
-
   return (
     <main
       className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}
@@ -380,6 +358,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       <AuthModal
         googleAuthEnabled={appConfig.googleAuthEnabled}
         open={authModalOpen}
+        serviceError={viewer.error}
         onClose={() => setAuthModalOpen(false)}
         onAuthenticated={async () => {
           await viewer.refresh();
@@ -401,15 +380,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         />
       ) : null}
     </main>
-  );
-}
-
-function LoaderMessage() {
-  return (
-    <div className="auth-loading-content">
-      <div className="drawer-kicker">Blomoon</div>
-      <h2>Loading account</h2>
-    </div>
   );
 }
 

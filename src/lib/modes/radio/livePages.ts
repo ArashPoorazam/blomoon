@@ -51,12 +51,22 @@ type ProviderPageRequest = {
 const countryQueryRecordCache = new Map<string, CountryQueryRecordCache>();
 
 export async function getLiveWorldRecords() {
+  return getLiveRecordsFromAvailableHost(getLiveWorldRecordsFromHost);
+}
+
+export async function getLiveTopVotedWorldRecords() {
+  return getLiveRecordsFromAvailableHost(getLiveTopVotedWorldRecordsFromHost);
+}
+
+async function getLiveRecordsFromAvailableHost(
+  loadRecords: (host: string) => Promise<RadioStationRecord[]>
+) {
   const hosts = await getRadioBrowserHosts();
   let lastError: Error | null = null;
 
   for (const host of hosts) {
     try {
-      const records = await getLiveWorldRecordsFromHost(host);
+      const records = await loadRecords(host);
 
       if (records.length > 0) {
         return records;
