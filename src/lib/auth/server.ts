@@ -9,6 +9,7 @@ import { headers } from "next/headers";
 import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
 import { sendAccountVerificationEmail, sendAccountVerificationOtp } from "@/lib/email/verification";
+import { recordSuccessfulLogin } from "@/lib/auth/login-tracking";
 import { logger } from "@/lib/server/logging";
 import { isTerraThemeId, type TerraThemeId } from "@/lib/theme/ids";
 
@@ -182,6 +183,32 @@ function createAuth() {
       },
       transaction: true
     }),
+    databaseHooks: {
+      session: {
+        create: {
+          after: async (session) => {
+            const userId = typeof session.userId === "string" ? session.userId : null;
+
+            if (!userId) {
+              logger.warn("auth.login_tracking.missing_user", {
+                message: "Login tracking skipped because the created session did not include a user id"
+              });
+              return;
+            }
+
+            try {
+              await recordSuccessfulLogin(userId);
+            } catch (error) {
+              logger.error("auth.login_tracking.failed", {
+                context: { userId },
+                error,
+                message: "Failed to update user login tracking after session creation"
+              });
+            }
+          }
+        }
+      }
+    },
     emailVerification: {
       autoSignInAfterVerification: true,
       sendOnSignIn: false,

@@ -22,10 +22,15 @@ export const users = pgTable("users", {
   emailVerified: boolean("email_verified").notNull().default(false),
   image: text("image"),
   selectedTheme: text("selected_theme", { enum: terraThemeIds }).notNull().default("night"),
+  firstLoginAt: timestamp("first_login_at", { withTimezone: true }),
+  lastLoginAt: timestamp("last_login_at", { withTimezone: true }),
+  loginCount: integer("login_count").notNull().default(0),
+  tipsDismissedAt: timestamp("tips_dismissed_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  uniqueIndex("users_email_normalized_unique").on(sql`lower(${table.email})`)
+  uniqueIndex("users_email_normalized_unique").on(sql`lower(${table.email})`),
+  check("users_login_count_nonnegative", sql`${table.loginCount} >= 0`)
 ]);
 
 export const sessions = pgTable("sessions", {

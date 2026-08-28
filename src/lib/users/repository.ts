@@ -17,9 +17,13 @@ export async function getViewer(user: SafeUser): Promise<ViewerDto> {
         .select({
           email: schema.users.email,
           emailVerified: schema.users.emailVerified,
+          firstLoginAt: schema.users.firstLoginAt,
           id: schema.users.id,
           image: schema.users.image,
-          selectedTheme: schema.users.selectedTheme
+          lastLoginAt: schema.users.lastLoginAt,
+          loginCount: schema.users.loginCount,
+          selectedTheme: schema.users.selectedTheme,
+          tipsDismissedAt: schema.users.tipsDismissedAt
         })
         .from(schema.users)
         .where(eq(schema.users.id, user.id))
@@ -35,9 +39,13 @@ export async function getViewer(user: SafeUser): Promise<ViewerDto> {
       availableProviderIds: isGoogleAuthConfigured() ? ["credential", "google"] : ["credential"],
       email: profile?.email ?? user.email,
       emailVerified: profile?.emailVerified ?? user.emailVerified,
+      firstLoginAt: profile?.firstLoginAt ?? null,
       id: profile?.id ?? user.id,
       image: profile?.image ?? user.image,
-      selectedTheme: profile?.selectedTheme ?? user.selectedTheme
+      lastLoginAt: profile?.lastLoginAt ?? null,
+      loginCount: profile?.loginCount ?? 0,
+      selectedTheme: profile?.selectedTheme ?? user.selectedTheme,
+      tipsDismissedAt: profile?.tipsDismissedAt ?? null
     });
   });
 }
