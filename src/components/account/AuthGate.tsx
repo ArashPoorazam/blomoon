@@ -4,8 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import loginBackground from "@/assets/images/backgrounds/blomoon_login_background.webp";
-import blomoonLogo from "@/assets/images/logo/Blomoon_Logo.webp";
-import blomoonSymbol from "@/assets/images/symbol/Blomoon_symbol.webp";
+import blomoonFullLogo from "@/assets/images/full_logo/Blomoon_Full_Logo.png";
 import { AuthCard } from "./AuthCard";
 
 type AuthGateProps = {
@@ -36,30 +35,18 @@ export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
       <div className="auth-gate-layout">
         <section className="auth-brand" aria-labelledby="login-brand-title">
           <div className="auth-brand-lockup">
-            <div className="auth-symbol-frame" aria-hidden="true">
+            <span className="auth-brand-kicker">LIVE ENTERTAINMENT DIRECTORY</span>
+            <h1 className="auth-logo-title" id="login-brand-title">
               <Image
-                alt=""
-                className="auth-symbol"
+                alt="Blomoon"
+                className="auth-logo"
                 priority
-                sizes="(max-width: 760px) 132px, 180px"
-                src={blomoonSymbol}
+                sizes="(max-width: 760px) 300px, 500px"
+                src={blomoonFullLogo}
               />
-            </div>
-            <div className="auth-logo-stack">
-              <span className="auth-brand-kicker">LIVE ENTERTAINMENT DIRECTORY</span>
-              <h1 className="auth-logo-title" id="login-brand-title">
-                <Image
-                  alt="Blomoon"
-                  className="auth-logo"
-                  priority
-                  sizes="(max-width: 760px) 230px, 360px"
-                  src={blomoonLogo}
-                />
-              </h1>
-            </div>
+            </h1>
           </div>
           <div className="auth-brand-message">
-            <p className="auth-brand-motto">Tune the planet by place.</p>
             <p>Follow live stations across cities, countries, and quiet corners of the globe.</p>
           </div>
           <nav className="auth-policy-links" aria-label="Legal">

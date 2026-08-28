@@ -491,73 +491,38 @@
 .auth-brand {
   display: grid;
   max-width: 610px;
-  gap: 22px;
+  gap: 20px;
   padding-bottom: 18px;
 }
 
 .auth-brand-lockup {
   display: grid;
-  grid-template-columns: minmax(118px, 180px) minmax(0, 1fr);
-  align-items: center;
-  gap: clamp(16px, 3vw, 28px);
-}
-
-.auth-symbol-frame {
-  display: grid;
-  width: clamp(118px, 15vw, 180px);
-  aspect-ratio: 1;
-  place-items: center;
-  overflow: hidden;
-  border: 1px solid rgba(122, 162, 247, 0.22);
-  border-radius: 8px;
-  background:
-    linear-gradient(145deg, rgba(26, 27, 38, 0.82), rgba(122, 162, 247, 0.12)),
-    rgba(5, 5, 9, 0.28);
-  box-shadow:
-    0 24px 70px rgba(0, 0, 0, 0.36),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  backdrop-filter: blur(18px);
-}
-
-.auth-symbol {
-  display: block;
-  width: 82%;
-  height: auto;
-  filter:
-    drop-shadow(0 0 20px rgba(125, 207, 255, 0.24))
-    drop-shadow(0 18px 34px rgba(0, 0, 0, 0.46));
-}
-
-.auth-logo-stack {
-  display: grid;
   min-width: 0;
-  gap: 10px;
+  gap: 12px;
+  justify-items: start;
 }
 
 .auth-brand-kicker {
-  width: max-content;
   max-width: 100%;
-  padding: 6px 8px;
-  border: 1px solid rgba(122, 162, 247, 0.28);
-  border-radius: 6px;
-  background: rgba(26, 27, 38, 0.82);
   color: #7dcfff;
   font-size: 11px;
   font-weight: 850;
-  line-height: 1.2;
+  letter-spacing: 0;
+  line-height: 1.35;
   text-transform: uppercase;
-  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.24);
+  text-shadow: 0 0 18px rgba(125, 207, 255, 0.34);
 }
 
 .auth-logo-title {
-  max-width: min(360px, 100%);
+  max-width: min(500px, 100%);
   margin: 0;
   line-height: 0;
+  transform: translateX(-23px);
 }
 
 .auth-logo {
   display: block;
-  width: min(360px, 100%);
+  width: min(500px, 100%);
   height: auto;
   filter:
     drop-shadow(0 0 24px rgba(122, 162, 247, 0.26))
@@ -575,16 +540,6 @@
   color: var(--muted-strong);
   font-size: 17px;
   line-height: 1.55;
-}
-
-.auth-brand-message .auth-brand-motto {
-  color: var(--text);
-  font-size: 40px;
-  font-weight: 900;
-  line-height: 1.08;
-  text-shadow:
-    0 0 28px rgba(125, 207, 255, 0.2),
-    0 18px 54px rgba(0, 0, 0, 0.52);
 }
 
 .auth-policy-links {
@@ -1056,25 +1011,15 @@
   }
 
   .auth-brand-lockup {
-    grid-template-columns: 96px minmax(0, 1fr);
-    gap: 14px;
-  }
-
-  .auth-symbol-frame {
-    width: 96px;
-  }
-
-  .auth-logo-stack {
     gap: 8px;
   }
 
   .auth-brand-kicker {
-    padding: 5px 7px;
     font-size: 9px;
   }
 
   .auth-logo {
-    width: min(230px, 100%);
+    width: min(300px, 100%);
   }
 
   .auth-brand-message {
@@ -1084,10 +1029,6 @@
 
   .auth-brand-message p {
     font-size: 14px;
-  }
-
-  .auth-brand-message .auth-brand-motto {
-    font-size: 32px;
   }
 
   .auth-modal {
