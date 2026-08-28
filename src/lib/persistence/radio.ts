@@ -11,9 +11,15 @@ import type { FavouriteDto, ModePersistenceAdapter } from "./types";
 
 type BlomoonTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 
+const RADIO_MODE_ID = "radio";
+const RADIO_BROWSER_PROVIDER_ID = "radio-browser";
+const RADIO_BROWSER_PROVIDER_NAME = "Radio Browser";
+const RADIO_BROWSER_PROVIDER_URL = "https://www.radio-browser.info";
+const RADIO_BROWSER_ATTRIBUTION = "Radio Browser community database";
+
 export const radioPersistenceAdapter: ModePersistenceAdapter = {
   label: "Radio",
-  modeId: "radio",
+  modeId: RADIO_MODE_ID,
   async addFavourite(userId, pointId) {
     return logger.measure("persistence.radio.favourite.add", {
       pointId,
@@ -35,29 +41,29 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
         await upsertStation(tx, snapshot);
 
         const [inserted] = await tx
-          .insert(schema.usersFavourites)
+          .insert(schema.userFavourites)
           .values({
             userId,
-            stationId: snapshot.id,
+            mediaItemId: snapshot.id,
             updatedAt: new Date()
           })
           .onConflictDoNothing()
           .returning({
-            createdAt: schema.usersFavourites.createdAt
+            createdAt: schema.userFavourites.createdAt
           });
 
         if (inserted) {
           await tx
-            .update(schema.stations)
+            .update(schema.mediaItems)
             .set({
-              starCount: sql`${schema.stations.starCount} + 1`,
+              starCount: sql`${schema.mediaItems.starCount} + 1`,
               updatedAt: new Date()
             })
-            .where(eq(schema.stations.id, snapshot.id));
+            .where(eq(schema.mediaItems.id, snapshot.id));
         }
 
         return {
-          modeId: "radio",
+          modeId: RADIO_MODE_ID,
           pointId: snapshot.id,
           createdAt: (inserted?.createdAt ?? new Date()).toISOString(),
           point: stationSnapshotToPoint(snapshot)
@@ -70,32 +76,36 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
       userId
     }, () => getDb()
         .select({
-          bitrate: schema.stations.bitrate,
-          codec: schema.stations.codec,
-          country: schema.stations.country,
-          countryCode: schema.stations.countryCode,
-          createdAt: schema.usersFavourites.createdAt,
-          id: schema.stations.id,
-          language: schema.stations.language,
-          latitude: schema.stations.latitude,
-          locationPrecision: schema.stations.locationPrecision,
-          longitude: schema.stations.longitude,
-          name: schema.stations.name,
-          providerClicks: schema.stations.providerClicks,
-          providerMetadata: schema.stations.providerMetadata,
-          providerUpdatedAt: schema.stations.providerUpdatedAt,
-          providerVotes: schema.stations.providerVotes,
-          starCount: schema.stations.starCount,
-          summary: schema.stations.summary,
-          tags: schema.stations.tags
+          bitrate: schema.radioStations.bitrate,
+          codec: schema.radioStations.codec,
+          country: schema.mediaItems.country,
+          countryCode: schema.mediaItems.countryCode,
+          createdAt: schema.userFavourites.createdAt,
+          id: schema.mediaItems.id,
+          language: schema.radioStations.language,
+          latitude: schema.mediaItems.latitude,
+          locationPrecision: schema.mediaItems.locationPrecision,
+          longitude: schema.mediaItems.longitude,
+          name: schema.mediaItems.name,
+          providerClicks: schema.radioStations.providerClicks,
+          providerMetadata: schema.mediaItems.providerMetadata,
+          providerUpdatedAt: schema.mediaItems.providerUpdatedAt,
+          providerVotes: schema.radioStations.providerVotes,
+          starCount: schema.mediaItems.starCount,
+          summary: schema.mediaItems.summary,
+          tags: schema.radioStations.tags
         })
-        .from(schema.usersFavourites)
-        .innerJoin(schema.stations, eq(schema.usersFavourites.stationId, schema.stations.id))
-        .where(eq(schema.usersFavourites.userId, userId))
-        .orderBy(desc(schema.usersFavourites.updatedAt)));
+        .from(schema.userFavourites)
+        .innerJoin(schema.mediaItems, eq(schema.userFavourites.mediaItemId, schema.mediaItems.id))
+        .innerJoin(schema.radioStations, eq(schema.radioStations.mediaItemId, schema.mediaItems.id))
+        .where(and(
+          eq(schema.userFavourites.userId, userId),
+          eq(schema.mediaItems.modeId, RADIO_MODE_ID)
+        ))
+        .orderBy(desc(schema.userFavourites.updatedAt)));
 
     return rows.map((row) => ({
-      modeId: "radio" as const,
+      modeId: RADIO_MODE_ID,
       pointId: row.id,
       createdAt: row.createdAt.toISOString(),
       point: stationRowToPoint(row)
@@ -114,24 +124,24 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
 
       return db.transaction(async (tx) => {
         const [deleted] = await tx
-          .delete(schema.usersFavourites)
+          .delete(schema.userFavourites)
           .where(and(
-            eq(schema.usersFavourites.userId, userId),
-            eq(schema.usersFavourites.stationId, pointId)
+            eq(schema.userFavourites.userId, userId),
+            eq(schema.userFavourites.mediaItemId, pointId)
           ))
-          .returning({ stationId: schema.usersFavourites.stationId });
+          .returning({ mediaItemId: schema.userFavourites.mediaItemId });
 
         if (!deleted) {
           return false;
         }
 
         await tx
-          .update(schema.stations)
+          .update(schema.mediaItems)
           .set({
-            starCount: sql`greatest(${schema.stations.starCount} - 1, 0)`,
+            starCount: sql`greatest(${schema.mediaItems.starCount} - 1, 0)`,
             updatedAt: new Date()
           })
-          .where(eq(schema.stations.id, deleted.stationId));
+          .where(eq(schema.mediaItems.id, deleted.mediaItemId));
 
         return true;
       });
@@ -158,29 +168,29 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
         await upsertStation(tx, snapshot);
 
         const [clickRow] = await tx
-          .insert(schema.stationClicks)
+          .insert(schema.userMediaClicks)
           .values({
             userId,
-            stationId: snapshot.id,
+            mediaItemId: snapshot.id,
             clickCount: 1,
             lastClickedAt: new Date()
           })
           .onConflictDoUpdate({
-            target: [schema.stationClicks.userId, schema.stationClicks.stationId],
+            target: [schema.userMediaClicks.userId, schema.userMediaClicks.mediaItemId],
             set: {
-              clickCount: sql`${schema.stationClicks.clickCount} + 1`,
+              clickCount: sql`${schema.userMediaClicks.clickCount} + 1`,
               lastClickedAt: new Date()
             }
           })
-          .returning({ clickCount: schema.stationClicks.clickCount });
+          .returning({ clickCount: schema.userMediaClicks.clickCount });
 
         await tx
-          .update(schema.stations)
+          .update(schema.mediaItems)
           .set({
-            clickCount: sql`${schema.stations.clickCount} + 1`,
+            clickCount: sql`${schema.mediaItems.clickCount} + 1`,
             updatedAt: new Date()
           })
-          .where(eq(schema.stations.id, snapshot.id));
+          .where(eq(schema.mediaItems.id, snapshot.id));
 
         return { clickCount: clickRow?.clickCount ?? 1 };
       });
@@ -190,49 +200,88 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
 
 async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersistenceSnapshot) {
   await tx
-    .insert(schema.stations)
+    .insert(schema.mediaModes)
+    .values({
+      id: RADIO_MODE_ID,
+      label: "Radio",
+      updatedAt: new Date()
+    })
+    .onConflictDoNothing();
+
+  await tx
+    .insert(schema.mediaProviders)
+    .values({
+      id: RADIO_BROWSER_PROVIDER_ID,
+      modeId: RADIO_MODE_ID,
+      name: RADIO_BROWSER_PROVIDER_NAME,
+      url: RADIO_BROWSER_PROVIDER_URL,
+      attribution: RADIO_BROWSER_ATTRIBUTION,
+      updatedAt: new Date()
+    })
+    .onConflictDoNothing();
+
+  await tx
+    .insert(schema.mediaItems)
     .values({
       id: snapshot.id,
-      providerStationId: snapshot.id,
+      modeId: RADIO_MODE_ID,
+      providerId: RADIO_BROWSER_PROVIDER_ID,
+      providerItemId: snapshot.id,
       name: snapshot.name,
       summary: snapshot.summary,
       countryCode: snapshot.countryCode,
       country: snapshot.country,
-      language: snapshot.language,
-      tags: snapshot.tags,
-      codec: snapshot.codec,
-      bitrate: snapshot.bitrate,
       latitude: snapshot.latitude,
       longitude: snapshot.longitude,
       locationPrecision: snapshot.locationPrecision,
-      streamUrl: snapshot.streamUrl,
       sourceUrl: snapshot.sourceUrl,
-      providerVotes: snapshot.votes,
-      providerClicks: snapshot.clickCount,
       providerMetadata: snapshot.metrics,
       providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
       updatedAt: new Date()
     })
     .onConflictDoUpdate({
-      target: schema.stations.id,
+      target: schema.mediaItems.id,
       set: {
+        modeId: RADIO_MODE_ID,
+        providerId: RADIO_BROWSER_PROVIDER_ID,
+        providerItemId: snapshot.id,
         name: snapshot.name,
         summary: snapshot.summary,
         countryCode: snapshot.countryCode,
         country: snapshot.country,
+        latitude: snapshot.latitude,
+        longitude: snapshot.longitude,
+        locationPrecision: snapshot.locationPrecision,
+        sourceUrl: snapshot.sourceUrl,
+        providerMetadata: snapshot.metrics,
+        providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
+        updatedAt: new Date()
+      }
+    });
+
+  await tx
+    .insert(schema.radioStations)
+    .values({
+      mediaItemId: snapshot.id,
+      streamUrl: snapshot.streamUrl,
+      language: snapshot.language,
+      tags: snapshot.tags,
+      codec: snapshot.codec,
+      bitrate: snapshot.bitrate,
+      providerVotes: snapshot.votes,
+      providerClicks: snapshot.clickCount,
+      updatedAt: new Date()
+    })
+    .onConflictDoUpdate({
+      target: schema.radioStations.mediaItemId,
+      set: {
+        streamUrl: snapshot.streamUrl,
         language: snapshot.language,
         tags: snapshot.tags,
         codec: snapshot.codec,
         bitrate: snapshot.bitrate,
-        latitude: snapshot.latitude,
-        longitude: snapshot.longitude,
-        locationPrecision: snapshot.locationPrecision,
-        streamUrl: snapshot.streamUrl,
-        sourceUrl: snapshot.sourceUrl,
         providerVotes: snapshot.votes,
         providerClicks: snapshot.clickCount,
-        providerMetadata: snapshot.metrics,
-        providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
         updatedAt: new Date()
       }
     });

@@ -3,6 +3,7 @@ import {
   boolean,
   check,
   doublePrecision,
+  foreignKey,
   index,
   integer,
   jsonb,
@@ -13,7 +14,7 @@ import {
   uniqueIndex,
   uuid
 } from "drizzle-orm/pg-core";
-import { terraThemeIds } from "@/lib/theme/ids";
+import { terraThemeIds } from "../lib/theme/ids";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
@@ -37,8 +38,7 @@ export const sessions = pgTable("sessions", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  index("sessions_user_id_idx").on(table.userId),
-  index("sessions_token_idx").on(table.token)
+  index("sessions_user_id_idx").on(table.userId)
 ]);
 
 export const accounts = pgTable("accounts", {
@@ -88,25 +88,39 @@ export const pendingRegistrations = pgTable("pending_registrations", {
   check("pending_registrations_attempts_nonnegative", sql`${table.attempts} >= 0`)
 ]);
 
-export const stations = pgTable("stations", {
+export const mediaModes = pgTable("media_modes", {
+  id: text("id").primaryKey(),
+  label: text("label").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+});
+
+export const mediaProviders = pgTable("media_providers", {
+  id: text("id").primaryKey(),
+  modeId: text("mode_id").notNull().references(() => mediaModes.id, { onDelete: "restrict" }),
+  name: text("name").notNull(),
+  url: text("url"),
+  attribution: text("attribution"),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  uniqueIndex("media_providers_id_mode_id_unique").on(table.id, table.modeId),
+  index("media_providers_mode_id_idx").on(table.modeId)
+]);
+
+export const mediaItems = pgTable("media_items", {
   id: uuid("id").primaryKey(),
-  providerStationId: uuid("provider_station_id").notNull().unique(),
-  providerName: text("provider_name").notNull().default("Radio Browser"),
+  modeId: text("mode_id").notNull().references(() => mediaModes.id, { onDelete: "restrict" }),
+  providerId: text("provider_id").notNull(),
+  providerItemId: text("provider_item_id").notNull(),
   name: text("name").notNull(),
   summary: text("summary").notNull(),
   countryCode: text("country_code").notNull(),
   country: text("country").notNull(),
-  language: text("language"),
-  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
-  codec: text("codec"),
-  bitrate: integer("bitrate"),
   latitude: doublePrecision("latitude").notNull(),
   longitude: doublePrecision("longitude").notNull(),
   locationPrecision: text("location_precision", { enum: ["station", "country"] }).notNull(),
-  streamUrl: text("stream_url").notNull(),
   sourceUrl: text("source_url"),
-  providerVotes: integer("provider_votes").notNull().default(0),
-  providerClicks: integer("provider_clicks").notNull().default(0),
   starCount: integer("star_count").notNull().default(0),
   clickCount: integer("click_count").notNull().default(0),
   providerMetadata: jsonb("provider_metadata").$type<Record<string, string | number | null>>().notNull().default({}),
@@ -114,47 +128,73 @@ export const stations = pgTable("stations", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  index("stations_country_code_idx").on(table.countryCode),
-  index("stations_star_count_idx").on(table.starCount),
-  index("stations_click_count_idx").on(table.clickCount),
-  index("stations_provider_votes_idx").on(table.providerVotes),
-  index("stations_updated_at_idx").on(table.updatedAt),
-  check("stations_latitude_range", sql`${table.latitude} >= -90 AND ${table.latitude} <= 90`),
-  check("stations_longitude_range", sql`${table.longitude} >= -180 AND ${table.longitude} <= 180`),
-  check("stations_provider_votes_nonnegative", sql`${table.providerVotes} >= 0`),
-  check("stations_provider_clicks_nonnegative", sql`${table.providerClicks} >= 0`),
-  check("stations_star_count_nonnegative", sql`${table.starCount} >= 0`),
-  check("stations_click_count_nonnegative", sql`${table.clickCount} >= 0`)
+  foreignKey({
+    columns: [table.providerId, table.modeId],
+    foreignColumns: [mediaProviders.id, mediaProviders.modeId],
+    name: "media_items_provider_mode_fk"
+  }).onDelete("restrict"),
+  uniqueIndex("media_items_provider_item_unique").on(table.providerId, table.providerItemId),
+  index("media_items_provider_mode_idx").on(table.providerId, table.modeId),
+  index("media_items_mode_country_idx").on(table.modeId, table.countryCode),
+  index("media_items_country_code_idx").on(table.countryCode),
+  index("media_items_star_count_idx").on(table.starCount),
+  index("media_items_click_count_idx").on(table.clickCount),
+  index("media_items_updated_at_idx").on(table.updatedAt),
+  check("media_items_country_code_format", sql`${table.countryCode} ~ '^[0-9]{3}$' OR ${table.countryCode} LIKE 'X-%'`),
+  check("media_items_latitude_range", sql`${table.latitude} >= -90 AND ${table.latitude} <= 90`),
+  check("media_items_longitude_range", sql`${table.longitude} >= -180 AND ${table.longitude} <= 180`),
+  check("media_items_location_precision_valid", sql`${table.locationPrecision} IN ('station', 'country')`),
+  check("media_items_star_count_nonnegative", sql`${table.starCount} >= 0`),
+  check("media_items_click_count_nonnegative", sql`${table.clickCount} >= 0`)
 ]);
 
-export const usersFavourites = pgTable("users_favourites", {
-  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  stationId: uuid("station_id").notNull().references(() => stations.id, { onDelete: "cascade" }),
+export const radioStations = pgTable("radio_stations", {
+  mediaItemId: uuid("media_item_id").primaryKey().references(() => mediaItems.id, { onDelete: "cascade" }),
+  streamUrl: text("stream_url").notNull(),
+  language: text("language"),
+  tags: text("tags").array().notNull().default(sql`ARRAY[]::text[]`),
+  codec: text("codec"),
+  bitrate: integer("bitrate"),
+  providerVotes: integer("provider_votes").notNull().default(0),
+  providerClicks: integer("provider_clicks").notNull().default(0),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  primaryKey({ columns: [table.userId, table.stationId] }),
-  index("users_favourites_user_id_idx").on(table.userId),
-  index("users_favourites_station_id_idx").on(table.stationId)
+  index("radio_stations_provider_votes_idx").on(table.providerVotes),
+  check("radio_stations_stream_url_http", sql`${table.streamUrl} ~* '^https?://'`),
+  check("radio_stations_bitrate_nonnegative", sql`${table.bitrate} IS NULL OR ${table.bitrate} >= 0`),
+  check("radio_stations_provider_votes_nonnegative", sql`${table.providerVotes} >= 0`),
+  check("radio_stations_provider_clicks_nonnegative", sql`${table.providerClicks} >= 0`)
 ]);
 
-export const stationClicks = pgTable("station_clicks", {
+export const userFavourites = pgTable("user_favourites", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  stationId: uuid("station_id").notNull().references(() => stations.id, { onDelete: "cascade" }),
+  mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.mediaItemId] }),
+  index("user_favourites_user_updated_idx").on(table.userId, table.updatedAt),
+  index("user_favourites_media_item_id_idx").on(table.mediaItemId)
+]);
+
+export const userMediaClicks = pgTable("user_media_clicks", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
   clickCount: integer("click_count").notNull().default(0),
   firstClickedAt: timestamp("first_clicked_at", { withTimezone: true }).notNull().defaultNow(),
   lastClickedAt: timestamp("last_clicked_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  primaryKey({ columns: [table.userId, table.stationId] }),
-  index("station_clicks_station_id_idx").on(table.stationId),
-  check("station_clicks_click_count_positive", sql`${table.clickCount} >= 0`)
+  primaryKey({ columns: [table.userId, table.mediaItemId] }),
+  index("user_media_clicks_media_item_id_idx").on(table.mediaItemId),
+  check("user_media_clicks_click_count_positive", sql`${table.clickCount} >= 0`)
 ]);
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  favourites: many(usersFavourites),
+  favourites: many(userFavourites),
   sessions: many(sessions),
-  stationClicks: many(stationClicks)
+  mediaClicks: many(userMediaClicks)
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -171,29 +211,58 @@ export const accountsRelations = relations(accounts, ({ one }) => ({
   })
 }));
 
-export const stationsRelations = relations(stations, ({ many }) => ({
-  favourites: many(usersFavourites),
-  clicks: many(stationClicks)
+export const mediaModesRelations = relations(mediaModes, ({ many }) => ({
+  items: many(mediaItems),
+  providers: many(mediaProviders)
 }));
 
-export const usersFavouritesRelations = relations(usersFavourites, ({ one }) => ({
-  user: one(users, {
-    fields: [usersFavourites.userId],
-    references: [users.id]
+export const mediaProvidersRelations = relations(mediaProviders, ({ many, one }) => ({
+  mode: one(mediaModes, {
+    fields: [mediaProviders.modeId],
+    references: [mediaModes.id]
   }),
-  station: one(stations, {
-    fields: [usersFavourites.stationId],
-    references: [stations.id]
+  items: many(mediaItems)
+}));
+
+export const mediaItemsRelations = relations(mediaItems, ({ many, one }) => ({
+  mode: one(mediaModes, {
+    fields: [mediaItems.modeId],
+    references: [mediaModes.id]
+  }),
+  provider: one(mediaProviders, {
+    fields: [mediaItems.providerId],
+    references: [mediaProviders.id]
+  }),
+  radioStation: one(radioStations),
+  favourites: many(userFavourites),
+  clicks: many(userMediaClicks)
+}));
+
+export const radioStationsRelations = relations(radioStations, ({ one }) => ({
+  mediaItem: one(mediaItems, {
+    fields: [radioStations.mediaItemId],
+    references: [mediaItems.id]
   })
 }));
 
-export const stationClicksRelations = relations(stationClicks, ({ one }) => ({
+export const userFavouritesRelations = relations(userFavourites, ({ one }) => ({
   user: one(users, {
-    fields: [stationClicks.userId],
+    fields: [userFavourites.userId],
     references: [users.id]
   }),
-  station: one(stations, {
-    fields: [stationClicks.stationId],
-    references: [stations.id]
+  mediaItem: one(mediaItems, {
+    fields: [userFavourites.mediaItemId],
+    references: [mediaItems.id]
+  })
+}));
+
+export const userMediaClicksRelations = relations(userMediaClicks, ({ one }) => ({
+  user: one(users, {
+    fields: [userMediaClicks.userId],
+    references: [users.id]
+  }),
+  mediaItem: one(mediaItems, {
+    fields: [userMediaClicks.mediaItemId],
+    references: [mediaItems.id]
   })
 }));

@@ -6,12 +6,15 @@ import { logger } from "@/lib/server/logging";
 
 const requiredTables = [
   "accounts",
+  "media_items",
+  "media_modes",
+  "media_providers",
   "pending_registrations",
+  "radio_stations",
   "sessions",
-  "station_clicks",
-  "stations",
+  "user_favourites",
+  "user_media_clicks",
   "users",
-  "users_favourites",
   "verifications"
 ] as const;
 
@@ -29,6 +32,15 @@ export class DatabaseSchemaMissingError extends Error {
   constructor(missingTables: string[]) {
     super(`Database schema is not initialized. Missing tables: ${missingTables.join(", ")}.`);
     this.missingTables = missingTables;
+  }
+}
+
+export class DatabaseRlsDisabledError extends Error {
+  readonly tableNames: string[];
+
+  constructor(tableNames: string[]) {
+    super(`Database tables require row level security: ${tableNames.join(", ")}.`);
+    this.tableNames = tableNames;
   }
 }
 
@@ -63,6 +75,24 @@ export async function ensureDatabaseReady() {
       message: "Database schema is missing required tables"
     });
     throw new DatabaseSchemaMissingError(missingTables);
+  }
+
+  const tableSecurityRows = await getDb().execute<{ relrowsecurity: boolean; table_name: string }>(sql`
+    select c.relname as table_name, c.relrowsecurity
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+  `);
+  const rlsStatusByTable = new Map(Array.from(tableSecurityRows).map((row) => [row.table_name, row.relrowsecurity]));
+  const rlsDisabledTables = requiredTables.filter((tableName) => !rlsStatusByTable.get(tableName));
+
+  if (rlsDisabledTables.length > 0) {
+    logger.error("db.readiness.rls_disabled", {
+      context: { tableNames: rlsDisabledTables },
+      message: "Database schema has required public tables without row level security"
+    });
+    throw new DatabaseRlsDisabledError(rlsDisabledTables);
   }
 
   ready = true;

@@ -3,12 +3,15 @@ import postgres from "postgres";
 
 const requiredTables = [
   "accounts",
+  "media_items",
+  "media_modes",
+  "media_providers",
   "pending_registrations",
+  "radio_stations",
   "sessions",
-  "station_clicks",
-  "stations",
+  "user_favourites",
+  "user_media_clicks",
   "users",
-  "users_favourites",
   "verifications"
 ];
 
@@ -37,6 +40,22 @@ try {
 
   if (missingTables.length > 0) {
     console.error(`Database schema is missing tables: ${missingTables.join(", ")}`);
+    console.error("Run npm run db:migrate.");
+    process.exit(1);
+  }
+
+  const securityRows = await sql`
+    select c.relname as table_name, c.relrowsecurity
+    from pg_class c
+    join pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'public'
+      and c.relkind = 'r'
+  `;
+  const rlsStatusByTable = new Map(securityRows.map((row) => [row.table_name, row.relrowsecurity]));
+  const rlsDisabledTables = requiredTables.filter((tableName) => !rlsStatusByTable.get(tableName));
+
+  if (rlsDisabledTables.length > 0) {
+    console.error(`Database schema has tables without RLS enabled: ${rlsDisabledTables.join(", ")}`);
     console.error("Run npm run db:migrate.");
     process.exit(1);
   }
