@@ -1,0 +1,105 @@
+name: blomoon
+
+services:
+  traefik:
+    image: traefik:v3.1
+    command:
+      - --providers.docker=true
+      - --providers.docker.exposedbydefault=false
+      - --entrypoints.web.address=:80
+      - --entrypoints.web.http.redirections.entrypoint.to=websecure
+      - --entrypoints.web.http.redirections.entrypoint.scheme=https
+      - --entrypoints.websecure.address=:443
+      - --certificatesresolvers.letsencrypt.acme.email=${TRAEFIK_ACME_EMAIL}
+      - --certificatesresolvers.letsencrypt.acme.storage=/letsencrypt/acme.json
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge=true
+      - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
+      - --accesslog=true
+      - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
+    ports:
+      - "80:80"
+      - "443:443"
+    restart: unless-stopped
+    volumes:
+      - traefik_letsencrypt:/letsencrypt
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB}
+      POSTGRES_USER: ${POSTGRES_USER}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U \"${POSTGRES_USER}\" -d \"${POSTGRES_DB}\""]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+    restart: unless-stopped
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  app:
+    image: ${BLOMOON_IMAGE:?Set BLOMOON_IMAGE before running docker compose}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      BLOMOON_AUTH_EMAIL_FROM: ${BLOMOON_AUTH_EMAIL_FROM}
+      BLOMOON_LOG_LEVEL: ${BLOMOON_LOG_LEVEL:-info}
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
+      GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      HOSTNAME: 0.0.0.0
+      NODE_ENV: production
+      PORT: 3000
+      RESEND_API_KEY: ${RESEND_API_KEY}
+    healthcheck:
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 20s
+    labels:
+      - traefik.enable=true
+      - traefik.http.routers.blomoon.entrypoints=websecure
+      - traefik.http.routers.blomoon.rule=Host(`${BLOMOON_DOMAIN}`)
+      - traefik.http.routers.blomoon.tls.certresolver=letsencrypt
+      - traefik.http.services.blomoon.loadbalancer.server.port=3000
+    restart: unless-stopped
+
+  migrate:
+    image: ${BLOMOON_MIGRATE_IMAGE:?Set BLOMOON_MIGRATE_IMAGE before running migrations}
+    profiles:
+      - migrate
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      NODE_ENV: production
+
+  backup:
+    image: postgres:17-alpine
+    profiles:
+      - backup
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      PGDATABASE: ${POSTGRES_DB}
+      PGHOST: postgres
+      PGPASSWORD: ${POSTGRES_PASSWORD}
+      PGUSER: ${POSTGRES_USER}
+    command: >
+      sh -c 'mkdir -p /backups
+      && pg_dump | gzip > /backups/blomoon-$$(date +%Y%m%d%H%M%S).sql.gz
+      && find /backups -type f -name "blomoon-*.sql.gz" -mtime +14 -delete'
+    volumes:
+      - ./backups:/backups
+
+volumes:
+  postgres_data:
+  traefik_letsencrypt:

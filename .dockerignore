@@ -1,0 +1,15 @@
+.git
+.github
+.next
+coverage
+dist
+node_modules
+npm-debug.log*
+out
+test-results
+tsconfig.tsbuildinfo
+.env
+.env.local
+.env.*.local
+.env.production
+backups

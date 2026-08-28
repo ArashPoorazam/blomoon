@@ -37,6 +37,45 @@ Password accounts require email verification before login. Use Resend's `onboard
 
 Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Production Google OAuth should use `https://blomoon.ir` as `BETTER_AUTH_URL`, `blomoon.ir` as the authorized domain, `https://blomoon.ir` as the application home page, `https://blomoon.ir/privacy` as the privacy policy, `https://blomoon.ir/terms` as the terms of service, and `https://blomoon.ir/api/auth/callback/google` as the authorized redirect URI. Public support contact is `blomoon.support@gmail.com`.
 
+## VPS Deployment
+
+Production runs through Docker Compose with Traefik, Postgres, the Next.js app image, and a one-shot migration image.
+
+First-time VPS setup:
+
+```bash
+sudo mkdir -p /opt/blomoon
+sudo chown "$USER":"$USER" /opt/blomoon
+git clone <repo-url> /opt/blomoon
+cd /opt/blomoon
+cp .env.production.example .env.production
+```
+
+Fill `.env.production` with production secrets, then point `BLOMOON_DOMAIN` DNS at the VPS. `GHCR_USERNAME` and `GHCR_TOKEN` are only needed when the GitHub Container Registry package is private.
+
+GitHub Actions deploys automatically from `main`. Configure these repository secrets:
+
+- `VPS_HOST`
+- `VPS_USER`
+- `VPS_SSH_PRIVATE_KEY`
+- `VPS_PORT` if SSH is not on `22`
+- `VPS_APP_DIR` if the app is not in `/opt/blomoon`
+
+Manual deploy fallback:
+
+```bash
+cd /opt/blomoon
+BLOMOON_REGISTRY_IMAGE=ghcr.io/<owner>/<repo> ./deploy.sh <git-sha-or-main>
+```
+
+Run a database backup from the VPS with:
+
+```bash
+docker compose --env-file .env.production -f compose.prod.yml --profile backup run --rm backup
+```
+
+The default Traefik rule only requests a certificate for `BLOMOON_DOMAIN`. Add a `www` router after the `www` DNS record is pointed at the VPS.
+
 ## Data Sources
 
 - Radio: Radio Browser
