@@ -17,7 +17,7 @@ type AccountMenuProps = {
   user: ViewerDto | null;
   onAccountUpdated: () => void | Promise<void>;
   onAuthOpen: () => void;
-  onLogout: () => void;
+  onLogout: () => void | Promise<void>;
   onThemeChange: (themeId: TerraThemeId) => void;
 };
 
@@ -136,7 +136,7 @@ export function AccountMenu({
               onClick={async () => {
                 await authClient.signOut();
                 closeModal();
-                onLogout();
+                await onLogout();
               }}
             >
               Log out

@@ -345,22 +345,31 @@ async function getLiveCountryStationCount(alphaCode: string) {
   const countries = await fetchRadioBrowserJsonWithOptions<RadioBrowserCountRecord[]>("/json/countrycodes", {
     hidebroken: "true"
   });
-  const countsByCode = new Map<string, number>();
+  const countsByCode = createCountryStationCountIndex(countries);
 
-  countries.forEach((country) => {
-    const code = (country.iso_3166_1 ?? country.name)?.trim().toUpperCase();
-    const count = parseCount(country.stationcount);
-
-    if (code && count !== null) {
-      countsByCode.set(code, count);
-    }
-  });
   countryCountCache = {
     countsByCode,
     fetchedAt: now
   };
 
   return countsByCode.get(alphaCode.toUpperCase()) ?? null;
+}
+
+export function createCountryStationCountIndex(countries: RadioBrowserCountRecord[]) {
+  const countsByCode = new Map<string, number>();
+
+  countries.forEach((country) => {
+    const code = normalizeProviderCountryCountCode(country);
+    const count = parseCount(country.stationcount);
+
+    if (!code || count === null) {
+      return;
+    }
+
+    countsByCode.set(code, Math.max(countsByCode.get(code) ?? 0, count));
+  });
+
+  return countsByCode;
 }
 
 export async function getLiveGlobalStationCount() {
@@ -458,4 +467,13 @@ function sortRecords(records: RadioStationRecord[], sort: RadioSortOption) {
 function parseCount(value?: number | string) {
   const count = typeof value === "number" ? value : Number.parseInt(value ?? "", 10);
   return Number.isFinite(count) ? count : null;
+}
+
+function normalizeProviderCountryCountCode(country: RadioBrowserCountRecord) {
+  const candidates = [country.iso_3166_1, country.name];
+  const code = candidates
+    .map((value) => value?.trim().toUpperCase() ?? "")
+    .find((value) => /^[A-Z]{2}$/.test(value));
+
+  return code ?? null;
 }

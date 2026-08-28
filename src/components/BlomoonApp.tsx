@@ -1,5 +1,6 @@
 "use client";
 
+import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
@@ -33,6 +34,7 @@ type BlomoonAppProps = {
 const EARTH_SPIN_INTERRUPT_EVENTS = ["keydown", "mousedown", "pointerdown", "click"] as const;
 
 export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
+  const router = useRouter();
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
@@ -278,9 +280,11 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         user={viewer.user}
         onAccountUpdated={viewer.refresh}
         onAuthOpen={() => setAuthModalOpen(true)}
-        onLogout={() => {
-          void viewer.refresh();
+        onLogout={async () => {
           setThemeId(defaultTheme.id);
+          await viewer.refresh();
+          router.replace("/login");
+          router.refresh();
         }}
         onThemeChange={selectTheme}
       />
