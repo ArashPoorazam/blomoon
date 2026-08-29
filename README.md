@@ -74,6 +74,20 @@ Run a database backup from the VPS with:
 docker compose --env-file .env.production -f compose.prod.yml --profile backup run --rm backup
 ```
 
+Run an operator check from your laptop or the VPS with:
+
+```bash
+npm run check:prod
+```
+
+The check uses `https://blomoon.ir` by default. To check another deployment, set `BLOMOON_ORIGIN`:
+
+```bash
+BLOMOON_ORIGIN=http://localhost:3000 npm run check:prod
+```
+
+It verifies public health, HTTPS redirect behavior, auth guards, radio catalog/search/detail responses, and attempts radio playback resolution. Live stream playback resolution is reported as a warning by default because external radio streams can be flaky; set `BLOMOON_STRICT_PLAYBACK=1` to make it fail the command.
+
 The default Traefik rule only requests a certificate for `BLOMOON_DOMAIN`. Add a `www` router after the `www` DNS record is pointed at the VPS.
 
 ## Data Sources
