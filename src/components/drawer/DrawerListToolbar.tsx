@@ -54,13 +54,13 @@ export function DrawerListToolbar({
       <div className="drawer-compact-header">
         <div className="drawer-heading-copy">
           <h1 className="drawer-brand-title">Blomoon</h1>
-          <p className="drawer-subtitle">{activeMode.label} stations by geography</p>
+          <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
         </div>
         <div className="drawer-count-line" aria-live="polite">
           <span>{loading ? "Loading" : "Directory"}</span>
           <strong>
             {loading
-              ? activeMode.loadingLabel
+              ? activeMode.copy.loadingLabel
               : formatVisibleCount({
                 listedCount,
                 loadingMore: isLoadingMorePoints,
@@ -75,7 +75,7 @@ export function DrawerListToolbar({
         <Search className="search-icon" size={16} aria-hidden="true" />
         <input
           className="search-input"
-          placeholder={activeMode.searchPlaceholder}
+          placeholder={activeMode.copy.searchPlaceholder}
           type="search"
           value={query}
           onChange={(event) => onQueryChange(event.target.value)}

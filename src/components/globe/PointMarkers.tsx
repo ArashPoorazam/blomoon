@@ -27,6 +27,7 @@ type MarkerTransform = {
 };
 
 type PointMarkersProps = {
+  hoverEnabled: boolean;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
@@ -39,6 +40,7 @@ type PointMarkersProps = {
 const MIN_CAMERA_FACING_DOT = 0.01;
 
 export function PointMarkers({
+  hoverEnabled,
   markerColor,
   markerColorMode,
   points,
@@ -66,6 +68,7 @@ export function PointMarkers({
         />
       ))}
       <MarkerHitInstances
+        hoverEnabled={hoverEnabled}
         points={instancedPoints}
         onHover={onHover}
         onSelect={onSelect}
@@ -74,6 +77,7 @@ export function PointMarkers({
         <SelectedPointMarker
           point={selectedPoint}
           theme={theme}
+          hoverEnabled={hoverEnabled}
           onHover={onHover}
           onSelect={onSelect}
         />
@@ -106,10 +110,12 @@ function MarkerVisualInstances({ color, points }: { color: string; points: Terra
 }
 
 function MarkerHitInstances({
+  hoverEnabled,
   points,
   onHover,
   onSelect
 }: {
+  hoverEnabled: boolean;
   points: TerraPoint[];
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
@@ -131,6 +137,10 @@ function MarkerHitInstances({
   }
 
   function handlePointerMove(event: ThreeEvent<PointerEvent>) {
+    if (!hoverEnabled) {
+      return;
+    }
+
     const point = getPointFromEvent(event);
     const normal = typeof event.instanceId === "number" ? markerNormals[event.instanceId] : null;
 
@@ -156,6 +166,10 @@ function MarkerHitInstances({
   }
 
   function handlePointerOut() {
+    if (!hoverEnabled) {
+      return;
+    }
+
     clearHover();
   }
 
@@ -192,11 +206,13 @@ function MarkerHitInstances({
 }
 
 function SelectedPointMarker({
+  hoverEnabled,
   point,
   theme,
   onHover,
   onSelect
 }: {
+  hoverEnabled: boolean;
   point: TerraPoint;
   theme: GlobeTheme;
   onHover: (point: TerraPoint | null) => void;
@@ -231,10 +247,18 @@ function SelectedPointMarker({
       quaternion={quaternion}
       onClick={handleClick}
       onPointerOut={() => {
+        if (!hoverEnabled) {
+          return;
+        }
+
         document.body.style.cursor = "";
         onHover(null);
       }}
       onPointerOver={(event) => {
+        if (!hoverEnabled) {
+          return;
+        }
+
         if (!isMarkerFacingCamera(normal, camera)) {
           return;
         }

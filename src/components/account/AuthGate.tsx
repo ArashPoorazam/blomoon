@@ -47,7 +47,7 @@ export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
             </h1>
           </div>
           <div className="auth-brand-message">
-            <p>Follow live stations across cities, countries, and quiet corners of the globe.</p>
+            <p>Follow live entertainment across cities, countries, and quiet corners of the globe.</p>
           </div>
           <nav className="auth-policy-links" aria-label="Legal">
             <Link href="/privacy">Privacy</Link>

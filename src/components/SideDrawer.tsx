@@ -1,10 +1,11 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X } from "lucide-react";
+import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X } from "lucide-react";
 import { useEffect, useState } from "react";
-import { formatDateTime, type CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { FavouriteGroupDto } from "@/lib/persistence/types";
+import type { DrawerMobileState } from "./drawer/mobileState";
 import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
 import { SideDrawerList } from "./SideDrawerList";
 
@@ -22,6 +23,7 @@ type SideDrawerProps = {
   loading: boolean;
   loadingTaskLabel: string;
   loadingMoreRemotePoints?: boolean;
+  mobileState: DrawerMobileState;
   points: TerraPoint[];
   providerError: string | null;
   query: string;
@@ -43,6 +45,7 @@ type SideDrawerProps = {
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
   onToggleCollapsed: () => void;
+  onToggleMobileState: () => void;
   onToggleShowListedOnGlobe: () => void;
 };
 
@@ -60,6 +63,7 @@ export function SideDrawer({
   loading,
   loadingTaskLabel,
   loadingMoreRemotePoints,
+  mobileState,
   points,
   providerError,
   query,
@@ -81,13 +85,18 @@ export function SideDrawer({
   onSortChange,
   onToggleFavourite,
   onToggleCollapsed,
+  onToggleMobileState,
   onToggleShowListedOnGlobe
 }: SideDrawerProps) {
   const isDetail = Boolean(selectedId);
   const isFavourites = !isDetail && view === "favourites";
 
   return (
-    <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label={`${activeMode.label} data`}>
+    <aside
+      className={`drawer ${collapsed ? "collapsed" : ""}`}
+      aria-label={`${activeMode.label} data`}
+      data-mobile-state={mobileState}
+    >
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
 
       <button
@@ -97,6 +106,16 @@ export function SideDrawer({
         onClick={onToggleCollapsed}
       >
         {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+      </button>
+
+      <button
+        aria-label={collapsed ? "Open drawer" : "Close drawer"}
+        className="drawer-sheet-handle"
+        type="button"
+        onClick={onToggleMobileState}
+      >
+        <span aria-hidden="true" />
+        <ChevronDown size={16} aria-hidden="true" />
       </button>
 
       <div className="drawer-inner">
@@ -215,7 +234,7 @@ function DetailView({
         {detailAccessory ? <div className="detail-accessory">{detailAccessory}</div> : null}
 
         <div className="detail-sections">
-          {getDetailSections(detail, activeMode).map((section) => (
+          {activeMode.formatDetailSections(detail).map((section) => (
             <div className="detail-section" key={section.title}>
               <div className="detail-section-title">{section.title}</div>
               <div className="detail-grid">
@@ -239,89 +258,4 @@ function DetailView({
       </div>
     </>
   );
-}
-
-type DetailField = {
-  label: string;
-  value: string;
-};
-
-type DetailSection = {
-  fields: DetailField[];
-  title: string;
-};
-
-function getDetailSections(detail: TerraPointDetail | null, activeMode: TerraMode): DetailSection[] {
-  if (!detail) {
-    return [
-      {
-        title: "Station",
-        fields: [
-          { label: activeMode.markerMetricLabel, value: "Loading" },
-          { label: "Time", value: "Loading" }
-        ]
-      }
-    ];
-  }
-
-  const fieldValue = getDetailFieldValue(detail);
-
-  return [
-    {
-      title: "Station",
-      fields: [
-        { label: "Country", value: fieldValue("Country") },
-        { label: "Language", value: fieldValue("Language") },
-        { label: "Tags", value: fieldValue("Tags") }
-      ]
-    },
-    {
-      title: "Stream",
-      fields: [
-        { label: "Codec", value: fieldValue("Codec") },
-        { label: "Bitrate", value: fieldValue("Bitrate") }
-      ]
-    },
-    {
-      title: "Activity",
-      fields: [
-        { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
-        { label: "Votes", value: fieldValue("Votes") },
-        { label: "Last checked", value: formatCheckedDateTime(detail.timestamp) }
-      ]
-    },
-    {
-      title: "Location",
-      fields: [
-        { label: "Latitude", value: detail.latitude.toFixed(3) },
-        { label: "Longitude", value: detail.longitude.toFixed(3) }
-      ]
-    }
-  ].map((section) => ({
-    ...section,
-    fields: section.fields.filter((field) => field.value !== "Unknown" && field.value !== "Untagged")
-  })).filter((section) => section.fields.length > 0);
-}
-
-function getDetailFieldValue(detail: TerraPointDetail) {
-  const fields = new Map(detail.fields.map((field) => [field.label, field.value]));
-
-  return (label: string) => fields.get(label) ?? getMetricValue(detail, label, "Unknown");
-}
-
-function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
-  const value = point.metrics?.[label];
-  return value === undefined || value === null ? fallback : String(value);
-}
-
-function formatCheckedDateTime(value?: string) {
-  if (!value) {
-    return "Unknown";
-  }
-
-  const date = new Date(value);
-  return [
-    new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date),
-    new Intl.DateTimeFormat("en", { timeStyle: "short" }).format(date)
-  ].join("\n");
 }

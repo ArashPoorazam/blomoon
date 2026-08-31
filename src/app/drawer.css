@@ -70,6 +70,10 @@
   color: var(--text);
 }
 
+.drawer-sheet-handle {
+  display: none;
+}
+
 .drawer-inner {
   display: flex;
   height: 100%;
@@ -795,6 +799,118 @@
 
 @media (max-width: 760px) {
   .drawer {
-    width: min(360px, 92vw);
+    --mobile-sheet-height: min(46svh, 380px);
+
+    top: auto;
+    bottom: 0;
+    left: 0;
+    width: 100vw;
+    height: calc(var(--mobile-sheet-height) + env(safe-area-inset-bottom, 0px));
+    max-height: calc(100svh - 84px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+    border-top: 1px solid var(--panel-border);
+    border-left: 0;
+    box-shadow: 0 -18px 52px var(--shadow-panel);
+    transition: height 220ms ease, transform 220ms ease;
+  }
+
+  .drawer[data-mobile-state="closed"] {
+    --mobile-sheet-height: 52px;
+  }
+
+  .drawer[data-mobile-state="list"],
+  .drawer[data-mobile-state="detail"] {
+    --mobile-sheet-height: min(78svh, calc(100svh - 84px));
+  }
+
+  .drawer.collapsed {
+    transform: none;
+  }
+
+  .drawer[data-mobile-state="closed"] .drawer-inner {
+    display: none;
+  }
+
+  .drawer-toggle {
+    display: none;
+  }
+
+  .drawer-sheet-handle {
+    display: grid;
+    width: 100%;
+    height: 52px;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 8px;
+    padding: 0 18px;
+    border: 0;
+    border-bottom: 1px solid var(--line);
+    background: var(--panel);
+    color: var(--muted-strong);
+    cursor: pointer;
+  }
+
+  .drawer-sheet-handle span {
+    grid-column: 2;
+    width: 42px;
+    height: 4px;
+    border-radius: 999px;
+    background: var(--muted);
+    opacity: 0.65;
+  }
+
+  .drawer-sheet-handle svg {
+    justify-self: end;
+  }
+
+  .drawer-inner {
+    height: calc(100% - 52px);
+  }
+
+  .drawer-header,
+  .drawer-list-toolbar {
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .point-row-main {
+    min-height: 44px;
+  }
+
+  .favourite-star,
+  .favourite-remove,
+  .icon-button,
+  .search-clear,
+  .country-filter button {
+    width: 44px;
+    height: 44px;
+  }
+
+  .filter-menu-trigger,
+  .filter-chip,
+  .listed-globe-toggle,
+  .filter-load-more,
+  .filter-more-count,
+  .point-list-more {
+    min-height: 44px;
+  }
+
+  .filter-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .detail-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .has-mini-player .point-list,
+  .has-mini-player .detail-body,
+  .has-mini-player .favourites-body {
+    padding-bottom: calc(188px + env(safe-area-inset-bottom, 0px));
+  }
+
+  .favourite-row-main,
+  .favourite-remove {
+    min-height: 44px;
   }
 }

@@ -1,26 +1,37 @@
 "use client";
 
-import { Earth, Radio, Star } from "lucide-react";
+import { Earth, Podcast, Radio, Star, Tv, type LucideIcon } from "lucide-react";
 import type { MouseEvent } from "react";
-import { AccountModalShell } from "./account/AccountModalShell";
+import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 
 type ShellControlRailProps = {
+  activeModeId: TerraModeId;
   earthSpinEnabled: boolean;
+  earthSpinDisabled: boolean;
+  modes: TerraMode[];
   onOpenFavourites: () => void;
-  onOpenModeNotice: () => void;
+  onModeSelect: (modeId: TerraModeId) => void;
   onToggleEarthSpin: (event: MouseEvent<HTMLButtonElement>) => void;
 };
 
-type ModeComingSoonModalProps = {
-  onClose: () => void;
+export type ModeControlItem = {
+  active: boolean;
+  icon: TerraMode["controlIcon"];
+  id: TerraModeId;
+  label: string;
 };
 
 export function ShellControlRail({
+  activeModeId,
   earthSpinEnabled,
+  earthSpinDisabled,
+  modes,
   onOpenFavourites,
-  onOpenModeNotice,
+  onModeSelect,
   onToggleEarthSpin
 }: ShellControlRailProps) {
+  const modeControls = getModeControlItems(modes, activeModeId);
+
   return (
     <nav className="shell-control-rail" aria-label="Blomoon shortcuts">
       <button
@@ -35,44 +46,47 @@ export function ShellControlRail({
       <button
         className="shell-square-control"
         data-earth-spin-toggle
+        disabled={earthSpinDisabled}
         type="button"
-        aria-label={earthSpinEnabled ? "Stop globe spin" : "Start globe spin"}
+        aria-label={earthSpinDisabled ? "Globe spin unavailable" : earthSpinEnabled ? "Stop globe spin" : "Start globe spin"}
         aria-pressed={earthSpinEnabled}
         title="Globe spin"
         onClick={onToggleEarthSpin}
       >
         <Earth size={18} aria-hidden="true" />
       </button>
-      <button
-        className="shell-square-control active"
-        type="button"
-        aria-label="Radio mode. Podcast and TV modes coming soon"
-        title="Radio"
-        onClick={onOpenModeNotice}
-      >
-        <Radio size={18} aria-hidden="true" />
-      </button>
+      {modeControls.map((mode) => {
+        const ModeIcon = modeIcons[mode.icon];
+
+        return (
+          <button
+            aria-current={mode.active ? "page" : undefined}
+            aria-label={`${mode.label} mode`}
+            className={`shell-square-control ${mode.active ? "active" : ""}`}
+            key={mode.id}
+            title={mode.label}
+            type="button"
+            onClick={() => onModeSelect(mode.id)}
+          >
+            <ModeIcon size={18} aria-hidden="true" />
+          </button>
+        );
+      })}
     </nav>
   );
 }
 
-export function ModeComingSoonModal({ onClose }: ModeComingSoonModalProps) {
-  return (
-    <AccountModalShell
-      description="Podcast and TV discovery are planned for Blomoon. Radio is live now while the next media modes are being prepared."
-      kicker="Modes"
-      title="More modes coming soon"
-      onClose={onClose}
-    >
-      <div className="mode-coming-soon">
-        <div className="mode-coming-soon-icon" aria-hidden="true">
-          <Radio size={22} />
-        </div>
-        <div>
-          <strong>Radio is available today.</strong>
-          <span>Podcast and TV modes will be added soon. Stay tuned.</span>
-        </div>
-      </div>
-    </AccountModalShell>
-  );
+export function getModeControlItems(modes: TerraMode[], activeModeId: TerraModeId): ModeControlItem[] {
+  return modes.map((mode) => ({
+    active: mode.id === activeModeId,
+    icon: mode.controlIcon,
+    id: mode.id,
+    label: mode.label
+  }));
 }
+
+const modeIcons = {
+  podcast: Podcast,
+  radio: Radio,
+  tv: Tv
+} satisfies Record<TerraMode["controlIcon"], LucideIcon>;

@@ -26,7 +26,7 @@ button {
 .blomoon-shell {
   position: relative;
   width: 100vw;
-  height: 100vh;
+  height: 100svh;
   min-height: 620px;
   overflow: hidden;
   background: var(--background);
@@ -94,6 +94,11 @@ button {
   color: var(--text);
 }
 
+.shell-square-control:disabled {
+  cursor: not-allowed;
+  opacity: 0.52;
+}
+
 .shell-square-control.active {
   border-color: var(--panel-border);
   color: var(--muted-strong);
@@ -102,45 +107,6 @@ button {
 .shell-square-control[aria-pressed="true"] {
   background: var(--control-hover);
   color: var(--text);
-}
-
-.mode-coming-soon {
-  display: grid;
-  grid-template-columns: 46px minmax(0, 1fr);
-  align-items: center;
-  gap: 12px;
-  padding: 13px;
-  border: 1px solid var(--info-border);
-  border-radius: 8px;
-  background: var(--info-surface);
-}
-
-.mode-coming-soon-icon {
-  display: grid;
-  width: 46px;
-  height: 46px;
-  place-items: center;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--control);
-  color: var(--accent-strong);
-}
-
-.mode-coming-soon strong,
-.mode-coming-soon span {
-  display: block;
-}
-
-.mode-coming-soon strong {
-  color: var(--text);
-  font-size: 14px;
-}
-
-.mode-coming-soon span {
-  margin-top: 4px;
-  color: var(--muted);
-  font-size: 12px;
-  line-height: 1.45;
 }
 
 .point-tooltip {
@@ -177,5 +143,30 @@ button {
 @media (max-width: 760px) {
   .blomoon-shell {
     min-height: 100svh;
+  }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .blomoon-shell {
+    min-height: 100svh;
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+
+  .blomoon-shell.drawer-open .globe-stage {
+    transform: translateY(-8svh);
+  }
+
+  .account-menu-trigger,
+  .shell-square-control {
+    width: 44px;
+    height: 44px;
+  }
+
+  .shell-control-rail {
+    top: 72px;
+  }
+
+  .point-tooltip {
+    display: none;
   }
 }

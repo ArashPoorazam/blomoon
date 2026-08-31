@@ -3,6 +3,7 @@
 import { Globe2, Star, Trash2, X } from "lucide-react";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
 import type { FavouriteGroupDto } from "@/lib/persistence/types";
+import { toFavouriteKey } from "./useFavourites";
 
 type FavouritesDrawerProps = {
   activePlaybackPointKey: string | null;
@@ -58,7 +59,7 @@ export function FavouritesDrawer({
           <div className="favourites-empty">
             <Star size={20} aria-hidden="true" />
             <strong>No favourites saved</strong>
-            <span>Use the star beside a station to keep it here and bring it back onto the globe.</span>
+            <span>Use the star beside an item to keep it here and bring it back onto the globe.</span>
           </div>
         ) : null}
         {groups.map((group) => (
@@ -69,7 +70,7 @@ export function FavouritesDrawer({
             </div>
             {group.favourites.map((favourite) => (
               <div
-                className={`favourite-row ${activePlaybackPointKey === `${favourite.modeId}:${favourite.pointId}` ? "playback-active" : ""}`}
+                className={`favourite-row ${activePlaybackPointKey === toFavouriteKey(favourite) ? "playback-active" : ""}`}
                 key={`${favourite.modeId}:${favourite.pointId}`}
               >
                 <button
@@ -102,8 +103,8 @@ export function FavouritesDrawer({
 
 function formatFavouriteCount(count: number, loading: boolean) {
   if (loading) {
-    return "Loading saved stations";
+    return "Loading saved items";
   }
 
-  return count === 1 ? "1 saved station" : `${count} saved stations`;
+  return count === 1 ? "1 saved item" : `${count} saved items`;
 }

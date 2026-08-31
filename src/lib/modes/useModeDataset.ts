@@ -207,7 +207,7 @@ export function useModeDataset(
       } catch (error) {
         if (!cancelled && !isAbortError(error)) {
           setNextVisiblePointOffset(null);
-          setListRequestError(`${mode.label} stations are unavailable.`);
+          setListRequestError(`${mode.label} ${mode.copy.itemPlural} are unavailable.`);
         }
       } finally {
         if (!cancelled) {
@@ -292,7 +292,7 @@ export function useModeDataset(
   const providerError = requestError
     ?? countryRequestError
     ?? listRequestError
-    ?? (visiblePointSource?.isFallback || countrySource?.isFallback || (!refreshingLivePoints && source?.isFallback) ? mode.fallbackNotice : null);
+    ?? (visiblePointSource?.isFallback || countrySource?.isFallback || (!refreshingLivePoints && source?.isFallback) ? mode.copy.fallbackNotice : null);
   const hasMoreVisiblePoints = nextVisiblePointOffset !== null;
   const totalVisiblePoints = visiblePointTotal;
   const totalVisiblePointsKind = visiblePointTotalKind;
@@ -321,7 +321,7 @@ export function useModeDataset(
       setVisiblePointTotalKind(nextPage.totalKind);
     } catch {
       setNextVisiblePointOffset(null);
-      setListRequestError(`${mode.label} stations are unavailable.`);
+      setListRequestError(`${mode.label} ${mode.copy.itemPlural} are unavailable.`);
     } finally {
       setLoadingMoreVisiblePoints(false);
     }
@@ -377,22 +377,22 @@ function getLoadingTaskLabel({
   selectedCountryCode: string | null;
 }) {
   if (loading) {
-    return mode.loadingLabel;
+    return mode.copy.loadingLabel;
   }
 
   if (loadingMoreVisiblePoints) {
-    return "Loading more stations";
+    return mode.copy.loadingMoreLabel;
   }
 
   if (query.trim()) {
-    return "Searching stations";
+    return mode.copy.searchingLabel;
   }
 
   if (selectedCountryCode) {
-    return "Loading country stations";
+    return mode.copy.countryLoadingLabel;
   }
 
-  return mode.loadingLabel;
+  return mode.copy.loadingLabel;
 }
 
 function mergePoints(...pointGroups: TerraPoint[][]) {

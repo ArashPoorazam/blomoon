@@ -25,6 +25,16 @@ export type TerraPointDetail = TerraPoint & {
   sourceUrl?: string;
 };
 
+export type TerraDetailField = {
+  label: string;
+  value: string;
+};
+
+export type TerraDetailSection = {
+  fields: TerraDetailField[];
+  title: string;
+};
+
 export type DataSourceInfo = {
   name: string;
   url: string;
@@ -60,6 +70,20 @@ export type TerraPlaybackConfig = {
   randomPointEndpoint?: string;
 };
 
+export type TerraModeCopy = {
+  countryLoadingLabel: string;
+  emptyLabel: string;
+  fallbackNotice: string;
+  itemPlural: string;
+  itemSingular: string;
+  listSubtitle: string;
+  loadingLabel: string;
+  loadingMoreLabel: string;
+  randomPlaybackError: string;
+  searchPlaceholder: string;
+  searchingLabel: string;
+};
+
 export type TerraModeSortOption = {
   id: string;
   label: string;
@@ -84,6 +108,8 @@ export type TerraPlayableAudio = {
 export type TerraMode = {
   id: TerraModeId;
   label: string;
+  controlIcon: "radio" | "podcast" | "tv";
+  copy: TerraModeCopy;
   dataEndpoint: string;
   defaultSortId: string;
   listEndpoint: (params: TerraModeListParams) => string;
@@ -95,13 +121,10 @@ export type TerraMode = {
   detailEndpoint: (id: string) => string;
   clickEndpoint?: (id: string) => string;
   playback?: TerraPlaybackConfig;
-  loadingLabel: string;
-  emptyLabel: string;
-  searchPlaceholder: string;
   markerMetricLabel: string;
   markerColorMode: MarkerColorMode;
   markerColorToken?: MarkerColorToken;
-  fallbackNotice: string;
+  formatDetailSections: (detail: TerraPointDetail | null) => TerraDetailSection[];
   formatPointMetric: (point: TerraPoint) => string;
   matchCountry: (point: TerraPoint, countryCode: string) => boolean;
   matchPoint: (point: TerraPoint, query: string) => boolean;

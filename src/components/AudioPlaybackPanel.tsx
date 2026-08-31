@@ -1,38 +1,40 @@
 "use client";
 
-import { LoaderCircle, Pause, Play, Radio, Shuffle, SkipBack, SkipForward, Square } from "lucide-react";
-import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
+import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward, Square } from "lucide-react";
 import type { TerraPoint, TerraPointDetail } from "@/lib/modes/types";
+import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
-type RadioPlaybackPanelProps = {
+type AudioPlaybackPanelProps = {
   detail: TerraPointDetail;
   favourited: boolean;
+  itemSingularLabel: string;
   playback: AudioPlaybackController;
   playbackLabel: string;
   onToggleFavourite: (point: TerraPoint) => void;
 };
 
-export function RadioPlaybackPanel({
+export function AudioPlaybackPanel({
   detail,
   favourited,
+  itemSingularLabel,
   onToggleFavourite,
   playback,
   playbackLabel
-}: RadioPlaybackPanelProps) {
-  const isCurrentStation = playback.pointId === detail.id;
-  const status = isCurrentStation ? playback.status : "idle";
+}: AudioPlaybackPanelProps) {
+  const isCurrentItem = playback.pointId === detail.id;
+  const status = isCurrentItem ? playback.status : "idle";
 
   return (
-    <section className="radio-player" aria-label="Radio playback">
-      <div className="radio-player-header">
-        <div className="radio-player-icon" aria-hidden="true">
-          <Radio size={18} />
+    <section className="media-player" aria-label={`${playbackLabel} playback`}>
+      <div className="media-player-header">
+        <div className="media-player-icon" aria-hidden="true">
+          <AudioLines size={18} />
         </div>
-        <div className="radio-player-copy">
-          <div className="radio-player-kicker">{playbackLabel}</div>
-          <div className="radio-player-title">{detail.name}</div>
-          {isCurrentStation ? <div className="radio-player-status">{formatStatus(status)}</div> : null}
+        <div className="media-player-copy">
+          <div className="media-player-kicker">{playbackLabel}</div>
+          <div className="media-player-title">{detail.name}</div>
+          {isCurrentItem ? <div className="media-player-status">{formatAudioPlaybackStatus(status)}</div> : null}
         </div>
         <FavouriteStarButton
           favourited={favourited}
@@ -41,23 +43,30 @@ export function RadioPlaybackPanel({
         />
       </div>
 
-      <RadioPlaybackControls detail={detail} playback={playback} status={status} />
+      <AudioPlaybackControls
+        detail={detail}
+        itemSingularLabel={itemSingularLabel}
+        playback={playback}
+        status={status}
+      />
 
-      <div className="radio-player-meta">
+      <div className="media-player-meta">
         <span>{formatMetric(detail, "Codec")}</span>
         <span>{formatMetric(detail, "Bitrate")}</span>
       </div>
 
-      {isCurrentStation && playback.error ? (
-        <div className="radio-player-error">{playback.error}</div>
+      {isCurrentItem && playback.error ? (
+        <div className="media-player-error">{playback.error}</div>
       ) : null}
     </section>
   );
 }
 
-export function RadioMiniPlayer({
+export function AudioMiniPlayer({
   canPlayNext,
   canShuffle,
+  itemPluralLabel,
+  itemSingularLabel,
   loadingRandom,
   onNext,
   onPointOpen,
@@ -67,6 +76,8 @@ export function RadioMiniPlayer({
 }: {
   canPlayNext: boolean;
   canShuffle: boolean;
+  itemPluralLabel: string;
+  itemSingularLabel: string;
   loadingRandom: boolean;
   onNext: () => void;
   onPointOpen: (point: TerraPoint) => void;
@@ -81,44 +92,48 @@ export function RadioMiniPlayer({
   const currentPoint = playback.point;
 
   return (
-    <section className="radio-mini-player" aria-label="Current radio playback">
-      <div className="radio-mini-main">
-        <div className="radio-player-icon" aria-hidden="true">
-          <Radio size={18} />
+    <section className="media-mini-player" aria-label="Current media playback">
+      <div className="media-mini-main">
+        <div className="media-player-icon" aria-hidden="true">
+          <AudioLines size={18} />
         </div>
-        <div className="radio-player-copy">
-          <div className="radio-player-kicker">{playbackLabel}</div>
+        <div className="media-player-copy">
+          <div className="media-player-kicker">{playbackLabel}</div>
           <button
-            className="radio-player-title radio-player-title-button"
+            className="media-player-title media-player-title-button"
             type="button"
             onClick={() => onPointOpen(currentPoint)}
           >
             {currentPoint.name}
           </button>
-          <div className="radio-player-status">{formatStatus(playback.status)}</div>
+          <div className="media-player-status">{formatAudioPlaybackStatus(playback.status)}</div>
         </div>
       </div>
-      <RadioPlaybackControls
+      <AudioPlaybackControls
         canPlayNext={canPlayNext}
         canShuffle={canShuffle}
         compact
         detail={currentPoint}
+        itemPluralLabel={itemPluralLabel}
+        itemSingularLabel={itemSingularLabel}
         loadingRandom={loadingRandom}
         playback={playback}
         status={playback.status}
         onNext={onNext}
         onShuffle={onShuffle}
       />
-      {playback.error ? <div className="radio-player-error">{playback.error}</div> : null}
+      {playback.error ? <div className="media-player-error">{playback.error}</div> : null}
     </section>
   );
 }
 
-function RadioPlaybackControls({
+function AudioPlaybackControls({
   canPlayNext = false,
   canShuffle = false,
   compact = false,
   detail,
+  itemPluralLabel = "items",
+  itemSingularLabel,
   loadingRandom = false,
   onNext,
   onShuffle,
@@ -129,24 +144,26 @@ function RadioPlaybackControls({
   canShuffle?: boolean;
   compact?: boolean;
   detail: TerraPoint;
+  itemPluralLabel?: string;
+  itemSingularLabel: string;
   loadingRandom?: boolean;
   onNext?: () => void;
   onShuffle?: () => void;
   playback: AudioPlaybackController;
   status: AudioPlaybackStatus;
 }) {
-  const isCurrentStation = playback.pointId === detail.id;
+  const isCurrentItem = playback.pointId === detail.id;
   const isBusy = status === "loading";
   const isPlaying = status === "playing";
   const isPaused = status === "paused";
   const primaryLabel = isPlaying ? "Pause" : isPaused ? "Resume" : "Play";
 
   return (
-    <div className={`radio-player-controls ${compact ? "compact" : ""}`}>
+    <div className={`media-player-controls ${compact ? "compact" : ""}`}>
       {compact ? (
         <button
-          aria-label="Play previous station"
-          className="radio-control icon-only"
+          aria-label={`Play previous ${itemSingularLabel}`}
+          className="media-control icon-only"
           disabled={!playback.canPlayPrevious || isBusy}
           title="Previous"
           type="button"
@@ -158,7 +175,7 @@ function RadioPlaybackControls({
         </button>
       ) : null}
       <button
-        className="radio-control primary"
+        className="media-control primary"
         type="button"
         disabled={isBusy}
         onClick={() => {
@@ -181,8 +198,8 @@ function RadioPlaybackControls({
       </button>
       {compact ? (
         <button
-          aria-label="Play next station"
-          className="radio-control icon-only"
+          aria-label={`Play next ${itemSingularLabel}`}
+          className="media-control icon-only"
           disabled={!canPlayNext || isBusy}
           title="Next"
           type="button"
@@ -193,8 +210,8 @@ function RadioPlaybackControls({
       ) : null}
       {compact ? (
         <button
-          aria-label="Shuffle stations"
-          className="radio-control icon-only"
+          aria-label={`Shuffle ${itemPluralLabel}`}
+          className="media-control icon-only"
           aria-busy={loadingRandom}
           disabled={!canShuffle || isBusy}
           title="Shuffle"
@@ -209,9 +226,9 @@ function RadioPlaybackControls({
         </button>
       ) : null}
       <button
-        className="radio-control"
+        className="media-control"
         type="button"
-        disabled={!isCurrentStation || status === "idle" || isBusy}
+        disabled={!isCurrentItem || status === "idle" || isBusy}
         onClick={playback.stop}
       >
         <Square size={15} aria-hidden="true" />
@@ -226,7 +243,7 @@ function formatMetric(detail: TerraPointDetail, key: string) {
   return value === undefined || value === null ? "Unknown" : String(value);
 }
 
-function formatStatus(status: AudioPlaybackStatus) {
+export function formatAudioPlaybackStatus(status: AudioPlaybackStatus) {
   switch (status) {
     case "loading":
       return "Loading";

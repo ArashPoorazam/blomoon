@@ -1,9 +1,11 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
+import { limitGlobePoints } from "@/lib/modes/displayBudget";
+import { getPointKey } from "@/lib/modes/pointKeys";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import { getNextPlaybackPoint } from "@/lib/modes/playbackNavigation";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
@@ -20,10 +22,13 @@ import {
 import { AccountMenu } from "./account/AccountMenu";
 import { AuthModal } from "./account/AuthModal";
 import { useViewer } from "./account/useViewer";
+import { AudioMiniPlayer, AudioPlaybackPanel } from "./AudioPlaybackPanel";
+import { getDrawerMobileState, getNextDrawerMobileState } from "./drawer/mobileState";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
-import { RadioMiniPlayer, RadioPlaybackPanel } from "./RadioPlaybackPanel";
-import { ModeComingSoonModal, ShellControlRail } from "./ShellControlRail";
+import { useEarthSpinControls } from "./globe/useEarthSpinControls";
+import { useGlobeProfile } from "./globe/useGlobeProfile";
+import { ShellControlRail } from "./ShellControlRail";
 import { SideDrawer } from "./SideDrawer";
 
 type BlomoonAppProps = {
@@ -31,26 +36,24 @@ type BlomoonAppProps = {
   initialDatasets?: Partial<Record<TerraModeId, TerraDataset>>;
 };
 
-const EARTH_SPIN_INTERRUPT_EVENTS = ["keydown", "mousedown", "pointerdown", "click"] as const;
-
 export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const router = useRouter();
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
+  const [drawerSheetExpanded, setDrawerSheetExpanded] = useState(false);
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
-  const [earthSpinEnabled, setEarthSpinEnabled] = useState(false);
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [modeNoticeOpen, setModeNoticeOpen] = useState(false);
   const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
   const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
   const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
-  const ignoreNextEarthSpinToggle = useRef(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
+  const globeProfile = useGlobeProfile();
+  const earthSpin = useEarthSpinControls(globeProfile.motionEnabled);
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id]);
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
@@ -68,6 +71,12 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     onAuthRequired: () => setAuthModalOpen(true)
   });
   const drawerOpen = !drawerCollapsed;
+  const drawerMobileState = getDrawerMobileState({
+    collapsed: drawerCollapsed,
+    expanded: drawerSheetExpanded,
+    hasDetail: Boolean(modeState.selectedId),
+    showingFavourites: drawerView === "favourites"
+  });
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
   const favouritePoints = useMemo(
     () => favourites.groups.flatMap((group) => group.favourites.map((favourite) => favourite.point)),
@@ -84,7 +93,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "paused")
     ? getPointKey(audioPlayback.point)
     : null;
-  const globePoints = showListedOnGlobe ? activeDrawerPoints : modeState.globePoints;
+  const rawGlobePoints = showListedOnGlobe ? activeDrawerPoints : modeState.globePoints;
   const visiblePointIds = useMemo(
     () => new Set(activeDrawerPoints.map(getPointKey)),
     [activeDrawerPoints]
@@ -92,6 +101,12 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const globeSelectedPoint = !showListedOnGlobe || (modeState.selectedPoint && visiblePointIds.has(getPointKey(modeState.selectedPoint)))
     ? modeState.selectedPoint
     : null;
+  const globePoints = useMemo(() => limitGlobePoints({
+    activePlaybackPoint: audioPlayback.point,
+    budget: globeProfile.markerBudget,
+    points: rawGlobePoints,
+    selectedPoint: globeSelectedPoint
+  }), [audioPlayback.point, globeProfile.markerBudget, globeSelectedPoint, rawGlobePoints]);
   const globeMarkerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
   const globeMarkerColorMode = showListedOnGlobe ? "single" : activeMode.markerColorMode;
   const selectedCountryOutlineColor = globeSelectedPoint
@@ -99,9 +114,10 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     : defaultMarkerColor;
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
-      <RadioPlaybackPanel
+      <AudioPlaybackPanel
         detail={modeState.detail}
         favourited={favourites.favouriteIds.has(getPointKey(modeState.detail))}
+        itemSingularLabel={activeMode.copy.itemSingular}
         playback={audioPlayback}
         playbackLabel={activeMode.playback.label}
         onToggleFavourite={(point) => {
@@ -117,30 +133,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   }, [viewer.user?.selectedTheme]);
 
   useEffect(() => {
-    if (!earthSpinEnabled) {
-      return;
-    }
-
-    function stopEarthSpinOnInput(event: Event) {
-      if (shouldPreventEarthSpinToggleActivation(event)) {
-        event.preventDefault();
-      }
-
-      ignoreNextEarthSpinToggle.current ||= shouldIgnoreNextEarthSpinToggle(event);
-      setEarthSpinEnabled(false);
-    }
-
-    EARTH_SPIN_INTERRUPT_EVENTS.forEach((eventName) => {
-      window.addEventListener(eventName, stopEarthSpinOnInput, true);
-    });
-    return () => {
-      EARTH_SPIN_INTERRUPT_EVENTS.forEach((eventName) => {
-        window.removeEventListener(eventName, stopEarthSpinOnInput, true);
-      });
-    };
-  }, [earthSpinEnabled]);
-
-  useEffect(() => {
     if (!pendingFavouriteSelection || pendingFavouriteSelection.modeId !== activeModeId) {
       return;
     }
@@ -152,6 +144,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const selectPoint = useCallback((point: TerraPoint) => {
     modeState.selectPoint(point);
     setDrawerCollapsed(false);
+    setDrawerSheetExpanded(true);
     setDrawerView("list");
     setPlaybackQueueSource("list");
 
@@ -164,6 +157,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
     setDrawerCollapsed(false);
+    setDrawerSheetExpanded(true);
     setDrawerView("list");
     setPlaybackQueueSource("list");
     setHoveredPoint(null);
@@ -174,16 +168,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setDrawerView("favourites");
     setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
+    setDrawerSheetExpanded(true);
   }, [modeState.clearSelection]);
-
-  const toggleEarthSpin = useCallback((event: MouseEvent<HTMLButtonElement>) => {
-    if (ignoreNextEarthSpinToggle.current) {
-      ignoreNextEarthSpinToggle.current = false;
-      return;
-    }
-
-    setEarthSpinEnabled((value) => !value);
-  }, []);
 
   const selectTheme = useCallback((nextThemeId: TerraThemeId) => {
     setThemeId(nextThemeId);
@@ -201,7 +187,19 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     selectCountry(null);
   }, [selectCountry]);
 
-  const handleMouseMove = useCallback((event: MouseEvent<HTMLElement>) => {
+  const updateQuery = useCallback((value: string) => {
+    modeState.setQuery(value);
+    setDrawerSheetExpanded(true);
+  }, [modeState.setQuery]);
+
+  const toggleDrawerMobileState = useCallback(() => {
+    const nextState = getNextDrawerMobileState(drawerMobileState);
+
+    setDrawerCollapsed(nextState === "closed");
+    setDrawerSheetExpanded(nextState === "list");
+  }, [drawerMobileState]);
+
+  const handleMouseMove = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     if (tooltipRef.current) {
       tooltipRef.current.style.transform = `translate(${event.clientX + 14}px, ${event.clientY + 14}px)`;
     }
@@ -213,11 +211,22 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setDrawerView("list");
     setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
+    setDrawerSheetExpanded(true);
+  }, []);
+
+  const selectMode = useCallback((modeId: TerraModeId) => {
+    setActiveModeId(modeId);
+    setDrawerView("list");
+    setPlaybackQueueSource("list");
+    setDrawerCollapsed(false);
+    setDrawerSheetExpanded(false);
+    setHoveredPoint(null);
   }, []);
 
   const openPlaybackPoint = useCallback((point: TerraPoint) => {
     setActiveModeId(point.modeId);
     setDrawerCollapsed(false);
+    setDrawerSheetExpanded(true);
 
     if (point.modeId === activeModeId) {
       modeState.selectPoint(point);
@@ -227,7 +236,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setPendingFavouriteSelection({ modeId: point.modeId, point });
   }, [activeModeId, modeState.selectPoint]);
 
-  const playNextStation = useCallback(() => {
+  const playNextPoint = useCallback(() => {
     const nextPoint = getNextPlaybackPoint(playbackQueuePoints, audioPlayback.pointId);
 
     if (nextPoint) {
@@ -235,7 +244,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     }
   }, [audioPlayback, playbackQueuePoints]);
 
-  const shuffleStation = useCallback(async () => {
+  const shufflePoint = useCallback(async () => {
     if (!activeMode.playback?.randomPointEndpoint) {
       return;
     }
@@ -243,23 +252,25 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     const randomPoint = await randomPlaybackPoint.takePoint();
 
     if (!randomPoint) {
-      audioPlayback.reportError("Could not find a random station right now.");
+      audioPlayback.reportError(activeMode.copy.randomPlaybackError);
       return;
     }
 
     await audioPlayback.play(randomPoint);
-  }, [activeMode.playback?.randomPointEndpoint, audioPlayback, randomPlaybackPoint]);
+  }, [activeMode.copy.randomPlaybackError, activeMode.playback?.randomPointEndpoint, audioPlayback, randomPlaybackPoint]);
 
   return (
     <main
-      className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"}`}
+      className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"} ${audioPlayback.point ? "has-mini-player" : ""}`}
       data-theme={activeTheme.id}
       onMouseMove={handleMouseMove}
     >
       <div className="globe-stage">
         <GlobeScene
-          earthSpinEnabled={earthSpinEnabled}
+          dpr={globeProfile.dpr}
+          earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
           focusKey={modeState.selectedId}
+          hoverEnabled={globeProfile.hoverEnabled}
           markerColor={globeMarkerColor}
           markerColorMode={globeMarkerColorMode}
           points={globePoints}
@@ -290,13 +301,16 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       />
 
       <ShellControlRail
-        earthSpinEnabled={earthSpinEnabled}
+        activeModeId={activeModeId}
+        earthSpinEnabled={earthSpin.earthSpinEnabled}
+        earthSpinDisabled={!globeProfile.motionEnabled}
+        modes={terraModes}
         onOpenFavourites={openFavourites}
-        onOpenModeNotice={() => setModeNoticeOpen(true)}
-        onToggleEarthSpin={toggleEarthSpin}
+        onModeSelect={selectMode}
+        onToggleEarthSpin={earthSpin.toggleEarthSpin}
       />
 
-      {hoveredPoint ? (
+      {globeProfile.hoverEnabled && hoveredPoint ? (
         <div
           ref={tooltipRef}
           className="point-tooltip"
@@ -323,6 +337,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         loading={modeState.listLoading}
         loadingTaskLabel={modeState.loadingTaskLabel}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
+        mobileState={drawerMobileState}
         points={modeState.visiblePoints}
         providerError={modeState.providerError}
         query={modeState.query}
@@ -338,26 +353,25 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onClearSelection={() => {
           modeState.clearSelection();
           setDrawerView("list");
+          setDrawerSheetExpanded(true);
         }}
         onCloseFavourites={() => {
           setDrawerView("list");
           setPlaybackQueueSource("list");
+          setDrawerSheetExpanded(true);
         }}
         onFavouriteSelect={selectFavourite}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
         onPointSelect={selectPoint}
-        onQueryChange={modeState.setQuery}
+        onQueryChange={updateQuery}
         onSortChange={modeState.setSortId}
         onToggleFavourite={(point) => {
           void favourites.toggleFavourite(point);
         }}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
+        onToggleMobileState={toggleDrawerMobileState}
         onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
-
-      {modeNoticeOpen ? (
-        <ModeComingSoonModal onClose={() => setModeNoticeOpen(false)} />
-      ) : null}
 
       <AuthModal
         googleAuthEnabled={appConfig.googleAuthEnabled}
@@ -370,45 +384,21 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       />
 
       {activeMode.playback && audioPlayback.point ? (
-        <RadioMiniPlayer
+        <AudioMiniPlayer
           canPlayNext={playbackQueuePoints.length > 0}
           canShuffle={Boolean(activeMode.playback.randomPointEndpoint)}
+          itemPluralLabel={activeMode.copy.itemPlural}
+          itemSingularLabel={activeMode.copy.itemSingular}
           loadingRandom={randomPlaybackPoint.loading && !randomPlaybackPoint.point}
           playback={audioPlayback}
           playbackLabel={activeMode.playback.label}
-          onNext={playNextStation}
+          onNext={playNextPoint}
           onPointOpen={openPlaybackPoint}
           onShuffle={() => {
-            void shuffleStation();
+            void shufflePoint();
           }}
         />
       ) : null}
     </main>
   );
-}
-
-function getPointKey(point: TerraPoint) {
-  return `${point.modeId}:${point.id}`;
-}
-
-function shouldIgnoreNextEarthSpinToggle(event: Event) {
-  if (!isEarthSpinToggleEvent(event)) {
-    return false;
-  }
-
-  if (event instanceof KeyboardEvent) {
-    return false;
-  }
-
-  return !(event instanceof MouseEvent) || event.button === 0;
-}
-
-function isEarthSpinToggleEvent(event: Event) {
-  return event.target instanceof Element && Boolean(event.target.closest("[data-earth-spin-toggle]"));
-}
-
-function shouldPreventEarthSpinToggleActivation(event: Event) {
-  return event instanceof KeyboardEvent
-    && isEarthSpinToggleEvent(event)
-    && (event.code === "Space" || event.code === "Enter");
 }

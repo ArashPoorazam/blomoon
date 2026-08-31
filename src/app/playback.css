@@ -1,17 +1,17 @@
-.radio-player {
+.media-player {
   padding: 13px;
   border: 1px solid var(--info-border);
   border-radius: 8px;
   background: var(--info-surface);
 }
 
-.radio-player-header {
+.media-player-header {
   display: flex;
   align-items: center;
   gap: 10px;
 }
 
-.radio-player-icon {
+.media-player-icon {
   display: grid;
   width: 34px;
   height: 34px;
@@ -22,12 +22,12 @@
   color: var(--info);
 }
 
-.radio-player-copy {
+.media-player-copy {
   flex: 1 1 auto;
   min-width: 0;
 }
 
-.radio-player-kicker {
+.media-player-kicker {
   color: var(--muted);
   font-size: 11px;
   font-weight: 650;
@@ -35,7 +35,7 @@
   text-transform: uppercase;
 }
 
-.radio-player-title {
+.media-player-title {
   display: block;
   overflow: hidden;
   margin-top: 4px;
@@ -47,7 +47,7 @@
   white-space: nowrap;
 }
 
-.radio-player-title-button {
+.media-player-title-button {
   width: 100%;
   padding: 0;
   border: 0;
@@ -56,35 +56,35 @@
   text-align: left;
 }
 
-.radio-player-title-button:hover {
+.media-player-title-button:hover {
   color: var(--info);
 }
 
-.radio-player-title-button:focus-visible {
+.media-player-title-button:focus-visible {
   border-radius: 4px;
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-.radio-player-status {
+.media-player-status {
   margin-top: 4px;
   color: var(--muted-strong);
   font-size: 12px;
   line-height: 1.2;
 }
 
-.radio-player-controls {
+.media-player-controls {
   display: flex;
   gap: 8px;
   margin-top: 13px;
 }
 
-.radio-player-controls.compact {
+.media-player-controls.compact {
   flex: 0 0 auto;
   margin-top: 0;
 }
 
-.radio-control {
+.media-control {
   display: inline-flex;
   min-height: 36px;
   align-items: center;
@@ -100,41 +100,41 @@
   font-weight: 700;
 }
 
-.radio-control.primary {
+.media-control.primary {
   min-width: 112px;
   border-color: var(--info-border);
   background: var(--info-control);
   color: var(--text);
 }
 
-.radio-control.icon-only {
+.media-control.icon-only {
   width: 36px;
   padding: 0;
 }
 
-.radio-control:hover:not(:disabled) {
+.media-control:hover:not(:disabled) {
   background: var(--control-hover);
   color: var(--text);
 }
 
-.radio-control:disabled {
+.media-control:disabled {
   cursor: not-allowed;
   opacity: 0.52;
 }
 
-.radio-control:focus-visible {
+.media-control:focus-visible {
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
 
-.radio-player-meta {
+.media-player-meta {
   display: flex;
   flex-wrap: wrap;
   gap: 7px;
   margin-top: 11px;
 }
 
-.radio-player-meta span {
+.media-player-meta span {
   max-width: 100%;
   overflow: hidden;
   padding: 4px 7px;
@@ -147,17 +147,17 @@
   white-space: nowrap;
 }
 
-.radio-player-error {
+.media-player-error {
   margin-top: 10px;
   color: var(--danger);
   font-size: 12px;
   line-height: 1.4;
 }
 
-.radio-mini-player {
+.media-mini-player {
   position: absolute;
   right: 18px;
-  bottom: 18px;
+  bottom: calc(18px + env(safe-area-inset-bottom, 0px));
   left: 18px;
   z-index: 8;
   display: grid;
@@ -173,18 +173,18 @@
   backdrop-filter: blur(var(--panel-blur));
 }
 
-.drawer-open .radio-mini-player {
+.drawer-open .media-mini-player {
   right: calc(var(--drawer-width) + 18px);
 }
 
-.radio-mini-main {
+.media-mini-main {
   display: flex;
   min-width: 0;
   align-items: center;
   gap: 10px;
 }
 
-.radio-mini-player .radio-player-error {
+.media-mini-player .media-player-error {
   grid-column: 1 / -1;
   margin-top: -4px;
 }
@@ -199,20 +199,35 @@
   }
 }
 
-@media (max-width: 760px) {
-  .radio-mini-player,
-  .drawer-open .radio-mini-player {
+@media (max-width: 760px), (pointer: coarse) {
+  .media-mini-player,
+  .drawer-open .media-mini-player {
     right: 12px;
-    bottom: 12px;
+    bottom: calc(12px + env(safe-area-inset-bottom, 0px));
     left: 12px;
+    z-index: 16;
     grid-template-columns: 1fr;
+    max-width: none;
   }
 
-  .radio-player-controls.compact {
+  .media-player-controls.compact {
     width: 100%;
   }
 
-  .radio-player-controls.compact .radio-control {
+  .media-player-controls.compact .media-control {
     flex: 1;
+  }
+
+  .media-control {
+    min-height: 44px;
+  }
+
+  .media-control.icon-only {
+    min-width: 44px;
+    width: 44px;
+  }
+
+  .media-mini-player .media-player-title-button {
+    min-height: 44px;
   }
 }

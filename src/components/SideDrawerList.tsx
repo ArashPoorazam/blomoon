@@ -1,6 +1,7 @@
 "use client";
 
 import { formatDateTime, type CountryInfo } from "@/lib/geo";
+import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
@@ -86,7 +87,7 @@ export function SideDrawerList({
 
       <div className="point-list">
         {points.length === 0 ? (
-          <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
+          <div className="empty-state">{loading ? activeMode.copy.loadingLabel : activeMode.copy.emptyLabel}</div>
         ) : (
           listedPoints.map((point) => (
             <div
@@ -102,7 +103,7 @@ export function SideDrawerList({
                 </span>
               </button>
               <FavouriteStarButton
-                favourited={favouritePointIds.has(`${point.modeId}:${point.id}`)}
+                favourited={favouritePointIds.has(getPointKey(point))}
                 point={point}
                 onToggle={onToggleFavourite}
               />
@@ -119,8 +120,4 @@ export function SideDrawerList({
       </div>
     </>
   );
-}
-
-function getPointKey(point: TerraPoint) {
-  return `${point.modeId}:${point.id}`;
 }

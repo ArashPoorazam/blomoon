@@ -10,8 +10,10 @@ import { Earth } from "./globe/Earth";
 import { PointMarkers } from "./globe/PointMarkers";
 
 type GlobeSceneProps = {
+  dpr: [number, number];
   earthSpinEnabled: boolean;
   focusKey: string | null;
+  hoverEnabled: boolean;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
@@ -25,8 +27,10 @@ type GlobeSceneProps = {
 };
 
 export const GlobeScene = memo(function GlobeScene({
+  dpr,
   earthSpinEnabled,
   focusKey,
+  hoverEnabled,
   markerColor,
   markerColorMode,
   points,
@@ -39,7 +43,7 @@ export const GlobeScene = memo(function GlobeScene({
   onPointSelect
 }: GlobeSceneProps) {
   return (
-    <Canvas camera={{ position: [0, 0.35, 5.2], fov: 42 }} dpr={[1, 2]}>
+    <Canvas camera={{ position: [0, 0.35, 5.2], fov: 42 }} dpr={dpr}>
       <color attach="background" args={[theme.ocean]} />
 
       <Earth
@@ -54,6 +58,7 @@ export const GlobeScene = memo(function GlobeScene({
         points={points}
         selectedPoint={selectedPoint}
         theme={theme}
+        hoverEnabled={hoverEnabled}
         onHover={onPointHover}
         onSelect={onPointSelect}
       />
