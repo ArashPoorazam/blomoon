@@ -517,7 +517,6 @@
   max-width: min(500px, 100%);
   margin: 0;
   line-height: 0;
-  transform: translateX(-23px);
 }
 
 .auth-logo {
