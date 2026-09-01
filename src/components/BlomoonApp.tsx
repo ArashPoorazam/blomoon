@@ -12,6 +12,7 @@ import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { usePrefetchedRandomPoint } from "@/lib/modes/usePrefetchedRandomPoint";
+import { authClient } from "@/lib/auth/client";
 import { resolvePointMarkerColor } from "@/lib/theme/globe";
 import {
   defaultTheme,
@@ -19,16 +20,17 @@ import {
   resolveMarkerColor,
   type TerraThemeId
 } from "@/lib/theme/themes";
-import { AccountMenu } from "./account/AccountMenu";
+import { AccountModalShell } from "./account/AccountModalShell";
 import { AuthModal } from "./account/AuthModal";
 import { useViewer } from "./account/useViewer";
 import { AudioMiniPlayer, AudioPlaybackPanel } from "./AudioPlaybackPanel";
-import { getDrawerMobileState, getNextDrawerMobileState } from "./drawer/mobileState";
+import { FavouriteListPicker } from "./favourites/FavouriteListPicker";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
 import { useEarthSpinControls } from "./globe/useEarthSpinControls";
 import { useGlobeProfile } from "./globe/useGlobeProfile";
-import { ShellControlRail } from "./ShellControlRail";
+import type { DrawerMobilePosition, ShellDrawerView } from "./shell/drawerState";
+import { ShellChrome } from "./shell/ShellChrome";
 import { SideDrawer } from "./SideDrawer";
 
 type BlomoonAppProps = {
@@ -40,15 +42,17 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const router = useRouter();
   const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
   const [drawerCollapsed, setDrawerCollapsed] = useState(false);
-  const [drawerSheetExpanded, setDrawerSheetExpanded] = useState(false);
+  const [mobileDrawerPosition, setMobileDrawerPosition] = useState<DrawerMobilePosition>("standard");
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [drawerView, setDrawerView] = useState<"list" | "favourites">("list");
+  const [drawerView, setDrawerView] = useState<ShellDrawerView>("main");
   const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
   const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
+  const [favouritePickerPoint, setFavouritePickerPoint] = useState<TerraPoint | null>(null);
+  const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -62,31 +66,21 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     excludePointId: audioPlayback.pointId
   });
   const viewer = useViewer();
-  const getModeLabel = useCallback((modeId: TerraModeId) => (
-    terraModes.find((mode) => mode.id === modeId)?.label ?? String(modeId)
-  ), []);
   const favourites = useFavourites({
-    getModeLabel,
     user: viewer.user,
     onAuthRequired: () => setAuthModalOpen(true)
   });
-  const drawerOpen = !drawerCollapsed;
-  const drawerMobileState = getDrawerMobileState({
-    collapsed: drawerCollapsed,
-    expanded: drawerSheetExpanded,
-    hasDetail: Boolean(modeState.selectedId),
-    showingFavourites: drawerView === "favourites"
-  });
+  const drawerOpen = !drawerCollapsed && mobileDrawerPosition !== "closed";
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken) ?? activeTheme.globe.markers.defaultSingle;
   const favouritePoints = useMemo(
-    () => favourites.groups.flatMap((group) => group.favourites.map((favourite) => favourite.point)),
-    [favourites.groups]
+    () => uniquePoints(favourites.lists.flatMap((list) => list.items.map((favourite) => favourite.point))),
+    [favourites.lists]
   );
   const activeModeFavouritePoints = useMemo(
-    () => favourites.groups
-      .filter((group) => group.modeId === activeModeId)
-      .flatMap((group) => group.favourites.map((favourite) => favourite.point)),
-    [activeModeId, favourites.groups]
+    () => uniquePoints(favourites.lists
+      .flatMap((list) => list.items.map((favourite) => favourite.point))
+      .filter((point) => point.modeId === activeModeId)),
+    [activeModeId, favourites.lists]
   );
   const activeDrawerPoints = drawerView === "favourites" && !modeState.selectedId ? favouritePoints : modeState.visiblePoints;
   const playbackQueuePoints = playbackQueueSource === "favourites" ? activeModeFavouritePoints : modeState.visiblePoints;
@@ -112,6 +106,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const selectedCountryOutlineColor = globeSelectedPoint
     ? resolvePointMarkerColor(globeSelectedPoint, globeMarkerColorMode, globeMarkerColor, activeTheme.globe)
     : defaultMarkerColor;
+  const openFavouritePicker = useCallback((point: TerraPoint) => {
+    if (!viewer.user) {
+      setAuthModalOpen(true);
+      return;
+    }
+
+    setFavouritePickerPoint(point);
+  }, [viewer.user]);
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
       <AudioPlaybackPanel
@@ -120,9 +122,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         itemSingularLabel={activeMode.copy.itemSingular}
         playback={audioPlayback}
         playbackLabel={activeMode.playback.label}
-        onToggleFavourite={(point) => {
-          void favourites.toggleFavourite(point);
-        }}
+        onToggleFavourite={openFavouritePicker}
       />
     ) : null;
 
@@ -144,8 +144,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const selectPoint = useCallback((point: TerraPoint) => {
     modeState.selectPoint(point);
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(true);
-    setDrawerView("list");
+    setMobileDrawerPosition("full");
+    setDrawerView("point-detail");
     setPlaybackQueueSource("list");
 
     if (viewer.user && activeMode.clickEndpoint) {
@@ -157,8 +157,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(true);
-    setDrawerView("list");
+    setMobileDrawerPosition("standard");
+    setDrawerView("main");
     setPlaybackQueueSource("list");
     setHoveredPoint(null);
   }, [selectedCountry?.code]);
@@ -168,7 +168,29 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setDrawerView("favourites");
     setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(true);
+    setMobileDrawerPosition("standard");
+  }, [modeState.clearSelection]);
+
+  const openModeSwitcher = useCallback(() => {
+    modeState.clearSelection();
+    setDrawerView("mode-switcher");
+    setDrawerCollapsed(false);
+    setMobileDrawerPosition("standard");
+  }, [modeState.clearSelection]);
+
+  const openAccountDrawer = useCallback(() => {
+    modeState.clearSelection();
+    setDrawerView("account");
+    setDrawerCollapsed(false);
+    setMobileDrawerPosition("standard");
+  }, [modeState.clearSelection]);
+
+  const restoreHomeDrawer = useCallback(() => {
+    modeState.clearSelection();
+    setDrawerView("main");
+    setPlaybackQueueSource("list");
+    setDrawerCollapsed(false);
+    setMobileDrawerPosition("standard");
   }, [modeState.clearSelection]);
 
   const selectTheme = useCallback((nextThemeId: TerraThemeId) => {
@@ -189,15 +211,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
   const updateQuery = useCallback((value: string) => {
     modeState.setQuery(value);
-    setDrawerSheetExpanded(true);
+    setMobileDrawerPosition("full");
   }, [modeState.setQuery]);
-
-  const toggleDrawerMobileState = useCallback(() => {
-    const nextState = getNextDrawerMobileState(drawerMobileState);
-
-    setDrawerCollapsed(nextState === "closed");
-    setDrawerSheetExpanded(nextState === "list");
-  }, [drawerMobileState]);
 
   const handleMouseMove = useCallback((event: ReactMouseEvent<HTMLElement>) => {
     if (tooltipRef.current) {
@@ -208,25 +223,26 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const selectFavourite = useCallback((modeId: TerraModeId, point: TerraPoint) => {
     setActiveModeId(modeId);
     setPendingFavouriteSelection({ modeId, point });
-    setDrawerView("list");
+    setDrawerView("point-detail");
     setPlaybackQueueSource("favourites");
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(true);
+    setMobileDrawerPosition("full");
   }, []);
 
   const selectMode = useCallback((modeId: TerraModeId) => {
     setActiveModeId(modeId);
-    setDrawerView("list");
+    setDrawerView("main");
     setPlaybackQueueSource("list");
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(false);
+    setMobileDrawerPosition("standard");
     setHoveredPoint(null);
   }, []);
 
   const openPlaybackPoint = useCallback((point: TerraPoint) => {
     setActiveModeId(point.modeId);
     setDrawerCollapsed(false);
-    setDrawerSheetExpanded(true);
+    setMobileDrawerPosition("full");
+    setDrawerView("point-detail");
 
     if (point.modeId === activeModeId) {
       modeState.selectPoint(point);
@@ -284,30 +300,33 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         />
       </div>
 
-      <AccountMenu
-        contactLinks={appConfig.contactLinks}
-        loading={viewer.loading}
+      <ShellChrome
+        activeModeId={activeModeId}
+        appConfig={appConfig}
+        drawerView={drawerView}
+        earthSpinEnabled={earthSpin.earthSpinEnabled}
+        earthSpinDisabled={!globeProfile.motionEnabled}
+        modes={terraModes}
         selectedThemeId={themeId}
+        showListedOnGlobe={showListedOnGlobe}
         user={viewer.user}
+        viewerLoading={viewer.loading}
+        onAccountOpen={openAccountDrawer}
         onAccountUpdated={viewer.refresh}
         onAuthOpen={() => setAuthModalOpen(true)}
-        onLogout={async () => {
+        onDesktopLogout={async () => {
           setThemeId(defaultTheme.id);
           await viewer.refresh();
           router.replace("/login");
           router.refresh();
         }}
-        onThemeChange={selectTheme}
-      />
-
-      <ShellControlRail
-        activeModeId={activeModeId}
-        earthSpinEnabled={earthSpin.earthSpinEnabled}
-        earthSpinDisabled={!globeProfile.motionEnabled}
-        modes={terraModes}
-        onOpenFavourites={openFavourites}
+        onFavouritesOpen={openFavourites}
+        onHome={restoreHomeDrawer}
+        onModeOpen={openModeSwitcher}
         onModeSelect={selectMode}
+        onThemeChange={selectTheme}
         onToggleEarthSpin={earthSpin.toggleEarthSpin}
+        onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
 
       {globeProfile.hoverEnabled && hoveredPoint ? (
@@ -325,53 +344,102 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
       <SideDrawer
         activeMode={activeMode}
+        activeModeId={activeModeId}
         activePlaybackPointKey={activePlaybackPointKey}
+        accountContactLinks={appConfig.contactLinks}
+        accountLoading={viewer.loading}
         collapsed={drawerCollapsed}
         detail={modeState.detail}
         detailAccessory={detailAccessory}
         favouritePointIds={favourites.favouriteIds}
-        favouriteGroups={favourites.groups}
+        favouriteLists={favourites.lists}
         favouritesLoading={favourites.loading}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
         isLoadingDrawerTask={modeState.isLoadingDrawerTask}
         loading={modeState.listLoading}
         loadingTaskLabel={modeState.loadingTaskLabel}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
-        mobileState={drawerMobileState}
+        mobilePosition={mobileDrawerPosition}
+        modes={terraModes}
         points={modeState.visiblePoints}
         providerError={modeState.providerError}
         query={modeState.query}
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
-        showListedOnGlobe={showListedOnGlobe}
+        selectedThemeId={themeId}
         sortId={modeState.sortId}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
+        user={viewer.user}
         view={drawerView}
+        onAccountUpdated={viewer.refresh}
         onCountryFilterChange={selectCountry}
         onClearCountrySelection={clearCountrySelection}
         onClearSelection={() => {
           modeState.clearSelection();
-          setDrawerView("list");
-          setDrawerSheetExpanded(true);
+          setDrawerView("main");
+          setMobileDrawerPosition("standard");
         }}
-        onCloseFavourites={() => {
-          setDrawerView("list");
-          setPlaybackQueueSource("list");
-          setDrawerSheetExpanded(true);
-        }}
+        onCreateFavouriteList={favourites.createList}
+        onDeleteFavouriteList={favourites.deleteList}
         onFavouriteSelect={selectFavourite}
+        onLoginOpen={() => setAuthModalOpen(true)}
+        onLogoutRequest={() => setMobileLogoutConfirmOpen(true)}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
+        onModeSelect={selectMode}
+        onOpenAccountRoot={() => setDrawerView("account")}
+        onOpenFavouritePicker={openFavouritePicker}
         onPointSelect={selectPoint}
         onQueryChange={updateQuery}
+        onRemoveFavouriteFromList={favourites.removePointFromList}
+        onRenameFavouriteList={favourites.renameList}
+        onSetAccountView={setDrawerView}
+        onSetMobilePosition={setMobileDrawerPosition}
         onSortChange={modeState.setSortId}
-        onToggleFavourite={(point) => {
-          void favourites.toggleFavourite(point);
-        }}
+        onThemeChange={selectTheme}
         onToggleCollapsed={() => setDrawerCollapsed((value) => !value)}
-        onToggleMobileState={toggleDrawerMobileState}
-        onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
+
+      {favouritePickerPoint ? (
+        <FavouriteListPicker
+          lists={favourites.lists}
+          point={favouritePickerPoint}
+          selectedListIds={favourites.getPointListIds(favouritePickerPoint)}
+          onAddToList={favourites.addPointToList}
+          onClose={() => setFavouritePickerPoint(null)}
+          onCreateList={favourites.createList}
+          onRemoveFromList={favourites.removePointFromList}
+        />
+      ) : null}
+
+      {mobileLogoutConfirmOpen ? (
+        <AccountModalShell
+          description="This clears your active session on this device. Your saved lists and theme preference stay on your account."
+          kicker="Session"
+          title="Log out?"
+          onClose={() => setMobileLogoutConfirmOpen(false)}
+        >
+          <div className="confirm-actions">
+            <button
+              className="primary-action danger-action"
+              type="button"
+              onClick={async () => {
+                await authClient.signOut();
+                setMobileLogoutConfirmOpen(false);
+                setThemeId(defaultTheme.id);
+                await viewer.refresh();
+                router.replace("/login");
+                router.refresh();
+              }}
+            >
+              Log out
+            </button>
+            <button className="secondary-action" type="button" onClick={() => setMobileLogoutConfirmOpen(false)}>
+              Not now
+            </button>
+          </div>
+        </AccountModalShell>
+      ) : null}
 
       <AuthModal
         googleAuthEnabled={appConfig.googleAuthEnabled}
@@ -401,4 +469,20 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       ) : null}
     </main>
   );
+}
+
+function uniquePoints(points: TerraPoint[]) {
+  const seen = new Set<string>();
+  const result: TerraPoint[] = [];
+
+  points.forEach((point) => {
+    const key = getPointKey(point);
+
+    if (!seen.has(key)) {
+      seen.add(key);
+      result.push(point);
+    }
+  });
+
+  return result;
 }

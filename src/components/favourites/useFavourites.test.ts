@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { toFavouriteKey } from "./useFavourites";
+import { toFavouriteKey } from "@/lib/persistence/favouriteKeys";
 
 describe("toFavouriteKey", () => {
   it("keeps favourite state mode-neutral", () => {

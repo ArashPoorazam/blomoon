@@ -1,32 +1,36 @@
 "use client";
 
-import { Globe2, Star, Trash2, X } from "lucide-react";
+import { Check, Pencil, Plus, Star, Trash2 } from "lucide-react";
+import { useState } from "react";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
-import type { FavouriteGroupDto } from "@/lib/persistence/types";
-import { toFavouriteKey } from "./useFavourites";
+import { toFavouriteKey } from "@/lib/persistence/favouriteKeys";
+import type { FavouriteListDto } from "@/lib/persistence/types";
 
 type FavouritesDrawerProps = {
   activePlaybackPointKey: string | null;
-  groups: FavouriteGroupDto[];
+  lists: FavouriteListDto[];
   loading: boolean;
-  showOnGlobe: boolean;
-  onBackToList: () => void;
+  onCreateList: (name: string) => Promise<FavouriteListDto | null>;
+  onDeleteList: (listId: string) => Promise<void>;
   onFavouriteSelect: (modeId: TerraModeId, point: TerraPoint) => void;
-  onToggleFavourite: (point: TerraPoint) => void;
-  onToggleShowOnGlobe: () => void;
+  onRemoveFavouriteFromList: (listId: string, point: TerraPoint) => Promise<void>;
+  onRenameList: (listId: string, name: string) => Promise<void>;
 };
 
 export function FavouritesDrawer({
   activePlaybackPointKey,
-  groups,
+  lists,
   loading,
-  onBackToList,
+  onCreateList,
+  onDeleteList,
   onFavouriteSelect,
-  onToggleFavourite,
-  onToggleShowOnGlobe,
-  showOnGlobe
+  onRemoveFavouriteFromList,
+  onRenameList
 }: FavouritesDrawerProps) {
-  const favouriteCount = groups.reduce((count, group) => count + group.favourites.length, 0);
+  const [creating, setCreating] = useState(false);
+  const [editingListId, setEditingListId] = useState<string | null>(null);
+  const [deleteCandidate, setDeleteCandidate] = useState<FavouriteListDto | null>(null);
+  const favouriteCount = lists.reduce((count, list) => count + list.itemCount, 0);
 
   return (
     <div className="favourites-view" aria-label="Favourites">
@@ -36,42 +40,68 @@ export function FavouritesDrawer({
           <h2>Favourites</h2>
           <p className="drawer-subtitle">{formatFavouriteCount(favouriteCount, loading)}</p>
         </div>
-        <button className="icon-button" type="button" aria-label="Back to list" onClick={onBackToList}>
-          <X size={17} aria-hidden="true" />
-        </button>
-      </div>
-
-      <div className="favourites-actions">
-        <button
-          aria-pressed={showOnGlobe}
-          className={`listed-globe-toggle ${showOnGlobe ? "active" : ""}`}
-          type="button"
-          onClick={onToggleShowOnGlobe}
-        >
-          <Globe2 size={15} aria-hidden="true" />
-          Display on globe
+        <button className="primary-action compact-action" type="button" onClick={() => setCreating(true)}>
+          <Plus size={15} aria-hidden="true" />
+          <span>New list</span>
         </button>
       </div>
 
       <div className="favourites-body">
+        {creating ? (
+          <FavouriteListForm
+            submitLabel="Create"
+            title="Create new list"
+            onCancel={() => setCreating(false)}
+            onSubmit={async (name) => {
+              const list = await onCreateList(name);
+              if (list) {
+                setCreating(false);
+              }
+            }}
+          />
+        ) : null}
+
         {loading ? <div className="empty-state">Loading favourites</div> : null}
-        {!loading && groups.length === 0 ? (
+        {!loading && lists.length === 0 && !creating ? (
           <div className="favourites-empty">
             <Star size={20} aria-hidden="true" />
-            <strong>No favourites saved</strong>
-            <span>Use the star beside an item to keep it here and bring it back onto the globe.</span>
+            <strong>No lists yet</strong>
+            <span>Create a list, then use the star beside a station to save it.</span>
           </div>
         ) : null}
-        {groups.map((group) => (
-          <section className="favourite-group" key={group.modeId}>
-            <div className="favourite-group-title">
-              <span>{group.label}</span>
-              <strong>{group.favourites.length}</strong>
-            </div>
-            {group.favourites.map((favourite) => (
+
+        {lists.map((list) => (
+          <section className="favourite-group" key={list.id}>
+            {editingListId === list.id ? (
+              <FavouriteListForm
+                initialName={list.name}
+                submitLabel="Save"
+                title="Rename list"
+                onCancel={() => setEditingListId(null)}
+                onSubmit={async (name) => {
+                  await onRenameList(list.id, name);
+                  setEditingListId(null);
+                }}
+              />
+            ) : (
+              <div className="favourite-group-title">
+                <span>{list.name}</span>
+                <div className="favourite-list-actions">
+                  <strong>{list.itemCount}</strong>
+                  <button className="icon-button" type="button" aria-label={`Rename ${list.name}`} onClick={() => setEditingListId(list.id)}>
+                    <Pencil size={14} aria-hidden="true" />
+                  </button>
+                  <button className="icon-button" type="button" aria-label={`Delete ${list.name}`} onClick={() => setDeleteCandidate(list)}>
+                    <Trash2 size={14} aria-hidden="true" />
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {list.items.map((favourite) => (
               <div
                 className={`favourite-row ${activePlaybackPointKey === toFavouriteKey(favourite) ? "playback-active" : ""}`}
-                key={`${favourite.modeId}:${favourite.pointId}`}
+                key={`${list.id}:${favourite.modeId}:${favourite.pointId}`}
               >
                 <button
                   className="favourite-row-main"
@@ -87,8 +117,10 @@ export function FavouritesDrawer({
                 <button
                   className="favourite-remove"
                   type="button"
-                  aria-label={`Remove ${favourite.point.name} from favourites`}
-                  onClick={() => onToggleFavourite(favourite.point)}
+                  aria-label={`Remove ${favourite.point.name} from ${list.name}`}
+                  onClick={() => {
+                    void onRemoveFavouriteFromList(list.id, favourite.point);
+                  }}
                 >
                   <Trash2 size={15} aria-hidden="true" />
                 </button>
@@ -97,6 +129,115 @@ export function FavouritesDrawer({
           </section>
         ))}
       </div>
+
+      {deleteCandidate ? (
+        <FavouriteConfirmDialog
+          title={`Delete ${deleteCandidate.name}?`}
+          description="Saved points in this list will be removed from the list. Points that are also in another list stay saved."
+          confirmLabel="Delete list"
+          onCancel={() => setDeleteCandidate(null)}
+          onConfirm={async () => {
+            await onDeleteList(deleteCandidate.id);
+            setDeleteCandidate(null);
+          }}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+export function FavouriteListForm({
+  initialName = "",
+  onCancel,
+  onSubmit,
+  submitLabel,
+  title
+}: {
+  initialName?: string;
+  onCancel: () => void;
+  onSubmit: (name: string) => Promise<void>;
+  submitLabel: string;
+  title: string;
+}) {
+  const [name, setName] = useState(initialName);
+  const [submitting, setSubmitting] = useState(false);
+  const trimmedName = name.trim();
+
+  return (
+    <form
+      className="favourite-list-form"
+      onSubmit={(event) => {
+        event.preventDefault();
+        if (!trimmedName) {
+          return;
+        }
+
+        setSubmitting(true);
+        void onSubmit(trimmedName).finally(() => setSubmitting(false));
+      }}
+    >
+      <strong>{title}</strong>
+      <input
+        autoFocus
+        maxLength={80}
+        placeholder="List name"
+        type="text"
+        value={name}
+        onChange={(event) => setName(event.target.value)}
+      />
+      <div className="favourite-list-form-actions">
+        <button className="primary-action compact-action" disabled={!trimmedName || submitting} type="submit">
+          <Check size={15} aria-hidden="true" />
+          <span>{submitting ? "Saving" : submitLabel}</span>
+        </button>
+        <button className="secondary-action compact-action" type="button" onClick={onCancel}>
+          Cancel
+        </button>
+      </div>
+    </form>
+  );
+}
+
+export function FavouriteConfirmDialog({
+  confirmLabel,
+  description,
+  onCancel,
+  onConfirm,
+  title
+}: {
+  confirmLabel: string;
+  description: string;
+  onCancel: () => void;
+  onConfirm: () => Promise<void>;
+  title: string;
+}) {
+  const [submitting, setSubmitting] = useState(false);
+
+  return (
+    <div className="favourite-modal-backdrop" role="presentation">
+      <section className="favourite-modal" role="dialog" aria-modal="true" aria-labelledby="favourite-confirm-title">
+        <div>
+          <div className="drawer-kicker">Confirm</div>
+          <h2 id="favourite-confirm-title">{title}</h2>
+          <p>{description}</p>
+        </div>
+        <div className="confirm-actions">
+          <button
+            className="primary-action danger-action"
+            disabled={submitting}
+            type="button"
+            onClick={() => {
+              setSubmitting(true);
+              void onConfirm().finally(() => setSubmitting(false));
+            }}
+          >
+            {submitting ? "Deleting" : confirmLabel}
+          </button>
+          <button className="secondary-action" type="button" onClick={onCancel}>
+            Not now
+          </button>
+        </div>
+      </section>
     </div>
   );
 }

@@ -43,6 +43,13 @@
       "when": 1787941474263,
       "tag": "0005_burly_garia",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "7",
+      "when": 1788355200000,
+      "tag": "0006_favourite_lists",
+      "breakpoints": true
     }
   ]
 }

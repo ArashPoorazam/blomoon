@@ -2,6 +2,18 @@
   box-sizing: border-box;
 }
 
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
 html,
 body {
   width: 100%;
@@ -73,6 +85,11 @@ button {
   gap: 10px;
 }
 
+.shell-mobile-nav,
+.shell-globe-controls {
+  display: none;
+}
+
 .shell-square-control {
   position: relative;
   display: grid;
@@ -100,13 +117,15 @@ button {
 }
 
 .shell-square-control.active {
-  border-color: var(--panel-border);
-  color: var(--muted-strong);
+  border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
+  background: var(--control-hover);
+  color: var(--accent-strong);
 }
 
-.shell-square-control[aria-pressed="true"] {
+.shell-square-control[aria-pressed="true"],
+.shell-mobile-nav-button[aria-pressed="true"] {
   background: var(--control-hover);
-  color: var(--text);
+  color: var(--accent-strong);
 }
 
 .point-tooltip {
@@ -147,6 +166,81 @@ button {
 }
 
 @media (max-width: 760px), (pointer: coarse) {
+  .shell-mobile-nav {
+    position: absolute;
+    top: max(10px, env(safe-area-inset-top, 0px));
+    left: max(10px, env(safe-area-inset-left, 0px));
+    z-index: 42;
+    display: grid;
+    width: calc(100vw - max(10px, env(safe-area-inset-left, 0px)) - max(10px, env(safe-area-inset-right, 0px)));
+    height: 52px;
+    grid-template-columns: 48px 48px minmax(94px, 1fr) 48px 48px;
+    align-items: center;
+    gap: 6px;
+    padding: 5px;
+    border: 1px solid var(--panel-border);
+    border-radius: 8px;
+    background: var(--panel);
+    box-shadow: 0 16px 38px var(--shadow-tooltip);
+    backdrop-filter: blur(var(--panel-blur));
+  }
+
+  .shell-mobile-nav-button,
+  .shell-mobile-logo-button {
+    display: grid;
+    width: 42px;
+    height: 42px;
+    place-items: center;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    background: transparent;
+    color: var(--muted-strong);
+    cursor: pointer;
+  }
+
+  .shell-mobile-nav-button:hover,
+  .shell-mobile-nav-button:focus-visible,
+  .shell-mobile-nav-button.active {
+    border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
+    background: var(--control-hover);
+    color: var(--accent-strong);
+  }
+
+  .shell-mobile-nav-slot {
+    width: 42px;
+    height: 42px;
+  }
+
+  .shell-mobile-logo-button {
+    width: 100%;
+    min-width: 0;
+    padding: 0 7px;
+  }
+
+  .shell-mobile-logo-button:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .shell-mobile-logo {
+    width: min(124px, 100%);
+    height: auto;
+  }
+
+  .shell-control-rail,
+  .account-menu {
+    display: none;
+  }
+
+  .shell-globe-controls {
+    position: absolute;
+    top: calc(max(10px, env(safe-area-inset-top, 0px)) + 68px);
+    right: max(12px, env(safe-area-inset-right, 0px));
+    z-index: 28;
+    display: grid;
+    gap: 10px;
+  }
+
   .blomoon-shell {
     min-height: 100svh;
     padding-bottom: env(safe-area-inset-bottom, 0px);

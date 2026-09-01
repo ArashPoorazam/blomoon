@@ -1,4 +1,4 @@
-import type { FavouriteGroupDto } from "@/lib/persistence/types";
+import type { FavouriteListDto } from "@/lib/persistence/types";
 import type { ViewerDto } from "./dto";
 
 export type ViewerResponse = {
@@ -6,5 +6,5 @@ export type ViewerResponse = {
 };
 
 export type FavouritesResponse = {
-  groups: FavouriteGroupDto[];
+  lists: FavouriteListDto[];
 };

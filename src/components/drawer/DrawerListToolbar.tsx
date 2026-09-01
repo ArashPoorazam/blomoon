@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronDown, Globe2, Search, X } from "lucide-react";
+import { ChevronDown, Search, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode } from "@/lib/modes/types";
@@ -15,7 +15,6 @@ type DrawerListToolbarProps = {
   providerError: string | null;
   query: string;
   selectedCountry: CountryInfo | null;
-  showListedOnGlobe: boolean;
   sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
@@ -24,7 +23,6 @@ type DrawerListToolbarProps = {
   onLoadMorePoints?: () => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function DrawerListToolbar({
@@ -36,7 +34,6 @@ export function DrawerListToolbar({
   providerError,
   query,
   selectedCountry,
-  showListedOnGlobe,
   sortId,
   totalPoints,
   totalPointsKind,
@@ -44,8 +41,7 @@ export function DrawerListToolbar({
   onClearCountrySelection,
   onLoadMorePoints,
   onQueryChange,
-  onSortChange,
-  onToggleShowListedOnGlobe
+  onSortChange
 }: DrawerListToolbarProps) {
   const countries = useMemo(getKnownCountries, []);
 
@@ -94,13 +90,11 @@ export function DrawerListToolbar({
         hasMorePoints={hasMorePoints}
         isLoadingMorePoints={isLoadingMorePoints}
         selectedCountry={selectedCountry}
-        showListedOnGlobe={showListedOnGlobe}
         sortId={sortId}
         onCountryFilterChange={onCountryFilterChange}
         onClearCountrySelection={onClearCountrySelection}
         onLoadMorePoints={onLoadMorePoints}
         onSortChange={onSortChange}
-        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
       />
     </div>
   );
@@ -112,26 +106,22 @@ function FilterControls({
   hasMorePoints,
   isLoadingMorePoints,
   selectedCountry,
-  showListedOnGlobe,
   sortId,
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMorePoints,
-  onSortChange,
-  onToggleShowListedOnGlobe
+  onSortChange
 }: {
   activeMode: TerraMode;
   countries: CountryInfo[];
   hasMorePoints: boolean;
   isLoadingMorePoints: boolean;
   selectedCountry: CountryInfo | null;
-  showListedOnGlobe: boolean;
   sortId: string;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMorePoints?: () => void;
   onSortChange: (sortId: string) => void;
-  onToggleShowListedOnGlobe: () => void;
 }) {
   const [countryMenuOpen, setCountryMenuOpen] = useState(false);
   const [sortMenuOpen, setSortMenuOpen] = useState(false);
@@ -283,15 +273,6 @@ function FilterControls({
             <X size={14} aria-hidden="true" />
           </button>
         ) : null}
-        <button
-          aria-pressed={showListedOnGlobe}
-          className={`listed-globe-toggle ${showListedOnGlobe ? "active" : ""}`}
-          type="button"
-          onClick={onToggleShowListedOnGlobe}
-        >
-          <Globe2 size={15} aria-hidden="true" />
-          Display on globe
-        </button>
         {hasMorePoints ? (
           <LoadMoreButton
             className="filter-load-more"

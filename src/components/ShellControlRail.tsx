@@ -1,6 +1,6 @@
 "use client";
 
-import { Earth, Podcast, Radio, Star, Tv, type LucideIcon } from "lucide-react";
+import { Earth, MapPin, Podcast, Radio, Star, Tv, type LucideIcon } from "lucide-react";
 import type { MouseEvent } from "react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 
@@ -9,9 +9,11 @@ type ShellControlRailProps = {
   earthSpinEnabled: boolean;
   earthSpinDisabled: boolean;
   modes: TerraMode[];
+  showListedOnGlobe: boolean;
   onOpenFavourites: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
   onToggleEarthSpin: (event: MouseEvent<HTMLButtonElement>) => void;
+  onToggleShowListedOnGlobe: () => void;
 };
 
 export type ModeControlItem = {
@@ -26,22 +28,34 @@ export function ShellControlRail({
   earthSpinEnabled,
   earthSpinDisabled,
   modes,
+  onToggleShowListedOnGlobe,
   onOpenFavourites,
   onModeSelect,
-  onToggleEarthSpin
+  onToggleEarthSpin,
+  showListedOnGlobe
 }: ShellControlRailProps) {
   const modeControls = getModeControlItems(modes, activeModeId);
 
   return (
     <nav className="shell-control-rail" aria-label="Blomoon shortcuts">
       <button
-        className="shell-square-control"
+        className={`shell-square-control ${showListedOnGlobe ? "active" : ""}`}
         type="button"
         aria-label="Open favourites"
         title="Favourites"
         onClick={onOpenFavourites}
       >
         <Star size={18} aria-hidden="true" />
+      </button>
+      <button
+        className="shell-square-control"
+        aria-label={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
+        aria-pressed={showListedOnGlobe}
+        title="Display listed points on globe"
+        type="button"
+        onClick={onToggleShowListedOnGlobe}
+      >
+        <MapPin size={18} aria-hidden="true" fill={showListedOnGlobe ? "currentColor" : "none"} />
       </button>
       <button
         className="shell-square-control"

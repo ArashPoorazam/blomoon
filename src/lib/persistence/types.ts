@@ -7,20 +7,23 @@ export type FavouriteRef = {
 
 export type FavouriteDto = FavouriteRef & {
   createdAt: string;
+  listId: string;
   point: TerraPoint;
 };
 
-export type FavouriteGroupDto = {
-  label: string;
-  modeId: TerraModeId;
-  favourites: FavouriteDto[];
+export type FavouriteListDto = {
+  createdAt: string;
+  id: string;
+  itemCount: number;
+  items: FavouriteDto[];
+  name: string;
+  updatedAt: string;
 };
 
 export type ModePersistenceAdapter = {
+  hydrateFavouritePoints: (pointIds: string[]) => Promise<TerraPoint[]>;
   label: string;
   modeId: TerraModeId;
-  addFavourite: (userId: string, pointId: string) => Promise<FavouriteDto | null>;
-  listFavourites: (userId: string) => Promise<FavouriteDto[]>;
-  removeFavourite: (userId: string, pointId: string) => Promise<boolean>;
   recordClick: (userId: string, pointId: string) => Promise<{ clickCount: number } | null>;
+  upsertFavouritePoint: (pointId: string) => Promise<TerraPoint | null>;
 };

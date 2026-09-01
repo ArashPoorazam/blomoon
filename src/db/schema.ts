@@ -172,15 +172,37 @@ export const radioStations = pgTable("radio_stations", {
   check("radio_stations_provider_clicks_nonnegative", sql`${table.providerClicks} >= 0`)
 ]);
 
-export const userFavourites = pgTable("user_favourites", {
+export const userFavouriteLists = pgTable("user_favourite_lists", {
+  id: uuid("id").primaryKey().defaultRandom(),
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  name: text("name").notNull(),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  uniqueIndex("user_favourite_lists_user_name_unique").on(table.userId, sql`lower(${table.name})`),
+  index("user_favourite_lists_user_updated_idx").on(table.userId, table.updatedAt),
+  check("user_favourite_lists_name_length", sql`length(btrim(${table.name})) BETWEEN 1 AND 80`)
+]);
+
+export const userSavedMediaItems = pgTable("user_saved_media_items", {
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
   primaryKey({ columns: [table.userId, table.mediaItemId] }),
-  index("user_favourites_user_updated_idx").on(table.userId, table.updatedAt),
-  index("user_favourites_media_item_id_idx").on(table.mediaItemId)
+  index("user_saved_media_items_user_updated_idx").on(table.userId, table.updatedAt),
+  index("user_saved_media_items_media_item_id_idx").on(table.mediaItemId)
+]);
+
+export const userFavouriteListItems = pgTable("user_favourite_list_items", {
+  listId: uuid("list_id").notNull().references(() => userFavouriteLists.id, { onDelete: "cascade" }),
+  mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
+  createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
+  updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  primaryKey({ columns: [table.listId, table.mediaItemId] }),
+  index("user_favourite_list_items_media_item_id_idx").on(table.mediaItemId)
 ]);
 
 export const userMediaClicks = pgTable("user_media_clicks", {
@@ -197,7 +219,8 @@ export const userMediaClicks = pgTable("user_media_clicks", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  favourites: many(userFavourites),
+  favouriteLists: many(userFavouriteLists),
+  savedMediaItems: many(userSavedMediaItems),
   sessions: many(sessions),
   mediaClicks: many(userMediaClicks)
 }));
@@ -239,7 +262,8 @@ export const mediaItemsRelations = relations(mediaItems, ({ many, one }) => ({
     references: [mediaProviders.id]
   }),
   radioStation: one(radioStations),
-  favourites: many(userFavourites),
+  favouriteListItems: many(userFavouriteListItems),
+  savedByUsers: many(userSavedMediaItems),
   clicks: many(userMediaClicks)
 }));
 
@@ -250,13 +274,32 @@ export const radioStationsRelations = relations(radioStations, ({ one }) => ({
   })
 }));
 
-export const userFavouritesRelations = relations(userFavourites, ({ one }) => ({
+export const userFavouriteListsRelations = relations(userFavouriteLists, ({ many, one }) => ({
   user: one(users, {
-    fields: [userFavourites.userId],
+    fields: [userFavouriteLists.userId],
+    references: [users.id]
+  }),
+  items: many(userFavouriteListItems)
+}));
+
+export const userSavedMediaItemsRelations = relations(userSavedMediaItems, ({ one }) => ({
+  user: one(users, {
+    fields: [userSavedMediaItems.userId],
     references: [users.id]
   }),
   mediaItem: one(mediaItems, {
-    fields: [userFavourites.mediaItemId],
+    fields: [userSavedMediaItems.mediaItemId],
+    references: [mediaItems.id]
+  })
+}));
+
+export const userFavouriteListItemsRelations = relations(userFavouriteListItems, ({ one }) => ({
+  list: one(userFavouriteLists, {
+    fields: [userFavouriteListItems.listId],
+    references: [userFavouriteLists.id]
+  }),
+  mediaItem: one(mediaItems, {
+    fields: [userFavouriteListItems.mediaItemId],
     references: [mediaItems.id]
   })
 }));

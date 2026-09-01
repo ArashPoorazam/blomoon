@@ -19,7 +19,6 @@ type SideDrawerListProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  showListedOnGlobe: boolean;
   sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
@@ -30,7 +29,6 @@ type SideDrawerListProps = {
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawerList({
@@ -45,7 +43,6 @@ export function SideDrawerList({
   query,
   selectedCountry,
   selectedId,
-  showListedOnGlobe,
   sortId,
   totalPoints,
   totalPointsKind,
@@ -55,8 +52,7 @@ export function SideDrawerList({
   onPointSelect,
   onQueryChange,
   onSortChange,
-  onToggleFavourite,
-  onToggleShowListedOnGlobe
+  onToggleFavourite
 }: SideDrawerListProps) {
   const listedPoints = points;
   const hasMorePoints = Boolean(hasMoreRemotePoints);
@@ -73,7 +69,6 @@ export function SideDrawerList({
         providerError={providerError}
         query={query}
         selectedCountry={selectedCountry}
-        showListedOnGlobe={showListedOnGlobe}
         sortId={sortId}
         totalPoints={totalPoints}
         totalPointsKind={totalPointsKind}
@@ -82,7 +77,6 @@ export function SideDrawerList({
         onLoadMorePoints={onLoadMoreRemotePoints}
         onQueryChange={onQueryChange}
         onSortChange={onSortChange}
-        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
       />
 
       <div className="point-list">

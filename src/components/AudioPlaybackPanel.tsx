@@ -1,6 +1,6 @@
 "use client";
 
-import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward, Square } from "lucide-react";
+import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward } from "lucide-react";
 import type { TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
@@ -152,7 +152,6 @@ function AudioPlaybackControls({
   playback: AudioPlaybackController;
   status: AudioPlaybackStatus;
 }) {
-  const isCurrentItem = playback.pointId === detail.id;
   const isBusy = status === "loading";
   const isPlaying = status === "playing";
   const isPaused = status === "paused";
@@ -225,15 +224,6 @@ function AudioPlaybackControls({
           )}
         </button>
       ) : null}
-      <button
-        className="media-control"
-        type="button"
-        disabled={!isCurrentItem || status === "idle" || isBusy}
-        onClick={playback.stop}
-      >
-        <Square size={15} aria-hidden="true" />
-        <span>Stop</span>
-      </button>
     </div>
   );
 }

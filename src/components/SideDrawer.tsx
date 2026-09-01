@@ -1,101 +1,134 @@
 "use client";
 
 import { CheckCircle2, ChevronDown, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
+import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-import type { FavouriteGroupDto } from "@/lib/persistence/types";
-import type { DrawerMobileState } from "./drawer/mobileState";
+import type { FavouriteListDto } from "@/lib/persistence/types";
+import type { TerraThemeId } from "@/lib/theme/themes";
+import type { ViewerDto } from "@/lib/users/dto";
 import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
+import { AccountDrawer } from "./shell/AccountDrawer";
+import type { DrawerMobilePosition, ShellDrawerView } from "./shell/drawerState";
+import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
 import { SideDrawerList } from "./SideDrawerList";
 
 type SideDrawerProps = {
   activeMode: TerraMode;
+  activeModeId: TerraModeId;
   activePlaybackPointKey: string | null;
+  accountContactLinks: ContactLink[];
+  accountLoading: boolean;
   collapsed: boolean;
   detail: TerraPointDetail | null;
-  detailAccessory?: React.ReactNode;
+  detailAccessory?: ReactNode;
   favouritePointIds: Set<string>;
-  favouriteGroups: FavouriteGroupDto[];
+  favouriteLists: FavouriteListDto[];
   favouritesLoading: boolean;
   hasMoreRemotePoints?: boolean;
   isLoadingDrawerTask: boolean;
   loading: boolean;
   loadingTaskLabel: string;
   loadingMoreRemotePoints?: boolean;
-  mobileState: DrawerMobileState;
+  mobilePosition: DrawerMobilePosition;
+  modes: TerraMode[];
   points: TerraPoint[];
   providerError: string | null;
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  showListedOnGlobe: boolean;
+  selectedThemeId: TerraThemeId;
   sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
-  view: "list" | "favourites";
+  user: ViewerDto | null;
+  view: ShellDrawerView;
+  onAccountUpdated: () => void | Promise<void>;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onClearSelection: () => void;
-  onCloseFavourites: () => void;
+  onCreateFavouriteList: (name: string) => Promise<FavouriteListDto | null>;
+  onDeleteFavouriteList: (listId: string) => Promise<void>;
   onFavouriteSelect: (modeId: TerraModeId, point: TerraPoint) => void;
+  onLoginOpen: () => void;
+  onLogoutRequest: () => void;
   onLoadMoreRemotePoints?: () => void;
+  onModeSelect: (modeId: TerraModeId) => void;
+  onOpenAccountRoot: () => void;
+  onOpenFavouritePicker: (point: TerraPoint) => void;
   onPointSelect: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
+  onRemoveFavouriteFromList: (listId: string, point: TerraPoint) => Promise<void>;
+  onRenameFavouriteList: (listId: string, name: string) => Promise<void>;
+  onSetAccountView: (view: Extract<ShellDrawerView, "account-info" | "themes" | "contact">) => void;
+  onSetMobilePosition: (position: DrawerMobilePosition) => void;
   onSortChange: (sortId: string) => void;
-  onToggleFavourite: (point: TerraPoint) => void;
+  onThemeChange: (themeId: TerraThemeId) => void;
   onToggleCollapsed: () => void;
-  onToggleMobileState: () => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawer({
   activeMode,
+  activeModeId,
   activePlaybackPointKey,
+  accountContactLinks,
+  accountLoading,
   collapsed,
   detail,
   detailAccessory,
   favouritePointIds,
-  favouriteGroups,
+  favouriteLists,
   favouritesLoading,
   hasMoreRemotePoints,
   isLoadingDrawerTask,
   loading,
   loadingTaskLabel,
   loadingMoreRemotePoints,
-  mobileState,
+  mobilePosition,
+  modes,
   points,
   providerError,
   query,
   selectedCountry,
   selectedId,
-  showListedOnGlobe,
+  selectedThemeId,
   sortId,
   totalPoints,
   totalPointsKind,
+  user,
   view,
+  onAccountUpdated,
   onCountryFilterChange,
   onClearCountrySelection,
   onClearSelection,
-  onCloseFavourites,
+  onCreateFavouriteList,
+  onDeleteFavouriteList,
   onFavouriteSelect,
+  onLoginOpen,
+  onLogoutRequest,
   onLoadMoreRemotePoints,
+  onModeSelect,
+  onOpenAccountRoot,
+  onOpenFavouritePicker,
   onPointSelect,
   onQueryChange,
+  onRemoveFavouriteFromList,
+  onRenameFavouriteList,
+  onSetAccountView,
+  onSetMobilePosition,
   onSortChange,
-  onToggleFavourite,
-  onToggleCollapsed,
-  onToggleMobileState,
-  onToggleShowListedOnGlobe
+  onThemeChange,
+  onToggleCollapsed
 }: SideDrawerProps) {
-  const isDetail = Boolean(selectedId);
-  const isFavourites = !isDetail && view === "favourites";
+  const isDetail = Boolean(selectedId) && view === "point-detail";
+  const isAccountView = view === "account" || view === "account-info" || view === "themes" || view === "contact";
 
   return (
     <aside
       className={`drawer ${collapsed ? "collapsed" : ""}`}
       aria-label={`${activeMode.label} data`}
-      data-mobile-state={mobileState}
+      data-mobile-position={mobilePosition}
     >
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
 
@@ -108,15 +141,17 @@ export function SideDrawer({
         {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
       </button>
 
-      <button
-        aria-label={collapsed ? "Open drawer" : "Close drawer"}
-        className="drawer-sheet-handle"
-        type="button"
-        onClick={onToggleMobileState}
-      >
-        <span aria-hidden="true" />
-        <ChevronDown size={16} aria-hidden="true" />
-      </button>
+      {mobilePosition === "standard" ? (
+        <div className="drawer-sheet-handle" aria-label="Drawer height controls">
+          <button aria-label="Close drawer" type="button" onClick={() => onSetMobilePosition("closed")}>
+            <ChevronDown size={16} aria-hidden="true" />
+          </button>
+          <span aria-hidden="true" />
+          <button aria-label="Open drawer fully" type="button" onClick={() => onSetMobilePosition("full")}>
+            <ChevronDown className="chevron-up" size={16} aria-hidden="true" />
+          </button>
+        </div>
+      ) : null}
 
       <div className="drawer-inner">
         {isDetail ? (
@@ -126,16 +161,32 @@ export function SideDrawer({
             detailAccessory={detailAccessory}
             onClearSelection={onClearSelection}
           />
-        ) : isFavourites ? (
+        ) : view === "mode-switcher" ? (
+          <ModeSwitcherDrawer activeModeId={activeModeId} modes={modes} onModeSelect={onModeSelect} />
+        ) : view === "favourites" ? (
           <FavouritesDrawer
             activePlaybackPointKey={activePlaybackPointKey}
-            groups={favouriteGroups}
+            lists={favouriteLists}
             loading={favouritesLoading}
-            showOnGlobe={showListedOnGlobe}
-            onBackToList={onCloseFavourites}
+            onCreateList={onCreateFavouriteList}
+            onDeleteList={onDeleteFavouriteList}
             onFavouriteSelect={onFavouriteSelect}
-            onToggleFavourite={onToggleFavourite}
-            onToggleShowOnGlobe={onToggleShowListedOnGlobe}
+            onRemoveFavouriteFromList={onRemoveFavouriteFromList}
+            onRenameList={onRenameFavouriteList}
+          />
+        ) : isAccountView ? (
+          <AccountDrawer
+            contactLinks={accountContactLinks}
+            loading={accountLoading}
+            selectedThemeId={selectedThemeId}
+            user={user}
+            view={view}
+            onAccountUpdated={onAccountUpdated}
+            onAuthOpen={onLoginOpen}
+            onBack={onOpenAccountRoot}
+            onLogoutRequest={onLogoutRequest}
+            onThemeChange={onThemeChange}
+            onViewChange={onSetAccountView}
           />
         ) : (
           <SideDrawerList
@@ -150,7 +201,6 @@ export function SideDrawer({
             query={query}
             selectedCountry={selectedCountry}
             selectedId={selectedId}
-            showListedOnGlobe={showListedOnGlobe}
             sortId={sortId}
             totalPoints={totalPoints}
             totalPointsKind={totalPointsKind}
@@ -160,8 +210,7 @@ export function SideDrawer({
             onPointSelect={onPointSelect}
             onQueryChange={onQueryChange}
             onSortChange={onSortChange}
-            onToggleFavourite={onToggleFavourite}
-            onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
+            onToggleFavourite={onOpenFavouritePicker}
           />
         )}
       </div>
