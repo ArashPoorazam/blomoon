@@ -71,6 +71,14 @@ services:
       - traefik.http.routers.blomoon.entrypoints=websecure
       - traefik.http.routers.blomoon.rule=Host(`${BLOMOON_DOMAIN}`)
       - traefik.http.routers.blomoon.tls.certresolver=letsencrypt
+      - traefik.http.routers.blomoon-www.entrypoints=websecure
+      - traefik.http.routers.blomoon-www.rule=Host(`${BLOMOON_WWW_DOMAIN:-www.${BLOMOON_DOMAIN}}`)
+      - traefik.http.routers.blomoon-www.tls.certresolver=letsencrypt
+      - traefik.http.routers.blomoon-www.middlewares=blomoon-www-redirect
+      - traefik.http.routers.blomoon-www.service=blomoon
+      - traefik.http.middlewares.blomoon-www-redirect.redirectregex.regex=^https?://[^/]+(/[^?]*)?(\?.*)?$
+      - traefik.http.middlewares.blomoon-www-redirect.redirectregex.replacement=https://${BLOMOON_DOMAIN}$${1}$${2}
+      - traefik.http.middlewares.blomoon-www-redirect.redirectregex.permanent=true
       - traefik.http.services.blomoon.loadbalancer.server.port=3000
     restart: unless-stopped
 

@@ -51,7 +51,15 @@ cd /opt/blomoon
 cp .env.production.example .env.production
 ```
 
-Fill `.env.production` with production secrets, then point `BLOMOON_DOMAIN` DNS at the VPS. `GHCR_USERNAME` and `GHCR_TOKEN` are only needed when the GitHub Container Registry package is private.
+Fill `.env.production` with production secrets, then point `BLOMOON_DOMAIN` DNS at the VPS. Keep `BLOMOON_WWW_DOMAIN` set to the `www` hostname that should redirect to the apex domain. `GHCR_USERNAME` and `GHCR_TOKEN` are only needed when the GitHub Container Registry package is private.
+
+In Cloudflare:
+
+- Set **SSL/TLS > Overview > SSL/TLS encryption mode** to **Full (strict)**.
+- Enable **SSL/TLS > Edge Certificates > Always Use HTTPS**.
+- Create proxied DNS records for `blomoon.ir` and `www.blomoon.ir`; both should be orange-clouded so Cloudflare can enforce redirects and TLS at the edge.
+
+Production Traefik also redirects `www.blomoon.ir` to `https://blomoon.ir` as a VPS-side fallback, preserving the path and query string.
 
 GitHub Actions deploys automatically from `main`. Configure these repository secrets:
 
@@ -86,9 +94,7 @@ The check uses `https://blomoon.ir` by default. To check another deployment, set
 BLOMOON_ORIGIN=http://localhost:3000 npm run check:prod
 ```
 
-It verifies public health, HTTPS redirect behavior, auth guards, radio catalog/search/detail responses, and attempts radio playback resolution. Live stream playback resolution is reported as a warning by default because external radio streams can be flaky; set `BLOMOON_STRICT_PLAYBACK=1` to make it fail the command.
-
-The default Traefik rule only requests a certificate for `BLOMOON_DOMAIN`. Add a `www` router after the `www` DNS record is pointed at the VPS.
+It verifies public health, HTTP-to-HTTPS redirect behavior, `www`-to-apex redirect behavior, auth guards, radio catalog/search/detail responses, and attempts radio playback resolution. Live stream playback resolution is reported as a warning by default because external radio streams can be flaky; set `BLOMOON_STRICT_PLAYBACK=1` to make it fail the command.
 
 ## Data Sources
 

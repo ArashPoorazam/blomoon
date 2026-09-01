@@ -1,13 +1,16 @@
 const DEFAULT_ORIGIN = "https://blomoon.ir";
+const DEFAULT_WWW_ORIGIN = "https://www.blomoon.ir";
 const DEFAULT_TIMEOUT_MS = 20_000;
 
 const origin = normalizeOrigin(process.env.BLOMOON_ORIGIN ?? DEFAULT_ORIGIN);
+const wwwOrigin = resolveWwwOrigin();
 const timeoutMs = parsePositiveInteger(process.env.BLOMOON_CHECK_TIMEOUT_MS, DEFAULT_TIMEOUT_MS);
 const strictPlayback = process.env.BLOMOON_STRICT_PLAYBACK === "1";
 const results = [];
 
 console.log(`Blomoon production check`);
 console.log(`origin=${origin}`);
+console.log(`www_origin=${wwwOrigin ?? "skipped"}`);
 console.log(`timestamp=${new Date().toISOString()}`);
 console.log("");
 
@@ -40,6 +43,28 @@ await runCheck("http to https redirect", origin.startsWith("https://"), async ()
   assert(location.startsWith(`https://${new URL(origin).host}/`), `expected redirect to https://${new URL(origin).host}/`);
 
   return `status=${response.status}`;
+});
+
+await runCheck("www to apex redirect", wwwOrigin !== null, async () => {
+  if (wwwOrigin === null) {
+    return warn("skipped; set BLOMOON_WWW_ORIGIN to verify a www hostname");
+  }
+
+  const path = "/api/health";
+  const query = "probe=www-redirect";
+  const url = new URL(`${path}?${query}`, wwwOrigin);
+
+  const response = await request(url, { redirect: "manual" });
+  const location = response.headers.get("location") ?? "";
+  const redirectUrl = new URL(location, origin);
+
+  assert(isRedirectStatus(response.status), `expected redirect, got ${response.status}`);
+  assert(location.startsWith(`${origin}/`) || location.startsWith(`${origin}?`), `expected absolute redirect to ${origin}, got ${location}`);
+  assert(redirectUrl.origin === origin, `expected redirect to ${origin}, got ${redirectUrl.origin}`);
+  assert(redirectUrl.pathname === path, `expected path ${path}, got ${redirectUrl.pathname}`);
+  assert(redirectUrl.searchParams.get("probe") === "www-redirect", "expected query string to be preserved");
+
+  return `status=${response.status} location=${redirectUrl.toString()}`;
 });
 
 await runCheck("login page", true, async () => {
@@ -179,6 +204,14 @@ function normalizeOrigin(value) {
   url.search = "";
   url.hash = "";
   return url.toString().replace(/\/$/, "");
+}
+
+function resolveWwwOrigin() {
+  if (process.env.BLOMOON_WWW_ORIGIN) {
+    return normalizeOrigin(process.env.BLOMOON_WWW_ORIGIN);
+  }
+
+  return origin === DEFAULT_ORIGIN ? DEFAULT_WWW_ORIGIN : null;
 }
 
 async function runCheck(name, critical, check) {
