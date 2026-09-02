@@ -1,10 +1,16 @@
 import { describe, expect, it } from "vitest";
-import { GLOBE_DISPLAY_BUDGET, limitGlobePoints } from "./displayBudget";
+import {
+  GLOBE_COUNTRY_POINT_GUARANTEE,
+  GLOBE_DISPLAY_BUDGET,
+  limitGlobePoints
+} from "./displayBudget";
 import type { TerraPoint } from "./types";
 
 describe("globe display budget", () => {
   it("uses a lower mobile marker budget than desktop", () => {
     expect(GLOBE_DISPLAY_BUDGET.mobile).toBeLessThan(GLOBE_DISPLAY_BUDGET.desktop);
+    expect(GLOBE_DISPLAY_BUDGET.mobile).toBe(400);
+    expect(GLOBE_COUNTRY_POINT_GUARANTEE.mobile).toBe(2);
   });
 
   it("caps displayed points while preserving selected and active playback points", () => {
@@ -30,10 +36,45 @@ describe("globe display budget", () => {
       selectedPoint: null
     })).toBe(points);
   });
+
+  it("preserves required drawer points before filling the marker budget", () => {
+    const required = point("listed", "840");
+    const limited = limitGlobePoints({
+      activePlaybackPoint: null,
+      budget: 3,
+      points: [point("a", "840"), point("b", "250"), point("c", "276"), required],
+      requiredPoints: [required],
+      selectedPoint: null
+    });
+
+    expect(limited.map((item) => item.id)).toEqual(["listed", "a", "b"]);
+  });
+
+  it("fills country guarantees before the remaining default points", () => {
+    const points = [
+      point("us-1", "840"),
+      point("us-2", "840"),
+      point("us-3", "840"),
+      point("fr-1", "250"),
+      point("fr-2", "250"),
+      point("de-1", "276"),
+      point("de-2", "276")
+    ];
+    const limited = limitGlobePoints({
+      activePlaybackPoint: null,
+      budget: 5,
+      countryPointGuarantee: 2,
+      points,
+      selectedPoint: null
+    });
+
+    expect(limited.map((item) => item.id)).toEqual(["us-1", "us-2", "fr-1", "fr-2", "de-1"]);
+  });
 });
 
-function point(id: string): TerraPoint {
+function point(id: string, countryCode?: string): TerraPoint {
   return {
+    countryCode,
     id,
     latitude: 0,
     longitude: 0,

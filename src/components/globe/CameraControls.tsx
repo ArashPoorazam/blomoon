@@ -10,12 +10,11 @@ import {
   DEFAULT_ROTATE_SPEED,
   GLOBE_AUTO_SPIN_SPEED,
   KEYBOARD_ORBIT_RADIANS_PER_SECOND,
-  MAX_CAMERA_DISTANCE,
   MIN_CAMERA_DISTANCE,
   getKeyboardOrbitIntent,
   getKeyboardOrbitIntentFromKeys,
   latLonToVector3,
-  getRotateSpeed,
+  getRotateSpeed
 } from "./globeMath";
 
 type CameraFocusTarget = {
@@ -29,11 +28,11 @@ const RIGHT_MOUSE_ORBIT_BUTTONS = {
 } as const;
 
 export function CameraFocus({
-  focusKey,
-  selectedPoint
+  focusPoint,
+  focusKey
 }: {
+  focusPoint: TerraPoint | null;
   focusKey: string | null;
-  selectedPoint: TerraPoint | null;
 }) {
   const lastFocusKey = useRef<string | null>(null);
   const focusTarget = useRef<CameraFocusTarget | null>(null);
@@ -41,16 +40,16 @@ export function CameraFocus({
   const targetPosition = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
-    if (!selectedPoint || !focusKey || lastFocusKey.current === focusKey) {
+    if (!focusPoint || !focusKey || lastFocusKey.current === focusKey) {
       return;
     }
 
     lastFocusKey.current = focusKey;
     focusTarget.current = {
       distance: null,
-      normal: latLonToVector3(selectedPoint.latitude, selectedPoint.longitude, 1).normalize()
+      normal: latLonToVector3(focusPoint.latitude, focusPoint.longitude, 1).normalize()
     };
-  }, [focusKey, selectedPoint]);
+  }, [focusKey, focusPoint]);
 
   useFrame(({ camera }, delta) => {
     if (!focusTarget.current) {
@@ -72,7 +71,13 @@ export function CameraFocus({
   return null;
 }
 
-export function AdaptiveOrbitControls({ earthSpinEnabled }: { earthSpinEnabled: boolean }) {
+export function AdaptiveOrbitControls({
+  earthSpinEnabled,
+  maxDistance
+}: {
+  earthSpinEnabled: boolean;
+  maxDistance: number;
+}) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
   const pressedKeyCodes = useRef(new Set<string>());
 
@@ -139,7 +144,7 @@ export function AdaptiveOrbitControls({ earthSpinEnabled }: { earthSpinEnabled: 
       enablePan={false}
       autoRotate={earthSpinEnabled}
       autoRotateSpeed={GLOBE_AUTO_SPIN_SPEED}
-      maxDistance={MAX_CAMERA_DISTANCE}
+      maxDistance={maxDistance}
       minDistance={MIN_CAMERA_DISTANCE}
       mouseButtons={RIGHT_MOUSE_ORBIT_BUTTONS}
       rotateSpeed={DEFAULT_ROTATE_SPEED}

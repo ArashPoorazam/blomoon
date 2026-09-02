@@ -103,10 +103,6 @@ export function MobileDrawerHandle({
     onMobilePositionChange("custom");
   }, [mobileHeight, onMobilePositionChange, onMobileStyleChange, setCustomHeight]);
 
-  if (mobilePosition === "closed") {
-    return null;
-  }
-
   return (
     <button
       aria-label="Adjust drawer height"

@@ -7,6 +7,7 @@ const RAD_TO_DEG = 180 / Math.PI;
 export const MIN_CAMERA_DISTANCE = 2.5;
 export const DEFAULT_CAMERA_DISTANCE = 5.2;
 export const MAX_CAMERA_DISTANCE = 7;
+export const MOBILE_MAX_CAMERA_DISTANCE = 8.4;
 export const MIN_ROTATE_SPEED = 0.18;
 export const DEFAULT_ROTATE_SPEED = 0.55;
 export const MAX_ROTATE_SPEED = 0.7;

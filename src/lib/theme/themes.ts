@@ -33,6 +33,8 @@ export const terraThemes = [
       markers: {
         defaultSingle: "#0f766e",
         listed: "#127f7a",
+        playback: "#4f9472",
+        playbackRing: "#4f9472",
         selected: "#b65f3a",
         selectedRing: "#f8fbf7",
         tokens: {
@@ -67,6 +69,8 @@ export const terraThemes = [
       markers: {
         defaultSingle: "#f6dcac",
         listed: "#35a2a7",
+        playback: "#35a2a7",
+        playbackRing: "#35a2a7",
         selected: "#f85525",
         selectedRing: "#f6dcac",
         tokens: {
@@ -101,6 +105,8 @@ export const terraThemes = [
       markers: {
         defaultSingle: "#ddf7ff",
         listed: "#4fe88f",
+        playback: "#82FB9C",
+        playbackRing: "#82FB9C",
         selected: "#d1fffe",
         selectedRing: "#82FB9C",
         tokens: {
@@ -135,6 +141,8 @@ export const terraThemes = [
       markers: {
         defaultSingle: "#cba6f7",
         listed: "#b4befe",
+        playback: "#a6e3a1",
+        playbackRing: "#a6e3a1",
         selected: "#f5c2e7",
         selectedRing: "#b4befe",
         tokens: {

@@ -27,6 +27,13 @@ type MarkerTransform = {
   quaternion: THREE.Quaternion;
 };
 
+type MarkerHighlight = {
+  isPlayback: boolean;
+  isSelected: boolean;
+  key: string;
+  point: TerraPoint;
+};
+
 type PointMarkersProps = {
   hoverEnabled: boolean;
   markerColor?: string;
@@ -52,13 +59,13 @@ export function PointMarkers({
   onHover,
   onSelect
 }: PointMarkersProps) {
-  const highlightedPoints = useMemo(
-    () => getHighlightedPoints(selectedPoint, activePlaybackPoint),
+  const highlightedMarkers = useMemo(
+    () => getHighlightedMarkers(selectedPoint, activePlaybackPoint),
     [activePlaybackPoint, selectedPoint]
   );
   const highlightedPointKeys = useMemo(
-    () => new Set(highlightedPoints.map(getPointKey)),
-    [highlightedPoints]
+    () => new Set(highlightedMarkers.map((marker) => marker.key)),
+    [highlightedMarkers]
   );
   const instancedPoints = useMemo(
     () => points.filter((point) => !highlightedPointKeys.has(getPointKey(point))),
@@ -84,10 +91,10 @@ export function PointMarkers({
         onHover={onHover}
         onSelect={onSelect}
       />
-      {highlightedPoints.map((point) => (
+      {highlightedMarkers.map((marker) => (
         <HighlightedPointMarker
-          key={getPointKey(point)}
-          point={point}
+          key={marker.key}
+          highlight={marker}
           theme={theme}
           hoverEnabled={hoverEnabled}
           onHover={onHover}
@@ -218,20 +225,21 @@ function MarkerHitInstances({
 }
 
 function HighlightedPointMarker({
+  highlight,
   hoverEnabled,
-  point,
   theme,
   onHover,
   onSelect
 }: {
+  highlight: MarkerHighlight;
   hoverEnabled: boolean;
-  point: TerraPoint;
   theme: GlobeTheme;
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 }) {
   const groupRef = useRef<THREE.Group>(null);
   const camera = useThree((state) => state.camera);
+  const { isPlayback, isSelected, point } = highlight;
   const { normal, position, quaternion } = useMemo(() => {
     const normal = latLonToVector3(point.latitude, point.longitude, 1).normalize();
     return {
@@ -282,12 +290,17 @@ function HighlightedPointMarker({
     >
       <mesh>
         <circleGeometry args={[MARKER_RADIUS * 1.15, 24]} />
-        <meshBasicMaterial color={theme.markers.selected} depthWrite={false} side={THREE.DoubleSide} toneMapped={false} />
+        <meshBasicMaterial
+          color={isPlayback ? theme.markers.playback : theme.markers.selected}
+          depthWrite={false}
+          side={THREE.DoubleSide}
+          toneMapped={false}
+        />
       </mesh>
       <mesh>
         <ringGeometry args={[MARKER_RADIUS * 2.05, MARKER_RADIUS * 3.05, 32]} />
         <meshBasicMaterial
-          color={theme.markers.selectedRing}
+          color={isSelected ? theme.markers.selectedRing : theme.markers.playbackRing}
           depthWrite={false}
           opacity={0.86}
           side={THREE.DoubleSide}
@@ -303,15 +316,30 @@ function HighlightedPointMarker({
   );
 }
 
-function getHighlightedPoints(selectedPoint: TerraPoint | null, activePlaybackPoint: TerraPoint | null) {
-  const highlighted = new Map<string, TerraPoint>();
+function getHighlightedMarkers(selectedPoint: TerraPoint | null, activePlaybackPoint: TerraPoint | null) {
+  const highlighted = new Map<string, MarkerHighlight>();
 
   if (selectedPoint) {
-    highlighted.set(getPointKey(selectedPoint), selectedPoint);
+    const key = getPointKey(selectedPoint);
+
+    highlighted.set(key, {
+      isPlayback: false,
+      isSelected: true,
+      key,
+      point: selectedPoint
+    });
   }
 
   if (activePlaybackPoint) {
-    highlighted.set(getPointKey(activePlaybackPoint), activePlaybackPoint);
+    const key = getPointKey(activePlaybackPoint);
+    const current = highlighted.get(key);
+
+    highlighted.set(key, {
+      isPlayback: true,
+      isSelected: Boolean(current?.isSelected),
+      key,
+      point: activePlaybackPoint
+    });
   }
 
   return Array.from(highlighted.values());

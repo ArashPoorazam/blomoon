@@ -13,7 +13,9 @@ type GlobeSceneProps = {
   dpr: [number, number];
   earthSpinEnabled: boolean;
   focusKey: string | null;
+  focusPoint: TerraPoint | null;
   hoverEnabled: boolean;
+  maxCameraDistance: number;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
@@ -31,7 +33,9 @@ export const GlobeScene = memo(function GlobeScene({
   dpr,
   earthSpinEnabled,
   focusKey,
+  focusPoint,
   hoverEnabled,
+  maxCameraDistance,
   markerColor,
   markerColorMode,
   points,
@@ -68,9 +72,9 @@ export const GlobeScene = memo(function GlobeScene({
 
       <CameraFocus
         focusKey={focusKey}
-        selectedPoint={selectedPoint}
+        focusPoint={focusPoint}
       />
-      <AdaptiveOrbitControls earthSpinEnabled={earthSpinEnabled} />
+      <AdaptiveOrbitControls earthSpinEnabled={earthSpinEnabled} maxDistance={maxCameraDistance} />
     </Canvas>
   );
 });

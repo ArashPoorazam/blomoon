@@ -29,6 +29,10 @@ export function useDrawerNavigation() {
     }));
   }, []);
 
+  const openContent = useCallback((nextView: ShellDrawerView) => {
+    setStack((currentStack) => openDrawerStackView(currentStack, nextView));
+  }, []);
+
   const replace = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "standard") => {
     setStack(createDrawerStack(nextView));
     setCollapsed(false);
@@ -36,6 +40,10 @@ export function useDrawerNavigation() {
       currentPosition,
       requestedOpenPosition: nextMobilePosition
     }));
+  }, []);
+
+  const replaceContent = useCallback((nextView: ShellDrawerView) => {
+    setStack(createDrawerStack(nextView));
   }, []);
 
   const goBack = useCallback(() => {
@@ -57,10 +65,12 @@ export function useDrawerNavigation() {
     goBack,
     mobilePosition,
     open,
+    openContent,
     replace,
+    replaceContent,
     setMobilePosition,
     stack,
     toggleCollapsed,
     view
-  }), [canGoBack, collapsed, goBack, mobilePosition, open, replace, stack, toggleCollapsed, view]);
+  }), [canGoBack, collapsed, goBack, mobilePosition, open, openContent, replace, replaceContent, stack, toggleCollapsed, view]);
 }
