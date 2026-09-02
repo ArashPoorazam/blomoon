@@ -172,7 +172,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
       longitude: snapshot.longitude,
       locationPrecision: snapshot.locationPrecision,
       sourceUrl: snapshot.sourceUrl,
-      providerMetadata: snapshot.metrics,
+      providerMetadata: stationProviderMetadata(snapshot),
       providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
       updatedAt: new Date()
     })
@@ -190,7 +190,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
         longitude: snapshot.longitude,
         locationPrecision: snapshot.locationPrecision,
         sourceUrl: snapshot.sourceUrl,
-        providerMetadata: snapshot.metrics,
+        providerMetadata: stationProviderMetadata(snapshot),
         providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
         updatedAt: new Date()
       }
@@ -233,10 +233,18 @@ function stationSnapshotToPoint(snapshot: RadioStationPersistenceSnapshot): Terr
     longitude: snapshot.longitude,
     locationPrecision: snapshot.locationPrecision,
     countryCode: snapshot.countryCode,
+    artworkUrl: snapshot.artworkUrl ?? undefined,
     prominence: normalizeProminence(snapshot.clickCount, snapshot.votes),
     timestamp: snapshot.timestamp ?? undefined,
     summary: snapshot.summary,
     metrics: snapshot.metrics
+  };
+}
+
+function stationProviderMetadata(snapshot: RadioStationPersistenceSnapshot) {
+  return {
+    ...snapshot.metrics,
+    Artwork: snapshot.artworkUrl
   };
 }
 
@@ -267,6 +275,7 @@ function stationRowToPoint(row: {
     longitude: row.longitude,
     locationPrecision: row.locationPrecision,
     countryCode: row.countryCode,
+    artworkUrl: typeof row.providerMetadata.Artwork === "string" ? row.providerMetadata.Artwork : undefined,
     prominence: normalizeProminence(row.providerClicks, row.providerVotes),
     timestamp: row.providerUpdatedAt?.toISOString(),
     summary: row.summary,

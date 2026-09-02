@@ -11,6 +11,7 @@ export type TerraPoint = {
   locationPrecision?: "station" | "country";
   /** ISO 3166-1 numeric country code, or a documented atlas-only X-* code. */
   countryCode?: string;
+  artworkUrl?: string;
   prominence?: number;
   timestamp?: string;
   summary: string;

@@ -867,8 +867,10 @@
 .favourite-row {
   display: grid;
   width: 100%;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
+  gap: 8px;
+  padding-right: 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--surface);
@@ -922,7 +924,6 @@
   display: inline-grid;
   width: 34px;
   height: 34px;
-  margin-right: 9px;
   place-items: center;
   border: 1px solid var(--panel-border);
   border-radius: 8px;

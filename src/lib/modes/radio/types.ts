@@ -65,6 +65,7 @@ export type RadioStationRecord = {
 };
 
 export type RadioStationPersistenceSnapshot = {
+  artworkUrl: string | null;
   bitrate: number | null;
   clickCount: number;
   codec: string | null;

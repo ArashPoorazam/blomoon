@@ -85,10 +85,6 @@ export function AudioMiniPlayer({
   playback: AudioPlaybackController;
   playbackLabel: string;
 }) {
-  if (!playback.point) {
-    return null;
-  }
-
   const currentPoint = playback.point;
 
   return (
@@ -99,14 +95,21 @@ export function AudioMiniPlayer({
         </div>
         <div className="media-player-copy">
           <div className="media-player-kicker">{playbackLabel}</div>
-          <button
-            className="media-player-title media-player-title-button"
-            type="button"
-            onClick={() => onPointOpen(currentPoint)}
-          >
-            {currentPoint.name}
-          </button>
-          <div className="media-player-status">{formatAudioPlaybackStatus(playback.status)}</div>
+          {currentPoint ? (
+            <button
+              className="media-player-title media-player-title-button"
+              type="button"
+              onClick={() => onPointOpen(currentPoint)}
+            >
+              {currentPoint.name}
+            </button>
+          ) : (
+            <div className="media-player-title">No station playing</div>
+          )}
+          <div className="media-player-description">
+            {currentPoint?.summary ?? "Choose a station or start a random one."}
+          </div>
+          {currentPoint ? <div className="media-player-status">{formatAudioPlaybackStatus(playback.status)}</div> : null}
         </div>
       </div>
       <AudioPlaybackControls
@@ -143,7 +146,7 @@ function AudioPlaybackControls({
   canPlayNext?: boolean;
   canShuffle?: boolean;
   compact?: boolean;
-  detail: TerraPoint;
+  detail: TerraPoint | null;
   itemPluralLabel?: string;
   itemSingularLabel: string;
   loadingRandom?: boolean;
@@ -176,8 +179,12 @@ function AudioPlaybackControls({
       <button
         className="media-control primary"
         type="button"
-        disabled={isBusy}
+        disabled={!detail || isBusy}
         onClick={() => {
+          if (!detail) {
+            return;
+          }
+
           if (isPlaying) {
             playback.pause();
             return;

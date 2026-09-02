@@ -5,6 +5,7 @@ import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
+import { PointActionMenu } from "./drawer/PointActionMenu";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
 type SideDrawerListProps = {
@@ -25,7 +26,8 @@ type SideDrawerListProps = {
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
-  onPointSelect: (point: TerraPoint) => void;
+  onPointInspect: (point: TerraPoint) => void;
+  onPointPlay: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
@@ -49,7 +51,8 @@ export function SideDrawerList({
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
-  onPointSelect,
+  onPointInspect,
+  onPointPlay,
   onQueryChange,
   onSortChange,
   onToggleFavourite
@@ -88,7 +91,7 @@ export function SideDrawerList({
               className={`point-row ${selectedId === point.id ? "selected" : ""} ${activePlaybackPointKey === getPointKey(point) ? "playback-active" : ""}`}
               key={point.id}
             >
-              <button className="point-row-main" type="button" onClick={() => onPointSelect(point)}>
+              <button className="point-row-main" type="button" onClick={() => onPointPlay(point)}>
                 <span className="point-copy">
                   <span className="point-name">{point.name}</span>
                   <span className="point-meta">
@@ -101,6 +104,7 @@ export function SideDrawerList({
                 point={point}
                 onToggle={onToggleFavourite}
               />
+              <PointActionMenu point={point} onInfo={onPointInspect} />
             </div>
           ))
         )}

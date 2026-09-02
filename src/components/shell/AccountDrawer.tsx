@@ -10,6 +10,7 @@ import { ThemePicker } from "../account/ThemePicker";
 import type { ShellDrawerView } from "./drawerState";
 
 type AccountDrawerProps = {
+  canGoBack: boolean;
   contactLinks: ContactLink[];
   loading: boolean;
   selectedThemeId: TerraThemeId;
@@ -24,6 +25,7 @@ type AccountDrawerProps = {
 };
 
 export function AccountDrawer({
+  canGoBack,
   contactLinks,
   loading,
   onAccountUpdated,
@@ -63,8 +65,12 @@ export function AccountDrawer({
   return (
     <div className="account-drawer-view" aria-label="Account">
       <div className="drawer-header">
+        {canGoBack ? (
+          <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
+        ) : null}
         <div>
-          <div className="drawer-kicker">Account</div>
           <h2 className="drawer-title">{user ? "Manage account" : "Account access"}</h2>
           <p className="drawer-subtitle">{user ? user.email : "Log in or register to save lists across devices."}</p>
         </div>
@@ -119,7 +125,6 @@ function AccountDrawerPanel({
           <ChevronLeft size={17} aria-hidden="true" />
         </button>
         <div className="account-drawer-heading">
-          <div className="drawer-kicker">Account</div>
           <h2 className="drawer-title">{title}</h2>
         </div>
       </div>

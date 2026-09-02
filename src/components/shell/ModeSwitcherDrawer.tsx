@@ -1,11 +1,13 @@
 "use client";
 
-import { Podcast, Radio, Tv, type LucideIcon } from "lucide-react";
+import { ChevronLeft, Podcast, Radio, Tv, type LucideIcon } from "lucide-react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 
 type ModeSwitcherDrawerProps = {
   activeModeId: TerraModeId;
+  canGoBack: boolean;
   modes: TerraMode[];
+  onBack: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
 };
 
@@ -38,7 +40,7 @@ const plannedModes = [
   }
 ] satisfies Array<Omit<ModeSwitcherItem, "available">>;
 
-export function ModeSwitcherDrawer({ activeModeId, modes, onModeSelect }: ModeSwitcherDrawerProps) {
+export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onModeSelect }: ModeSwitcherDrawerProps) {
   const registeredModes = new Map(modes.map((mode) => [mode.id, mode]));
   const items = plannedModes.map((item) => ({
     ...item,
@@ -49,8 +51,12 @@ export function ModeSwitcherDrawer({ activeModeId, modes, onModeSelect }: ModeSw
   return (
     <div className="mode-switcher-view" aria-label="Change mode">
       <div className="drawer-header">
+        {canGoBack ? (
+          <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
+        ) : null}
         <div>
-          <div className="drawer-kicker">Media modes</div>
           <h2 className="drawer-title">Change mode</h2>
           <p className="drawer-subtitle">More live entertainment modes are planned.</p>
         </div>

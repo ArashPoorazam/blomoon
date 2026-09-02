@@ -607,6 +607,7 @@ function toPersistenceSnapshot(record: RadioStationRecord): RadioStationPersiste
   const tags = getTextMetric(record.point, "Tags")?.split(",").map((tag) => tag.trim()).filter(Boolean) ?? [];
 
   return {
+    artworkUrl: record.point.artworkUrl ?? null,
     bitrate: getBitrate(record),
     clickCount: record.clickCount,
     codec: getTextMetric(record.point, "Codec"),
