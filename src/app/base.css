@@ -35,6 +35,10 @@ button {
   color: inherit;
 }
 
+.clickable-text {
+  color: var(--clickable-text);
+}
+
 .blomoon-shell {
   position: relative;
   width: 100vw;
@@ -117,14 +121,11 @@ button {
 }
 
 .shell-square-control.active {
-  border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
-  background: var(--control-hover);
   color: var(--accent-strong);
 }
 
 .shell-square-control[aria-pressed="true"],
 .shell-mobile-nav-button[aria-pressed="true"] {
-  background: var(--control-hover);
   color: var(--accent-strong);
 }
 
@@ -199,10 +200,13 @@ button {
   }
 
   .shell-mobile-nav-button:hover,
-  .shell-mobile-nav-button:focus-visible,
-  .shell-mobile-nav-button.active {
+  .shell-mobile-nav-button:focus-visible {
     border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
     background: var(--control-hover);
+    color: var(--accent-strong);
+  }
+
+  .shell-mobile-nav-button.active {
     color: var(--accent-strong);
   }
 

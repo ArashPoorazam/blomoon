@@ -484,9 +484,13 @@
 }
 
 .filter-menu-options button:hover,
-.filter-menu-options button.selected {
+.filter-menu-options button:focus-visible {
   background: var(--control-hover);
   color: var(--text);
+}
+
+.filter-menu-options button.selected {
+  color: var(--accent-strong);
 }
 
 .filter-menu-empty {
@@ -542,14 +546,13 @@
 
 .filter-chip:hover,
 .listed-globe-toggle:hover,
-.filter-load-more:hover:not(:disabled),
-.listed-globe-toggle.active {
+.filter-load-more:hover:not(:disabled) {
   background: var(--control-hover);
   color: var(--text);
 }
 
 .listed-globe-toggle.active {
-  border-color: var(--focus-ring);
+  color: var(--accent-strong);
 }
 
 .filter-load-more:disabled {
@@ -567,32 +570,27 @@
   padding: 0 12px 18px;
 }
 
-.point-list,
-.detail-body {
+.point-list {
   scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
   scrollbar-width: thin;
 }
 
-.point-list::-webkit-scrollbar,
-.detail-body::-webkit-scrollbar {
+.point-list::-webkit-scrollbar {
   width: 10px;
 }
 
-.point-list::-webkit-scrollbar-track,
-.detail-body::-webkit-scrollbar-track {
+.point-list::-webkit-scrollbar-track {
   background: var(--scrollbar-track);
 }
 
-.point-list::-webkit-scrollbar-thumb,
-.detail-body::-webkit-scrollbar-thumb {
+.point-list::-webkit-scrollbar-thumb {
   border: 2px solid transparent;
   border-radius: 999px;
   background: var(--scrollbar-thumb);
   background-clip: padding-box;
 }
 
-.point-list::-webkit-scrollbar-thumb:hover,
-.detail-body::-webkit-scrollbar-thumb:hover {
+.point-list::-webkit-scrollbar-thumb:hover {
   background: var(--scrollbar-thumb-hover);
   background-clip: padding-box;
 }
@@ -725,67 +723,19 @@
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background: var(--control);
-  color: var(--metric);
+  color: var(--muted-strong);
   cursor: pointer;
 }
 
 .favourite-star:hover,
-.favourite-star.active {
+.favourite-star:focus-visible {
   border-color: var(--metric-border);
   background: var(--control-hover);
   color: var(--metric);
 }
 
-.detail-body {
-  min-height: 0;
-  flex: 1;
-  overflow: auto;
-  padding: 18px 22px 24px;
-}
-
-.detail-accessory {
-  margin-bottom: 14px;
-}
-
-.detail-sections {
-  display: grid;
-  gap: 16px;
-}
-
-.detail-section-title {
-  margin-bottom: 8px;
-  color: var(--muted-strong);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-}
-
-.detail-grid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
-.detail-stat {
-  min-height: 74px;
-  padding: 12px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--surface);
-}
-
-.detail-label {
-  color: var(--muted);
-  font-size: 11px;
-  line-height: 1.2;
-}
-
-.detail-value {
-  margin-top: 8px;
-  font-size: 15px;
-  font-weight: 650;
-  line-height: 1.25;
-  white-space: pre-line;
+.favourite-star.active {
+  color: var(--metric);
 }
 
 .empty-state {
@@ -880,10 +830,6 @@
     display: none;
   }
 
-  .drawer-header .drawer-title {
-    color: var(--accent-strong);
-  }
-
   .point-row-main {
     min-height: 44px;
   }
@@ -910,12 +856,7 @@
     grid-template-columns: 1fr;
   }
 
-  .detail-grid {
-    grid-template-columns: 1fr;
-  }
-
   .has-mini-player .point-list,
-  .has-mini-player .detail-body,
   .has-mini-player .favourites-body {
     padding-bottom: 22px;
   }

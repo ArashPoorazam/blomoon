@@ -1,8 +1,9 @@
 "use client";
 
-import { Earth, MapPin, Podcast, Radio, Star, Tv, type LucideIcon } from "lucide-react";
+import { Earth, MapPin, Star } from "lucide-react";
 import type { MouseEvent } from "react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
+import { modeIcons } from "./shell/modeIcons";
 
 type ShellControlRailProps = {
   activeModeId: TerraModeId;
@@ -55,7 +56,7 @@ export function ShellControlRail({
         type="button"
         onClick={onToggleShowListedOnGlobe}
       >
-        <MapPin size={18} aria-hidden="true" fill={showListedOnGlobe ? "currentColor" : "none"} />
+        <MapPin size={18} aria-hidden="true" />
       </button>
       <button
         className="shell-square-control"
@@ -98,9 +99,3 @@ export function getModeControlItems(modes: TerraMode[], activeModeId: TerraModeI
     label: mode.label
   }));
 }
-
-const modeIcons = {
-  podcast: Podcast,
-  radio: Radio,
-  tv: Tv
-} satisfies Record<TerraMode["controlIcon"], LucideIcon>;

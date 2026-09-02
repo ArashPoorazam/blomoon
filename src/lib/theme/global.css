@@ -24,6 +24,7 @@
   --info-border: rgba(125, 207, 255, 0.24);
   --info-surface: rgba(125, 207, 255, 0.07);
   --info-control: rgba(125, 207, 255, 0.14);
+  --clickable-text: var(--accent-strong);
   --tooltip-border: rgba(122, 162, 247, 0.28);
   --tooltip-bg: rgba(22, 22, 30, 0.94);
   --shadow-panel: rgba(0, 0, 0, 0.42);

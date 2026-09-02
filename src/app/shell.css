@@ -117,14 +117,18 @@
 }
 
 .favourite-picker-option:hover,
-.favourite-picker-option.selected {
+.favourite-picker-option:focus-visible {
   border-color: var(--metric-border);
   background: var(--control-hover);
   color: var(--text);
 }
 
+.favourite-picker-option.selected {
+  color: var(--accent-strong);
+}
+
 .favourite-picker-option > svg {
-  color: var(--metric);
+  color: currentColor;
 }
 
 .favourite-picker-option strong,
@@ -186,11 +190,15 @@
 }
 
 .mode-switcher-option:hover:not(:disabled),
-.mode-switcher-option.active,
+.mode-switcher-option:focus-visible,
 .account-drawer-actions button:hover {
   border-color: color-mix(in srgb, var(--accent) 52%, var(--panel-border));
   background: var(--control-hover);
   color: var(--text);
+}
+
+.mode-switcher-option.active {
+  color: var(--accent-strong);
 }
 
 .mode-switcher-option:disabled {

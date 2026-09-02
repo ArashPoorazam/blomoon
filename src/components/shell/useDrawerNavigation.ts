@@ -7,6 +7,7 @@ import {
   getCurrentDrawerView,
   openDrawerStackView,
   popDrawerStack,
+  resolveDrawerMobilePosition,
   type DrawerMobilePosition,
   type ShellDrawerStack,
   type ShellDrawerView
@@ -22,19 +23,28 @@ export function useDrawerNavigation() {
   const open = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "standard") => {
     setStack((currentStack) => openDrawerStackView(currentStack, nextView));
     setCollapsed(false);
-    setMobilePosition(nextMobilePosition);
+    setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
+      currentPosition,
+      requestedOpenPosition: nextMobilePosition
+    }));
   }, []);
 
   const replace = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "standard") => {
     setStack(createDrawerStack(nextView));
     setCollapsed(false);
-    setMobilePosition(nextMobilePosition);
+    setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
+      currentPosition,
+      requestedOpenPosition: nextMobilePosition
+    }));
   }, []);
 
   const goBack = useCallback(() => {
     setStack((currentStack) => popDrawerStack(currentStack));
     setCollapsed(false);
-    setMobilePosition("standard");
+    setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
+      currentPosition,
+      requestedOpenPosition: "standard"
+    }));
   }, []);
 
   const toggleCollapsed = useCallback(() => {

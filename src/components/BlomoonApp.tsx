@@ -84,6 +84,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "paused")
     ? getPointKey(audioPlayback.point)
     : null;
+  const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;
   const rawGlobePoints = showListedOnGlobe ? activeDrawerPoints : modeState.globePoints;
   const visiblePointIds = useMemo(
     () => new Set(activeDrawerPoints.map(getPointKey)),
@@ -93,11 +94,11 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     ? modeState.selectedPoint
     : null;
   const globePoints = useMemo(() => limitGlobePoints({
-    activePlaybackPoint: audioPlayback.point,
+    activePlaybackPoint,
     budget: globeProfile.markerBudget,
     points: rawGlobePoints,
     selectedPoint: globeSelectedPoint
-  }), [audioPlayback.point, globeProfile.markerBudget, globeSelectedPoint, rawGlobePoints]);
+  }), [activePlaybackPoint, globeProfile.markerBudget, globeSelectedPoint, rawGlobePoints]);
   const globeMarkerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
   const globeMarkerColorMode = showListedOnGlobe ? "single" : activeMode.markerColorMode;
   const selectedCountryOutlineColor = globeSelectedPoint
@@ -297,6 +298,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     >
       <div className="globe-stage">
         <GlobeScene
+          activePlaybackPoint={activePlaybackPoint}
           dpr={globeProfile.dpr}
           earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
           focusKey={modeState.selectedId}
@@ -315,6 +317,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       </div>
 
       <ShellChrome
+        activeMode={activeMode}
         activeModeId={activeModeId}
         appConfig={appConfig}
         drawerView={drawer.view}
@@ -336,6 +339,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         }}
         onFavouritesOpen={openFavourites}
         onHome={restoreHomeDrawer}
+        onModeListOpen={restoreHomeDrawer}
         onModeOpen={openModeSwitcher}
         onModeSelect={selectMode}
         onThemeChange={selectTheme}

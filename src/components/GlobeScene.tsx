@@ -17,6 +17,7 @@ type GlobeSceneProps = {
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
+  activePlaybackPoint?: TerraPoint | null;
   selectedCountryCode: string | null;
   selectedCountryOutlineColor: string;
   selectedPoint: TerraPoint | null;
@@ -34,6 +35,7 @@ export const GlobeScene = memo(function GlobeScene({
   markerColor,
   markerColorMode,
   points,
+  activePlaybackPoint,
   selectedCountryCode,
   selectedCountryOutlineColor,
   selectedPoint,
@@ -56,6 +58,7 @@ export const GlobeScene = memo(function GlobeScene({
         markerColor={markerColor}
         markerColorMode={markerColorMode}
         points={points}
+        activePlaybackPoint={activePlaybackPoint}
         selectedPoint={selectedPoint}
         theme={theme}
         hoverEnabled={hoverEnabled}

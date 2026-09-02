@@ -3,24 +3,31 @@
 import Image from "next/image";
 import { Grid2X2, Star, UserCircle } from "lucide-react";
 import blomoonFullLogo from "@/assets/images/full_logo/Blomoon_Full_Logo.png";
+import type { TerraMode } from "@/lib/modes/types";
 import { isAccountDrawerView, type ShellDrawerView } from "./drawerState";
+import { modeIcons } from "./modeIcons";
 
 type ShellMobileNavProps = {
+  activeMode: TerraMode;
   activeView: ShellDrawerView;
   onAccountOpen: () => void;
   onFavouritesOpen: () => void;
   onHome: () => void;
+  onModeListOpen: () => void;
   onModeOpen: () => void;
 };
 
 export function ShellMobileNav({
+  activeMode,
   activeView,
   onAccountOpen,
   onFavouritesOpen,
   onHome,
+  onModeListOpen,
   onModeOpen
 }: ShellMobileNavProps) {
   const accountActive = isAccountDrawerView(activeView);
+  const ModeIcon = modeIcons[activeMode.controlIcon];
 
   return (
     <nav className="shell-mobile-nav" aria-label="Blomoon mobile navigation">
@@ -33,7 +40,15 @@ export function ShellMobileNav({
         <Grid2X2 size={19} aria-hidden="true" />
         <span className="sr-only">Change mode</span>
       </button>
-      <div className="shell-mobile-nav-slot" aria-hidden="true" />
+      <button
+        aria-current={activeView === "main" ? "page" : undefined}
+        className={`shell-mobile-nav-button ${activeView === "main" ? "active" : ""}`}
+        type="button"
+        onClick={onModeListOpen}
+      >
+        <ModeIcon size={19} aria-hidden="true" />
+        <span className="sr-only">{activeMode.label} list</span>
+      </button>
       <button className="shell-mobile-logo-button" type="button" onClick={onHome}>
         <Image
           alt="Blomoon"
@@ -49,7 +64,7 @@ export function ShellMobileNav({
         type="button"
         onClick={onFavouritesOpen}
       >
-        <Star size={19} aria-hidden="true" fill={activeView === "favourites" ? "currentColor" : "none"} />
+        <Star size={19} aria-hidden="true" />
         <span className="sr-only">Favourites</span>
       </button>
       <button

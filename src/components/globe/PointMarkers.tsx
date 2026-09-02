@@ -6,6 +6,7 @@ import { useLayoutEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import * as THREE from "three";
 import { GLOBE_RADIUS } from "@/lib/geo";
+import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraPoint } from "@/lib/modes/types";
 import { resolvePointMarkerColor, type GlobeTheme, type MarkerColorMode } from "@/lib/theme/globe";
 import {
@@ -31,6 +32,7 @@ type PointMarkersProps = {
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
+  activePlaybackPoint?: TerraPoint | null;
   selectedPoint: TerraPoint | null;
   theme: GlobeTheme;
   onHover: (point: TerraPoint | null) => void;
@@ -44,14 +46,23 @@ export function PointMarkers({
   markerColor,
   markerColorMode,
   points,
+  activePlaybackPoint = null,
   selectedPoint,
   theme,
   onHover,
   onSelect
 }: PointMarkersProps) {
+  const highlightedPoints = useMemo(
+    () => getHighlightedPoints(selectedPoint, activePlaybackPoint),
+    [activePlaybackPoint, selectedPoint]
+  );
+  const highlightedPointKeys = useMemo(
+    () => new Set(highlightedPoints.map(getPointKey)),
+    [highlightedPoints]
+  );
   const instancedPoints = useMemo(
-    () => points.filter((point) => point.id !== selectedPoint?.id),
-    [points, selectedPoint?.id]
+    () => points.filter((point) => !highlightedPointKeys.has(getPointKey(point))),
+    [highlightedPointKeys, points]
   );
   const visualBatches = useMemo(
     () => getMarkerBatches(instancedPoints, markerColorMode, markerColor ?? theme.markers.defaultSingle, theme),
@@ -73,15 +84,16 @@ export function PointMarkers({
         onHover={onHover}
         onSelect={onSelect}
       />
-      {selectedPoint ? (
-        <SelectedPointMarker
-          point={selectedPoint}
+      {highlightedPoints.map((point) => (
+        <HighlightedPointMarker
+          key={getPointKey(point)}
+          point={point}
           theme={theme}
           hoverEnabled={hoverEnabled}
           onHover={onHover}
           onSelect={onSelect}
         />
-      ) : null}
+      ))}
     </>
   );
 }
@@ -205,7 +217,7 @@ function MarkerHitInstances({
   );
 }
 
-function SelectedPointMarker({
+function HighlightedPointMarker({
   hoverEnabled,
   point,
   theme,
@@ -289,6 +301,20 @@ function SelectedPointMarker({
       </mesh>
     </group>
   );
+}
+
+function getHighlightedPoints(selectedPoint: TerraPoint | null, activePlaybackPoint: TerraPoint | null) {
+  const highlighted = new Map<string, TerraPoint>();
+
+  if (selectedPoint) {
+    highlighted.set(getPointKey(selectedPoint), selectedPoint);
+  }
+
+  if (activePlaybackPoint) {
+    highlighted.set(getPointKey(activePlaybackPoint), activePlaybackPoint);
+  }
+
+  return Array.from(highlighted.values());
 }
 
 function useScaledMarkerInstances(meshRef: RefObject<THREE.InstancedMesh | null>, points: TerraPoint[]) {

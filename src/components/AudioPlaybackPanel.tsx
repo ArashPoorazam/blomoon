@@ -1,6 +1,7 @@
 "use client";
 
 import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward } from "lucide-react";
+import { useEffect, useRef, useState } from "react";
 import type { TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
@@ -26,14 +27,13 @@ export function AudioPlaybackPanel({
   const status = isCurrentItem ? playback.status : "idle";
 
   return (
-    <section className="media-player" aria-label={`${playbackLabel} playback`}>
+    <section className="media-player media-player-detail" aria-label={`${playbackLabel} playback`}>
       <div className="media-player-header">
         <div className="media-player-icon" aria-hidden="true">
           <AudioLines size={18} />
         </div>
         <div className="media-player-copy">
           <div className="media-player-kicker">{playbackLabel}</div>
-          <div className="media-player-title">{detail.name}</div>
           {isCurrentItem ? <div className="media-player-status">{formatAudioPlaybackStatus(status)}</div> : null}
         </div>
         <FavouriteStarButton
@@ -97,17 +97,17 @@ export function AudioMiniPlayer({
           <div className="media-player-kicker">{playbackLabel}</div>
           {currentPoint ? (
             <button
-              className="media-player-title media-player-title-button"
+              className="media-player-title media-player-title-button clickable-text"
               type="button"
               onClick={() => onPointOpen(currentPoint)}
             >
-              {currentPoint.name}
+              <MiniOverflowText text={currentPoint.name} />
             </button>
           ) : (
             <div className="media-player-title">No station playing</div>
           )}
           <div className="media-player-description">
-            {currentPoint?.summary ?? "Choose a station or start a random one."}
+            <MiniOverflowText text={currentPoint?.summary ?? "Choose a station or start a random one."} />
           </div>
           {currentPoint ? <div className="media-player-status">{formatAudioPlaybackStatus(playback.status)}</div> : null}
         </div>
@@ -232,6 +232,75 @@ function AudioPlaybackControls({
         </button>
       ) : null}
     </div>
+  );
+}
+
+function MiniOverflowText({ text }: { text: string }) {
+  const containerRef = useRef<HTMLSpanElement>(null);
+  const textRef = useRef<HTMLSpanElement>(null);
+  const [overflowing, setOverflowing] = useState(false);
+  const [reducedMotion, setReducedMotion] = useState(false);
+  const shouldScroll = overflowing && !reducedMotion;
+
+  useEffect(() => {
+    if (typeof window.matchMedia !== "function") {
+      return;
+    }
+
+    const motionQuery = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const updateReducedMotion = () => setReducedMotion(motionQuery.matches);
+
+    updateReducedMotion();
+    motionQuery.addEventListener("change", updateReducedMotion);
+
+    return () => {
+      motionQuery.removeEventListener("change", updateReducedMotion);
+    };
+  }, []);
+
+  useEffect(() => {
+    const updateOverflow = () => {
+      const container = containerRef.current;
+      const textElement = textRef.current;
+
+      if (!container || !textElement) {
+        return;
+      }
+
+      setOverflowing(textElement.scrollWidth > container.clientWidth + 1);
+    };
+
+    updateOverflow();
+
+    const resizeObserver = typeof ResizeObserver === "undefined"
+      ? null
+      : new ResizeObserver(updateOverflow);
+
+    if (resizeObserver) {
+      if (containerRef.current) {
+        resizeObserver.observe(containerRef.current);
+      }
+
+      if (textRef.current) {
+        resizeObserver.observe(textRef.current);
+      }
+    }
+
+    window.addEventListener("resize", updateOverflow);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateOverflow);
+    };
+  }, [text]);
+
+  return (
+    <span className="media-mini-overflow" ref={containerRef} title={text}>
+      <span className={`media-mini-overflow-track ${shouldScroll ? "scrolling" : ""}`}>
+        <span className="media-mini-overflow-item" ref={textRef}>{text}</span>
+        {shouldScroll ? <span className="media-mini-overflow-item" aria-hidden="true">{text}</span> : null}
+      </span>
+    </span>
   );
 }
 

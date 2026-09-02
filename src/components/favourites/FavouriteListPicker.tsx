@@ -59,7 +59,7 @@ export function FavouriteListPicker({
                   void action(list.id, point).finally(() => setBusyListId(null));
                 }}
               >
-                <Star size={16} aria-hidden="true" fill={selected ? "currentColor" : "none"} />
+                <Star size={16} aria-hidden="true" />
                 <span>
                   <strong>{list.name}</strong>
                   <span>{formatListCount(list.itemCount)}</span>

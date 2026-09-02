@@ -28,7 +28,7 @@ export function ShellGlobeControls({
         type="button"
         onClick={onToggleShowListedOnGlobe}
       >
-        <MapPin size={18} aria-hidden="true" fill={showListedOnGlobe ? "currentColor" : "none"} />
+        <MapPin size={18} aria-hidden="true" />
       </button>
       <button
         className="shell-square-control"

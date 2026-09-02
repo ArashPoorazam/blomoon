@@ -19,7 +19,7 @@ export function FavouriteStarButton({ favourited, onToggle, point }: FavouriteSt
       type="button"
       onClick={() => onToggle(point)}
     >
-      <Star size={16} aria-hidden="true" fill={favourited ? "currentColor" : "none"} />
+      <Star size={16} aria-hidden="true" />
     </button>
   );
 }

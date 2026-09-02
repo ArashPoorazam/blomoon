@@ -12,6 +12,7 @@ import { ShellGlobeControls } from "./ShellGlobeControls";
 import { ShellMobileNav } from "./ShellMobileNav";
 
 type ShellChromeProps = {
+  activeMode: TerraMode;
   activeModeId: TerraModeId;
   appConfig: AppClientConfig;
   drawerView: ShellDrawerView;
@@ -28,6 +29,7 @@ type ShellChromeProps = {
   onDesktopLogout: () => void | Promise<void>;
   onFavouritesOpen: () => void;
   onHome: () => void;
+  onModeListOpen: () => void;
   onModeOpen: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
   onThemeChange: (themeId: TerraThemeId) => void;
@@ -36,6 +38,7 @@ type ShellChromeProps = {
 };
 
 export function ShellChrome({
+  activeMode,
   activeModeId,
   appConfig,
   drawerView,
@@ -48,6 +51,7 @@ export function ShellChrome({
   onDesktopLogout,
   onFavouritesOpen,
   onHome,
+  onModeListOpen,
   onModeOpen,
   onModeSelect,
   onThemeChange,
@@ -72,10 +76,12 @@ export function ShellChrome({
       />
 
       <ShellMobileNav
+        activeMode={activeMode}
         activeView={drawerView}
         onAccountOpen={onAccountOpen}
         onFavouritesOpen={onFavouritesOpen}
         onHome={onHome}
+        onModeListOpen={onModeListOpen}
         onModeOpen={onModeOpen}
       />
 

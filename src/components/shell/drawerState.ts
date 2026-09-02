@@ -55,3 +55,13 @@ export function popDrawerStack(stack: ShellDrawerStack): ShellDrawerStack {
 export function canGoBackFromDrawerStack(stack: ShellDrawerStack) {
   return stack.length > 1;
 }
+
+export function resolveDrawerMobilePosition({
+  currentPosition,
+  requestedOpenPosition
+}: {
+  currentPosition: DrawerMobilePosition;
+  requestedOpenPosition: DrawerMobilePosition;
+}): DrawerMobilePosition {
+  return currentPosition === "closed" ? requestedOpenPosition : currentPosition;
+}

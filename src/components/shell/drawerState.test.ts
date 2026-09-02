@@ -5,7 +5,8 @@ import {
   getCurrentDrawerView,
   isAccountDrawerView,
   openDrawerStackView,
-  popDrawerStack
+  popDrawerStack,
+  resolveDrawerMobilePosition
 } from "./drawerState";
 
 describe("shell drawer state", () => {
@@ -36,5 +37,27 @@ describe("shell drawer state", () => {
     expect(getCurrentDrawerView(stack)).toBe("point-detail");
     expect(popDrawerStack(stack)).toEqual(["main", "favourites"]);
     expect(popDrawerStack(["main"])).toEqual(["main"]);
+  });
+
+  it("uses requested mobile position only when reopening a closed drawer", () => {
+    expect(resolveDrawerMobilePosition({
+      currentPosition: "closed",
+      requestedOpenPosition: "full"
+    })).toBe("full");
+
+    expect(resolveDrawerMobilePosition({
+      currentPosition: "standard",
+      requestedOpenPosition: "full"
+    })).toBe("standard");
+
+    expect(resolveDrawerMobilePosition({
+      currentPosition: "full",
+      requestedOpenPosition: "standard"
+    })).toBe("full");
+
+    expect(resolveDrawerMobilePosition({
+      currentPosition: "custom",
+      requestedOpenPosition: "standard"
+    })).toBe("custom");
   });
 });

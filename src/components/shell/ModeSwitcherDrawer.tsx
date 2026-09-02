@@ -1,7 +1,8 @@
 "use client";
 
-import { ChevronLeft, Podcast, Radio, Tv, type LucideIcon } from "lucide-react";
+import { ChevronLeft } from "lucide-react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
+import { modeIcons } from "./modeIcons";
 
 type ModeSwitcherDrawerProps = {
   activeModeId: TerraModeId;
@@ -90,9 +91,3 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
     </div>
   );
 }
-
-const modeIcons = {
-  podcast: Podcast,
-  radio: Radio,
-  tv: Tv
-} satisfies Record<TerraMode["controlIcon"], LucideIcon>;
