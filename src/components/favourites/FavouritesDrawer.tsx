@@ -42,19 +42,21 @@ export function FavouritesDrawer({
   return (
     <div className="favourites-view" aria-label="Favourites">
       <div className="favourites-header">
-        {canGoBack ? (
-          <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
-            <ChevronLeft size={17} aria-hidden="true" />
-          </button>
-        ) : null}
-        <div>
+        <div className="favourites-header-copy">
           <h2>Favourites</h2>
           <p className="drawer-subtitle">{formatFavouriteCount(favouriteCount, loading)}</p>
         </div>
-        <button className="primary-action compact-action" type="button" onClick={() => setCreating(true)}>
-          <Plus size={15} aria-hidden="true" />
-          <span>New list</span>
-        </button>
+        <div className="favourites-header-actions">
+          <button className="primary-action compact-action" type="button" onClick={() => setCreating(true)}>
+            <Plus size={15} aria-hidden="true" />
+            <span>New list</span>
+          </button>
+          {canGoBack ? (
+            <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
+              <ChevronLeft size={17} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
       </div>
 
       <div className="favourites-body">
@@ -133,8 +135,8 @@ export function FavouritesDrawer({
                     void onRemoveFavouriteFromList(list.id, favourite.point);
                   }}
                 >
-                    <Trash2 size={15} aria-hidden="true" />
-                  </button>
+                  <Trash2 size={15} aria-hidden="true" />
+                </button>
                 <PointActionMenu
                   point={favourite.point}
                   onInfo={(point) => onFavouriteInspect(favourite.modeId, point)}

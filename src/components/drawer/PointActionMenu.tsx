@@ -1,6 +1,6 @@
 "use client";
 
-import { Info, MoreHorizontal } from "lucide-react";
+import { Info, MoreVertical } from "lucide-react";
 import { useId, useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 
@@ -32,7 +32,7 @@ export function PointActionMenu({ onInfo, point }: PointActionMenuProps) {
         type="button"
         onClick={() => setOpen((value) => !value)}
       >
-        <MoreHorizontal size={16} aria-hidden="true" />
+        <MoreVertical size={16} aria-hidden="true" />
       </button>
       {open ? (
         <div className="point-action-popover" id={menuId} role="menu">

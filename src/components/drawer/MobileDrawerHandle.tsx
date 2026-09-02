@@ -2,6 +2,7 @@
 
 import { useCallback, useRef, useState, type CSSProperties, type PointerEvent as ReactPointerEvent } from "react";
 import type { DrawerMobilePosition } from "../shell/drawerState";
+import { clampMobileSheetHeight, getMobileSheetMetrics } from "./mobileSheetMetrics";
 
 type MobileDrawerHandleProps = {
   mobilePosition: DrawerMobilePosition;
@@ -19,9 +20,11 @@ export function MobileDrawerHandle({
   onMobileStyleChange
 }: MobileDrawerHandleProps) {
   const [mobileHeight, setMobileHeight] = useState<number | null>(null);
-  const dragState = useRef<{ pointerId: number; height: number } | null>(null);
+  const dragState = useRef<{ currentHeight: number; pointerId: number; pointerOffset: number } | null>(null);
+  const activeHeight = useRef<number | null>(null);
 
   const setCustomHeight = useCallback((height: number) => {
+    activeHeight.current = height;
     setMobileHeight(height);
     const style: MobileSheetStyle = { "--mobile-sheet-height": `${height}px` };
 
@@ -35,10 +38,14 @@ export function MobileDrawerHandle({
       return;
     }
 
+    event.preventDefault();
+    const drawerRect = drawerElement.getBoundingClientRect();
+
     event.currentTarget.setPointerCapture(event.pointerId);
     dragState.current = {
+      currentHeight: drawerRect.height,
       pointerId: event.pointerId,
-      height: drawerElement.getBoundingClientRect().height
+      pointerOffset: event.clientY - drawerRect.top
     };
   }, []);
 
@@ -49,9 +56,12 @@ export function MobileDrawerHandle({
       return;
     }
 
+    event.preventDefault();
     const metrics = getMobileSheetMetrics();
-    const nextHeight = clamp(metrics.sheetBottom - event.clientY, metrics.minimumHeight, metrics.maximumHeight);
+    const nextTop = event.clientY - state.pointerOffset;
+    const nextHeight = clampMobileSheetHeight(metrics.sheetBottom - nextTop, metrics);
 
+    state.currentHeight = nextHeight;
     setCustomHeight(nextHeight);
     onMobilePositionChange("custom");
   }, [onMobilePositionChange, setCustomHeight]);
@@ -65,25 +75,31 @@ export function MobileDrawerHandle({
 
     dragState.current = null;
 
+    if (event.currentTarget.hasPointerCapture(event.pointerId)) {
+      event.currentTarget.releasePointerCapture(event.pointerId);
+    }
+
     const metrics = getMobileSheetMetrics();
-    const height = mobileHeight ?? state.height;
+    const height = activeHeight.current ?? mobileHeight ?? state.currentHeight;
     const handleTop = metrics.sheetBottom - height;
 
-    if (height <= metrics.closedHeight || handleTop >= metrics.closedTop) {
+    if (height <= metrics.closeSnapHeight) {
       setMobileHeight(null);
+      activeHeight.current = null;
       onMobileStyleChange(undefined);
       onMobilePositionChange("closed");
       return;
     }
 
-    if (handleTop <= metrics.fullTop || height >= metrics.maximumHeight - 28) {
+    if (handleTop <= metrics.fullTop || height >= metrics.fullSnapHeight) {
       setMobileHeight(null);
+      activeHeight.current = null;
       onMobileStyleChange(undefined);
       onMobilePositionChange("full");
       return;
     }
 
-    setCustomHeight(clamp(height, metrics.minimumHeight, metrics.maximumHeight));
+    setCustomHeight(clampMobileSheetHeight(height, metrics));
     onMobilePositionChange("custom");
   }, [mobileHeight, onMobilePositionChange, onMobileStyleChange, setCustomHeight]);
 
@@ -104,25 +120,4 @@ export function MobileDrawerHandle({
       <span aria-hidden="true" />
     </button>
   );
-}
-
-function getMobileSheetMetrics() {
-  const viewportHeight = window.innerHeight;
-  const navOffset = 72;
-  const playerSpace = 104;
-  const sheetBottom = viewportHeight - playerSpace;
-  const maximumHeight = Math.max(220, viewportHeight - navOffset - playerSpace);
-
-  return {
-    closedHeight: 110,
-    closedTop: sheetBottom - 118,
-    fullTop: navOffset + 18,
-    maximumHeight,
-    minimumHeight: 150,
-    sheetBottom
-  };
-}
-
-function clamp(value: number, minimum: number, maximum: number) {
-  return Math.min(maximum, Math.max(minimum, value));
 }

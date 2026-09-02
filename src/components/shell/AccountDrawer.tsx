@@ -65,15 +65,15 @@ export function AccountDrawer({
   return (
     <div className="account-drawer-view" aria-label="Account">
       <div className="drawer-header">
+        <div>
+          <h2 className="drawer-title">{user ? "Manage account" : "Account access"}</h2>
+          <p className="drawer-subtitle">{user ? user.email : "Log in or register to save lists across devices."}</p>
+        </div>
         {canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />
           </button>
         ) : null}
-        <div>
-          <h2 className="drawer-title">{user ? "Manage account" : "Account access"}</h2>
-          <p className="drawer-subtitle">{user ? user.email : "Log in or register to save lists across devices."}</p>
-        </div>
       </div>
       <div className="account-drawer-actions">
         {!user && !loading ? (
@@ -121,12 +121,12 @@ function AccountDrawerPanel({
   return (
     <div className="account-drawer-view" aria-label={title}>
       <div className="drawer-header">
-        <button className="icon-button" type="button" aria-label="Back to account" onClick={onBack}>
-          <ChevronLeft size={17} aria-hidden="true" />
-        </button>
         <div className="account-drawer-heading">
           <h2 className="drawer-title">{title}</h2>
         </div>
+        <button className="icon-button" type="button" aria-label="Back to account" onClick={onBack}>
+          <ChevronLeft size={17} aria-hidden="true" />
+        </button>
       </div>
       <div className="account-drawer-body">{children}</div>
     </div>

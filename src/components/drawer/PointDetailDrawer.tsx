@@ -20,12 +20,12 @@ export function PointDetailDrawer({
   return (
     <>
       <div className="drawer-header">
-        <button className="icon-button" type="button" aria-label="Back" onClick={onBack}>
-          <ChevronLeft size={17} aria-hidden="true" />
-        </button>
         <div>
           <h1 className="drawer-title">{activeMode.copy.itemSingular} info</h1>
         </div>
+        <button className="icon-button" type="button" aria-label="Back" onClick={onBack}>
+          <ChevronLeft size={17} aria-hidden="true" />
+        </button>
       </div>
 
       <div className="detail-body">

@@ -51,15 +51,15 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
   return (
     <div className="mode-switcher-view" aria-label="Change mode">
       <div className="drawer-header">
+        <div>
+          <h2 className="drawer-title">Change mode</h2>
+          <p className="drawer-subtitle">More live entertainment modes are planned.</p>
+        </div>
         {canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />
           </button>
         ) : null}
-        <div>
-          <h2 className="drawer-title">Change mode</h2>
-          <p className="drawer-subtitle">More live entertainment modes are planned.</p>
-        </div>
       </div>
       <div className="mode-switcher-list">
         {items.map((item) => {

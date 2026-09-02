@@ -9,12 +9,18 @@ import type { FavouriteListDto } from "@/lib/persistence/types";
 import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
+import { getMeasuredMobilePlayerHeight } from "./drawer/mobileSheetMetrics";
 import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
 import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
 import { AccountDrawer } from "./shell/AccountDrawer";
 import type { DrawerMobilePosition, ShellDrawerView } from "./shell/drawerState";
 import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
 import { SideDrawerList } from "./SideDrawerList";
+
+type DrawerRuntimeStyle = CSSProperties & {
+  "--mobile-player-height"?: string;
+  "--mobile-sheet-height"?: string;
+};
 
 type SideDrawerProps = {
   activeMode: TerraMode;
@@ -130,13 +136,18 @@ export function SideDrawer({
   const isDetail = Boolean(selectedId) && view === "point-detail";
   const isAccountView = view === "account" || view === "account-info" || view === "themes" || view === "contact";
   const [mobileSheetStyle, setMobileSheetStyle] = useState<CSSProperties | undefined>();
+  const mobilePlayerHeight = useMobilePlayerHeight();
+  const drawerStyle: DrawerRuntimeStyle = {
+    ...(mobilePlayerHeight ? { "--mobile-player-height": `${mobilePlayerHeight}px` } : undefined),
+    ...(mobilePosition === "custom" ? mobileSheetStyle : undefined)
+  };
 
   return (
     <aside
       className={`drawer ${collapsed ? "collapsed" : ""}`}
       aria-label={`${activeMode.label} data`}
       data-mobile-position={mobilePosition}
-      style={mobilePosition === "custom" ? mobileSheetStyle : undefined}
+      style={drawerStyle}
     >
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
 
@@ -229,6 +240,39 @@ export function SideDrawer({
       </div>
     </aside>
   );
+}
+
+function useMobilePlayerHeight() {
+  const [height, setHeight] = useState<number | null>(null);
+
+  useEffect(() => {
+    const updateHeight = () => {
+      setHeight((currentHeight) => {
+        const nextHeight = getMeasuredMobilePlayerHeight();
+
+        return currentHeight === nextHeight ? currentHeight : nextHeight;
+      });
+    };
+
+    updateHeight();
+
+    const playerElement = document.querySelector(".media-mini-player");
+    const resizeObserver = typeof ResizeObserver === "undefined" || !(playerElement instanceof HTMLElement)
+      ? null
+      : new ResizeObserver(updateHeight);
+
+    if (resizeObserver && playerElement instanceof HTMLElement) {
+      resizeObserver.observe(playerElement);
+    }
+    window.addEventListener("resize", updateHeight);
+
+    return () => {
+      resizeObserver?.disconnect();
+      window.removeEventListener("resize", updateHeight);
+    };
+  }, []);
+
+  return height;
 }
 
 function DrawerLoadingStatus({ active, label }: { active: boolean; label: string }) {
