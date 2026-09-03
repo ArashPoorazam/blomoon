@@ -22,6 +22,7 @@ import { AuthModal } from "./account/AuthModal";
 import { MobileLogoutConfirm } from "./account/MobileLogoutConfirm";
 import { useViewer } from "./account/useViewer";
 import { AudioMiniPlayer, AudioPlaybackPanel } from "./AudioPlaybackPanel";
+import { ButtonPressFeedback } from "./ButtonPressFeedback";
 import { FavouriteListPicker } from "./favourites/FavouriteListPicker";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
@@ -49,6 +50,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [pendingPlaybackSelection, setPendingPlaybackSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
   const [favouritePickerPoint, setFavouritePickerPoint] = useState<TerraPoint | null>(null);
   const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
+  const shellRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -310,10 +312,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
   return (
     <main
+      ref={shellRef}
       className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"} ${hasMiniPlayer ? "has-mini-player" : ""}`}
       data-theme={activeTheme.id}
       onMouseMove={handleMouseMove}
     >
+      <ButtonPressFeedback rootRef={shellRef} />
+
       <div className="globe-stage">
         <GlobeScene
           activePlaybackPoint={activePlaybackPoint}

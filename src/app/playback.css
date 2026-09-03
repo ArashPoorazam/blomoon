@@ -138,8 +138,8 @@
 }
 
 .media-control:focus-visible {
-  outline: 2px solid var(--focus-ring);
-  outline-offset: 2px;
+  outline: 0;
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 24%, transparent);
 }
 
 .media-player-meta {
@@ -244,6 +244,14 @@
 .media-mini-player .media-player-error {
   grid-column: 1 / -1;
   margin-top: -4px;
+}
+
+.media-mini-player .media-control {
+  border-radius: 999px;
+}
+
+.media-mini-player .media-control:focus-visible {
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 24%, transparent);
 }
 
 .spin {

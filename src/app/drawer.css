@@ -149,10 +149,19 @@
   text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
+.drawer-directory-row {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
 .drawer-count-line {
   display: inline-flex;
-  width: max-content;
+  min-width: 0;
   max-width: 100%;
+  flex: 1 1 auto;
   align-items: baseline;
   gap: 8px;
   color: var(--accent-strong);
@@ -161,9 +170,9 @@
 .drawer-count-line span {
   flex: 0 0 auto;
   color: var(--accent);
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 800;
-  letter-spacing: 0.08em;
+  letter-spacing: 0.04em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -177,6 +186,34 @@
   line-height: 1.2;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.directory-load-more {
+  display: inline-flex;
+  min-height: 32px;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  gap: 7px;
+  padding: 0 10px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--control);
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 750;
+  white-space: nowrap;
+}
+
+.directory-load-more:hover:not(:disabled) {
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.directory-load-more:disabled {
+  cursor: wait;
+  opacity: 0.7;
 }
 
 .drawer-subtitle {
@@ -283,8 +320,8 @@
 }
 
 .point-list {
-  --playback-highlight-left-inset: 1px;
-  --playback-highlight-right-inset: -7px;
+  --playback-highlight-left-inset: 4px;
+  --playback-highlight-right-inset: 4px;
 
   min-height: 0;
   flex: 1;
@@ -323,7 +360,7 @@
   width: 100%;
   grid-template-columns: minmax(0, 1fr) auto auto;
   align-items: center;
-  gap: 8px;
+  gap: 4px;
   margin: 0;
   border: 0;
   border-bottom: 1px solid var(--surface-strong);
@@ -336,6 +373,7 @@
   min-width: 0;
   padding: 12px 10px;
   border: 0;
+  border-radius: 8px;
   background: transparent;
   color: var(--text);
   cursor: pointer;
@@ -353,7 +391,8 @@
 
 .point-row.playback-active::before {
   position: absolute;
-  inset: 0 var(--playback-highlight-right-inset) 0 var(--playback-highlight-left-inset);
+  inset: 4px var(--playback-highlight-right-inset) 4px var(--playback-highlight-left-inset);
+  border-radius: 8px;
   background: var(--info-surface);
   box-shadow: inset 0 0 0 1px var(--info-border);
   content: "";
@@ -442,10 +481,10 @@
   height: 34px;
   flex: 0 0 auto;
   place-items: center;
-  border: 1px solid var(--metric-border);
-  border-radius: 8px;
-  background: var(--control);
-  box-shadow: inset 0 0 0 1px color-mix(in srgb, var(--metric) 18%, transparent);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
+  box-shadow: none;
   color: var(--metric);
   cursor: pointer;
 }
@@ -456,13 +495,12 @@
 
 .favourite-star:hover,
 .favourite-star:focus-visible {
-  border-color: var(--metric-border);
   background: var(--control-hover);
   color: var(--metric);
 }
 
 .favourite-star.active {
-  background: color-mix(in srgb, var(--metric) 13%, var(--control));
+  background: transparent;
   color: var(--metric);
 }
 

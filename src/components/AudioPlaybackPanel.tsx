@@ -159,6 +159,7 @@ function AudioPlaybackControls({
   const isPlaying = status === "playing";
   const isPaused = status === "paused";
   const primaryLabel = isPlaying ? "Pause" : isPaused ? "Resume" : "Play";
+  const primaryAriaLabel = isBusy ? `Loading ${itemSingularLabel}` : `${primaryLabel} ${itemSingularLabel}`;
 
   return (
     <div className={`media-player-controls ${compact ? "compact" : ""}`}>
@@ -177,6 +178,7 @@ function AudioPlaybackControls({
         </button>
       ) : null}
       <button
+        aria-label={primaryAriaLabel}
         className="media-control primary"
         type="button"
         disabled={!detail || isBusy}

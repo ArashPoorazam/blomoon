@@ -33,6 +33,88 @@ input {
 
 button {
   color: inherit;
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus:not(:focus-visible) {
+  outline: 0;
+}
+
+:where(
+  .shell-square-control,
+  .shell-mobile-nav-button,
+  .shell-mobile-logo-button,
+  .icon-button,
+  .media-control,
+  .media-player-title-button,
+  .point-row-main,
+  .point-list-more,
+  .favourite-star,
+  .favourite-row-main,
+  .favourite-remove,
+  .filter-toggle,
+  .filter-menu-trigger,
+  .filter-menu-options button,
+  .filter-chip,
+  .directory-load-more,
+  .point-action-trigger,
+  .point-action-popover button,
+  .account-action-list button,
+  .account-drawer-actions button,
+  .primary-action,
+  .secondary-action,
+  .text-action,
+  .theme-option,
+  .favourite-picker-option,
+  .mode-switcher-option
+) {
+  position: relative;
+  overflow: hidden;
+}
+
+:where(
+  .account-menu-trigger,
+  .drawer-toggle,
+  .drawer-sheet-handle,
+  .search-clear
+) {
+  overflow: hidden;
+}
+
+button.press-feedback-active::after {
+  position: absolute;
+  inset: 2px;
+  border: 1px solid color-mix(in srgb, var(--focus-ring) 62%, transparent);
+  border-radius: inherit;
+  background: color-mix(in srgb, var(--focus-ring) 16%, transparent);
+  content: "";
+  opacity: 0;
+  pointer-events: none;
+  transform: scale(0.84);
+  animation: press-feedback-fade 190ms ease-out both;
+}
+
+.media-mini-player .media-control.press-feedback-active::after,
+.favourite-star.press-feedback-active::after,
+.point-action-trigger.press-feedback-active::after {
+  border-radius: 999px;
+}
+
+@keyframes press-feedback-fade {
+  0% {
+    opacity: 0.72;
+    transform: scale(0.84);
+  }
+
+  58% {
+    opacity: 0.28;
+    transform: scale(1);
+  }
+
+  100% {
+    opacity: 0;
+    transform: scale(1.08);
+  }
 }
 
 .clickable-text {

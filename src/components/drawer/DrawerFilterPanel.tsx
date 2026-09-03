@@ -4,29 +4,22 @@ import { ChevronDown, Search, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
 import { getKnownCountries, type CountryInfo } from "@/lib/geo";
 import type { TerraMode } from "@/lib/modes/types";
-import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerFilterPanelProps = {
   activeMode: TerraMode;
-  hasMorePoints: boolean;
-  isLoadingMorePoints: boolean;
   selectedCountry: CountryInfo | null;
   sortId: string;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
-  onLoadMorePoints?: () => void;
   onSortChange: (sortId: string) => void;
 };
 
 export function DrawerFilterPanel({
   activeMode,
-  hasMorePoints,
-  isLoadingMorePoints,
   selectedCountry,
   sortId,
   onCountryFilterChange,
   onClearCountrySelection,
-  onLoadMorePoints,
   onSortChange
 }: DrawerFilterPanelProps) {
   const countries = useMemo(getKnownCountries, []);
@@ -61,10 +54,6 @@ export function DrawerFilterPanel({
 
   return (
     <div className="filter-panel" aria-label="Station filters">
-      <div className="filter-panel-header">
-        <span>Refine</span>
-        <strong>{selectedCountry?.name ?? "Worldwide"}</strong>
-      </div>
       <div className="filter-grid">
         <div
           className="filter-menu-field"
@@ -173,21 +162,14 @@ export function DrawerFilterPanel({
         </div>
       </div>
 
-      <div className="filter-actions">
-        {selectedCountry ? (
+      {selectedCountry ? (
+        <div className="filter-actions">
           <button className="filter-chip" type="button" onClick={onClearCountrySelection}>
             {selectedCountry.name}
             <X size={14} aria-hidden="true" />
           </button>
-        ) : null}
-        {hasMorePoints ? (
-          <LoadMoreButton
-            className="filter-load-more"
-            isLoading={isLoadingMorePoints}
-            onLoadMore={onLoadMorePoints}
-          />
-        ) : null}
-      </div>
+        </div>
+      ) : null}
     </div>
   );
 }

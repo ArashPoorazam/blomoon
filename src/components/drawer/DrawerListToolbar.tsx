@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode } from "@/lib/modes/types";
 import { DrawerFilterPanel } from "./DrawerFilterPanel";
+import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerListToolbarProps = {
   activeMode: TerraMode;
@@ -55,18 +56,27 @@ export function DrawerListToolbar({
           <h1 className="drawer-brand-title">Blomoon</h1>
           <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
         </div>
-        <div className="drawer-count-line" aria-live="polite">
-          <span>{loading ? "Loading" : "Directory"}</span>
-          <strong>
-            {loading
-              ? activeMode.copy.loadingLabel
-              : formatVisibleCount({
-                listedCount,
-                loadingMore: isLoadingMorePoints,
-                totalCount: totalPoints,
-                totalKind: totalPointsKind
-              })}
-          </strong>
+        <div className="drawer-directory-row">
+          <div className="drawer-count-line" aria-live="polite">
+            <span>{loading ? "Loading" : "Directory"}</span>
+            <strong>
+              {loading
+                ? activeMode.copy.loadingLabel
+                : formatVisibleCount({
+                  listedCount,
+                  loadingMore: isLoadingMorePoints,
+                  totalCount: totalPoints,
+                  totalKind: totalPointsKind
+                })}
+            </strong>
+          </div>
+          {hasMorePoints && !loading ? (
+            <LoadMoreButton
+              className="directory-load-more"
+              isLoading={isLoadingMorePoints}
+              onLoadMore={onLoadMorePoints}
+            />
+          ) : null}
         </div>
       </div>
 
@@ -105,13 +115,10 @@ export function DrawerListToolbar({
         <div id={filterPanelId}>
           <DrawerFilterPanel
             activeMode={activeMode}
-            hasMorePoints={hasMorePoints}
-            isLoadingMorePoints={isLoadingMorePoints}
             selectedCountry={selectedCountry}
             sortId={sortId}
             onCountryFilterChange={onCountryFilterChange}
             onClearCountrySelection={onClearCountrySelection}
-            onLoadMorePoints={onLoadMorePoints}
             onSortChange={onSortChange}
           />
         </div>
