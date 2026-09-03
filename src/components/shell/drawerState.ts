@@ -8,7 +8,7 @@ export type ShellDrawerView =
   | "contact"
   | "point-detail";
 
-export type DrawerMobilePosition = "closed" | "standard" | "custom" | "full";
+export type DrawerMobilePosition = "closed" | "middle" | "full";
 
 export type ShellDrawerStack = [ShellDrawerView, ...ShellDrawerView[]];
 

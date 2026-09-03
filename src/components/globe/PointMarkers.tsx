@@ -16,6 +16,7 @@ import {
   getMarkerScale,
   latLonToVector3
 } from "./globeMath";
+import { isSurfaceFacingCamera } from "./crosshairTargeting";
 
 type MarkerBatch = {
   color: string;
@@ -45,8 +46,6 @@ type PointMarkersProps = {
   onHover: (point: TerraPoint | null) => void;
   onSelect: (point: TerraPoint) => void;
 };
-
-const MIN_CAMERA_FACING_DOT = 0.01;
 
 export function PointMarkers({
   hoverEnabled,
@@ -423,7 +422,7 @@ function getMarkerTransforms(points: TerraPoint[]): MarkerTransform[] {
 }
 
 function isMarkerFacingCamera(normal: THREE.Vector3, camera: THREE.Camera) {
-  return normal.dot(camera.position.clone().normalize()) > MIN_CAMERA_FACING_DOT;
+  return isSurfaceFacingCamera(normal, camera.position.clone().normalize());
 }
 
 function getMarkerBatches(

@@ -26,6 +26,7 @@ import { ButtonPressFeedback } from "./ButtonPressFeedback";
 import { FavouriteListPicker } from "./favourites/FavouriteListPicker";
 import { useFavourites } from "./favourites/useFavourites";
 import { GlobeScene } from "./GlobeScene";
+import { MobileCrosshair } from "./globe/MobileCrosshair";
 import { useCameraFocusRequest } from "./globe/useCameraFocusRequest";
 import { useDisplayedGlobePoints } from "./globe/useDisplayedGlobePoints";
 import { useEarthSpinControls } from "./globe/useEarthSpinControls";
@@ -33,6 +34,7 @@ import { useGlobeProfile } from "./globe/useGlobeProfile";
 import { ShellChrome } from "./shell/ShellChrome";
 import { useDrawerNavigation } from "./shell/useDrawerNavigation";
 import { SideDrawer } from "./SideDrawer";
+import { usePointInteractions, type PlaybackQueueSource } from "./usePointInteractions";
 
 type BlomoonAppProps = { appConfig: AppClientConfig; initialDatasets?: Partial<Record<TerraModeId, TerraDataset>> };
 
@@ -45,9 +47,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [showListedOnGlobe, setShowListedOnGlobe] = useState(false);
   const [themeId, setThemeId] = useState<TerraThemeId>(defaultTheme.id);
   const [authModalOpen, setAuthModalOpen] = useState(false);
-  const [playbackQueueSource, setPlaybackQueueSource] = useState<"list" | "favourites">("list");
-  const [pendingFavouriteSelection, setPendingFavouriteSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
-  const [pendingPlaybackSelection, setPendingPlaybackSelection] = useState<{ modeId: TerraModeId; point: TerraPoint } | null>(null);
+  const [playbackQueueSource, setPlaybackQueueSource] = useState<PlaybackQueueSource>("list");
   const [favouritePickerPoint, setFavouritePickerPoint] = useState<TerraPoint | null>(null);
   const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
   const shellRef = useRef<HTMLElement>(null);
@@ -69,7 +69,34 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     user: viewer.user,
     onAuthRequired: () => setAuthModalOpen(true)
   });
+  const recordPointInteraction = useCallback((point: TerraPoint) => {
+    const mode = getTerraMode(point.modeId);
+
+    if (viewer.user && mode.clickEndpoint) {
+      void fetch(mode.clickEndpoint(point.id), { method: "POST" });
+    }
+  }, [viewer.user]);
+  const openPointDetail = useCallback(() => {
+    drawer.open("point-detail");
+  }, [drawer.open]);
+  const {
+    clearCrosshairPoint,
+    crosshairPoint,
+    inspect: inspectPoint,
+    play: playPoint,
+    preview: previewPoint
+  } = usePointInteractions({
+    activeModeId,
+    focusPoint,
+    openPointDetail,
+    playPoint: audioPlayback.play,
+    recordPointInteraction,
+    selectPoint: modeState.selectPoint,
+    setActiveModeId,
+    setPlaybackQueueSource
+  });
   const drawerOpen = !drawer.collapsed && drawer.mobilePosition !== "closed";
+  const crosshairEnabled = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
   const hasMiniPlayer = Boolean(activeMode.playback);
   const favouritePoints = useMemo(
     () => uniquePoints(favourites.lists.flatMap((list) => list.items.map((favourite) => favourite.point))),
@@ -86,6 +113,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     ? getPointKey(audioPlayback.point)
     : null;
   const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;
+  const playFromCurrentDrawer = useCallback((point: TerraPoint) => {
+    playPoint(point, drawer.view === "favourites" ? "favourites" : "list");
+  }, [drawer.view, playPoint]);
   const displayedGlobe = useDisplayedGlobePoints({
     activeMode,
     activePlaybackPoint,
@@ -125,105 +155,40 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     }
   }, [viewer.user?.selectedTheme]);
 
-  useEffect(() => {
-    if (!pendingFavouriteSelection || pendingFavouriteSelection.modeId !== activeModeId) {
-      return;
-    }
-
-    modeState.selectPoint(pendingFavouriteSelection.point);
-    focusPoint(pendingFavouriteSelection.point);
-    setPendingFavouriteSelection(null);
-  }, [activeModeId, focusPoint, modeState.selectPoint, pendingFavouriteSelection]);
-
-  useEffect(() => {
-    if (!pendingPlaybackSelection || pendingPlaybackSelection.modeId !== activeModeId) {
-      return;
-    }
-
-    void audioPlayback.play(pendingPlaybackSelection.point);
-    focusPoint(pendingPlaybackSelection.point);
-    setPendingPlaybackSelection(null);
-  }, [activeModeId, audioPlayback, focusPoint, pendingPlaybackSelection]);
-
-  const recordPointInteraction = useCallback((point: TerraPoint) => {
-    const mode = getTerraMode(point.modeId);
-
-    if (viewer.user && mode.clickEndpoint) {
-      void fetch(mode.clickEndpoint(point.id), { method: "POST" });
-    }
-  }, [viewer.user]);
-
-  const selectPointForDetail = useCallback((point: TerraPoint) => {
-    focusPoint(point);
-
-    if (point.modeId !== activeModeId) {
-      setActiveModeId(point.modeId);
-      setPendingFavouriteSelection({ modeId: point.modeId, point });
-    } else {
-      modeState.selectPoint(point);
-    }
-
-    drawer.openContent("point-detail");
-  }, [activeModeId, drawer, focusPoint, modeState.selectPoint]);
-
-  const startPointPlayback = useCallback((point: TerraPoint) => {
-    if (point.modeId !== activeModeId) {
-      setActiveModeId(point.modeId);
-      setPendingPlaybackSelection({ modeId: point.modeId, point });
-      return;
-    }
-
-    void audioPlayback.play(point);
-  }, [activeModeId, audioPlayback]);
-
-  const inspectPoint = useCallback((point: TerraPoint) => {
-    selectPointForDetail(point);
-    recordPointInteraction(point);
-  }, [recordPointInteraction, selectPointForDetail]);
-
-  const playPoint = useCallback((point: TerraPoint, source: "list" | "favourites") => {
-    setPlaybackQueueSource(source);
-    focusPoint(point);
-    recordPointInteraction(point);
-    startPointPlayback(point);
-  }, [focusPoint, recordPointInteraction, startPointPlayback]);
-
-  const activateGlobePoint = useCallback((point: TerraPoint) => {
-    setPlaybackQueueSource(drawer.view === "favourites" ? "favourites" : "list");
-    selectPointForDetail(point);
-    recordPointInteraction(point);
-    startPointPlayback(point);
-  }, [drawer.view, recordPointInteraction, selectPointForDetail, startPointPlayback]);
-
   const selectCountry = useCallback((country: CountryInfo | null) => {
     const nextCountry = country?.code === selectedCountry?.code ? null : country;
     setSelectedCountry(nextCountry);
     drawer.replaceContent("main");
     setPlaybackQueueSource("list");
     setHoveredPoint(null);
-  }, [drawer, selectedCountry?.code]);
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replaceContent, selectedCountry?.code]);
 
   const openFavourites = useCallback(() => {
     modeState.clearSelection();
-    drawer.replace("favourites", "standard");
+    drawer.replace("favourites");
     setPlaybackQueueSource("favourites");
-  }, [drawer, modeState.clearSelection]);
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replace, modeState.clearSelection]);
 
   const openModeSwitcher = useCallback(() => {
     modeState.clearSelection();
-    drawer.replace("mode-switcher", "standard");
-  }, [drawer, modeState.clearSelection]);
+    drawer.replace("mode-switcher");
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replace, modeState.clearSelection]);
 
   const openAccountDrawer = useCallback(() => {
     modeState.clearSelection();
-    drawer.replace("account", "standard");
-  }, [drawer, modeState.clearSelection]);
+    drawer.replace("account");
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replace, modeState.clearSelection]);
 
   const restoreHomeDrawer = useCallback(() => {
     modeState.clearSelection();
-    drawer.replace("main", "standard");
+    drawer.replace("main");
     setPlaybackQueueSource("list");
-  }, [drawer, modeState.clearSelection]);
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replace, modeState.clearSelection]);
 
   const selectTheme = useCallback((nextThemeId: TerraThemeId) => {
     setThemeId(nextThemeId);
@@ -251,49 +216,30 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     }
   }, []);
 
-  const selectFavourite = useCallback((modeId: TerraModeId, point: TerraPoint) => {
-    setActiveModeId(modeId);
-    focusPoint(point);
-    setPendingFavouriteSelection({ modeId, point });
-    setPlaybackQueueSource("favourites");
-    drawer.openContent("point-detail");
-  }, [drawer, focusPoint]);
-
   const selectMode = useCallback((modeId: TerraModeId) => {
     setActiveModeId(modeId);
-    drawer.replace("main", "standard");
+    drawer.replace("main");
     setPlaybackQueueSource("list");
     setHoveredPoint(null);
-  }, [drawer]);
-
-  const openPlaybackPoint = useCallback((point: TerraPoint) => {
-    focusPoint(point);
-    setActiveModeId(point.modeId);
-    drawer.openContent("point-detail");
-
-    if (point.modeId === activeModeId) {
-      modeState.selectPoint(point);
-      return;
-    }
-
-    setPendingFavouriteSelection({ modeId: point.modeId, point });
-  }, [activeModeId, drawer, focusPoint, modeState.selectPoint]);
+    clearCrosshairPoint();
+  }, [clearCrosshairPoint, drawer.replace]);
 
   const goBackDrawer = useCallback(() => {
     if (drawer.view === "point-detail") {
       modeState.clearSelection();
+      clearCrosshairPoint();
     }
 
     drawer.goBack();
-  }, [drawer, modeState.clearSelection]);
+  }, [clearCrosshairPoint, drawer.goBack, drawer.view, modeState.clearSelection]);
 
   const playNextPoint = useCallback(() => {
     const nextPoint = getNextPlaybackPoint(playbackQueuePoints, audioPlayback.pointId);
 
     if (nextPoint) {
-      void audioPlayback.play(nextPoint);
+      playPoint(nextPoint, playbackQueueSource);
     }
-  }, [audioPlayback, playbackQueuePoints]);
+  }, [audioPlayback.pointId, playbackQueuePoints, playbackQueueSource, playPoint]);
 
   const shufflePoint = useCallback(async () => {
     if (!activeMode.playback?.randomPointEndpoint) {
@@ -307,13 +253,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       return;
     }
 
-    await audioPlayback.play(randomPoint);
-  }, [activeMode.copy.randomPlaybackError, activeMode.playback?.randomPointEndpoint, audioPlayback, randomPlaybackPoint]);
+    playPoint(randomPoint, "list");
+  }, [activeMode.copy.randomPlaybackError, activeMode.playback?.randomPointEndpoint, audioPlayback, playPoint, randomPlaybackPoint]);
 
   return (
     <main
       ref={shellRef}
       className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"} ${hasMiniPlayer ? "has-mini-player" : ""}`}
+      data-mobile-drawer-position={drawer.mobilePosition}
       data-theme={activeTheme.id}
       onMouseMove={handleMouseMove}
     >
@@ -322,6 +269,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       <div className="globe-stage">
         <GlobeScene
           activePlaybackPoint={activePlaybackPoint}
+          crosshairEnabled={crosshairEnabled}
           dpr={globeProfile.dpr}
           earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
           focusKey={cameraFocusRequest?.key ?? null}
@@ -330,15 +278,30 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
           maxCameraDistance={globeProfile.maxCameraDistance}
           markerColor={displayedGlobe.markerColor}
           markerColorMode={displayedGlobe.markerColorMode}
+          motionEnabled={globeProfile.motionEnabled}
           points={displayedGlobe.points}
           selectedCountryCode={selectedCountry?.code ?? null}
           selectedCountryOutlineColor={displayedGlobe.selectedCountryOutlineColor}
           selectedPoint={displayedGlobe.selectedPoint}
           theme={activeTheme.globe}
           onCountrySelect={selectCountry}
+          onCrosshairPoint={previewPoint}
+          onGlobeMotionStart={clearCrosshairPoint}
           onPointHover={setHoveredPoint}
-          onPointSelect={activateGlobePoint}
+          onPointSelect={playFromCurrentDrawer}
         />
+        {crosshairEnabled ? (
+          <MobileCrosshair
+            metric={crosshairPoint
+              ? activeMode.formatPointMetric(crosshairPoint)
+              : null}
+            playbackLoading={audioPlayback.status === "loading"
+              && audioPlayback.pointId === crosshairPoint?.id}
+            point={crosshairPoint}
+            onInfo={inspectPoint}
+            onPlay={playFromCurrentDrawer}
+          />
+        ) : null}
       </div>
 
       <ShellChrome
@@ -408,6 +371,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         selectedCountry={selectedCountry}
         selectedId={modeState.selectedId}
         selectedThemeId={themeId}
+        shellRef={shellRef}
         sortId={modeState.sortId}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
@@ -429,13 +393,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onQueryChange={updateQuery}
         onRemoveFavouriteFromList={favourites.removePointFromList}
         onRenameFavouriteList={favourites.renameList}
-        onSetAccountView={(view) => drawer.open(view, "standard")}
+        onSetAccountView={drawer.open}
         onSetMobilePosition={drawer.setMobilePosition}
         onSortChange={modeState.setSortId}
         onThemeChange={selectTheme}
         onToggleCollapsed={drawer.toggleCollapsed}
-        onFavouritePointInspect={selectFavourite}
-        onFavouritePointPlay={(modeId, point) => playPoint(point, "favourites")}
+        onFavouritePointInspect={inspectPoint}
+        onFavouritePointPlay={(point) => playPoint(point, "favourites")}
       />
 
       {favouritePickerPoint ? (
@@ -484,7 +448,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
           playback={audioPlayback}
           playbackLabel={activeMode.playback.label}
           onNext={playNextPoint}
-          onPointOpen={openPlaybackPoint}
+          onPointOpen={inspectPoint}
           onShuffle={() => {
             void shufflePoint();
           }}

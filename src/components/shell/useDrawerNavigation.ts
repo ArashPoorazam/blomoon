@@ -16,11 +16,11 @@ import {
 export function useDrawerNavigation() {
   const [stack, setStack] = useState<ShellDrawerStack>(() => createDrawerStack("main"));
   const [collapsed, setCollapsed] = useState(false);
-  const [mobilePosition, setMobilePosition] = useState<DrawerMobilePosition>("standard");
+  const [mobilePosition, setMobilePosition] = useState<DrawerMobilePosition>("middle");
   const view = useMemo(() => getCurrentDrawerView(stack), [stack]);
   const canGoBack = useMemo(() => canGoBackFromDrawerStack(stack), [stack]);
 
-  const open = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "standard") => {
+  const open = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "middle") => {
     setStack((currentStack) => openDrawerStackView(currentStack, nextView));
     setCollapsed(false);
     setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
@@ -33,7 +33,7 @@ export function useDrawerNavigation() {
     setStack((currentStack) => openDrawerStackView(currentStack, nextView));
   }, []);
 
-  const replace = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "standard") => {
+  const replace = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "middle") => {
     setStack(createDrawerStack(nextView));
     setCollapsed(false);
     setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
@@ -51,7 +51,7 @@ export function useDrawerNavigation() {
     setCollapsed(false);
     setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
       currentPosition,
-      requestedOpenPosition: "standard"
+      requestedOpenPosition: "middle"
     }));
   }, []);
 

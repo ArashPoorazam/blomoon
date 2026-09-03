@@ -5,6 +5,7 @@ import { useId, useState } from "react";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode } from "@/lib/modes/types";
 import { DrawerFilterPanel } from "./DrawerFilterPanel";
+import { DrawerHeader } from "./DrawerHeader";
 import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerListToolbarProps = {
@@ -51,34 +52,28 @@ export function DrawerListToolbar({
 
   return (
     <div className="drawer-list-toolbar">
-      <div className="drawer-compact-header">
-        <div className="drawer-heading-copy">
-          <h1 className="drawer-brand-title">Blomoon</h1>
-          <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
-        </div>
-        <div className="drawer-directory-row">
-          <div className="drawer-count-line" aria-live="polite">
-            <span>{loading ? "Loading" : "Directory"}</span>
-            <strong>
-              {loading
-                ? activeMode.copy.loadingLabel
-                : formatVisibleCount({
-                  listedCount,
-                  loadingMore: isLoadingMorePoints,
-                  totalCount: totalPoints,
-                  totalKind: totalPointsKind
-                })}
-            </strong>
-          </div>
-          {hasMorePoints && !loading ? (
+      <div className="drawer-heading-copy">
+        <h1 className="drawer-brand-title">Blomoon</h1>
+        <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
+      </div>
+      <DrawerHeader
+        className="drawer-directory-header"
+        title="Directory"
+        subtitle={loading
+          ? activeMode.copy.loadingLabel
+          : formatVisibleCount({
+            listedCount,
+            totalCount: totalPoints,
+            totalKind: totalPointsKind
+          })}
+        actions={hasMorePoints && !loading ? (
             <LoadMoreButton
               className="directory-load-more"
               isLoading={isLoadingMorePoints}
               onLoadMore={onLoadMorePoints}
             />
           ) : null}
-        </div>
-      </div>
+      />
 
       <div className="drawer-search-controls">
         <div className={`search-row ${hasActiveSearch ? "active" : ""}`}>
@@ -137,12 +132,10 @@ function ProviderNotice({ message }: { message: string | null }) {
 
 function formatVisibleCount({
   listedCount,
-  loadingMore,
   totalCount,
   totalKind
 }: {
   listedCount: number;
-  loadingMore: boolean;
   totalCount: number;
   totalKind: "exact" | "lowerBound";
 }) {
@@ -154,9 +147,7 @@ function formatVisibleCount({
   const totalLabel = numberFormatter.format(totalCount);
 
   if (totalKind === "lowerBound") {
-    return loadingMore
-      ? `${listedLabel} listed, loading more`
-      : `${listedLabel} listed, ${totalLabel}+ available`;
+    return `${listedLabel} listed, ${totalLabel}+ available`;
   }
 
   return `${listedLabel} listed, ${totalLabel} available`;

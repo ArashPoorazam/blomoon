@@ -1,17 +1,8 @@
 import type { TerraPoint } from "./types";
 import { getPointKey } from "./pointKeys";
 
-export type GlobeDisplayProfile = "desktop" | "mobile";
-
-export const GLOBE_DISPLAY_BUDGET: Record<GlobeDisplayProfile, number> = {
-  desktop: 1200,
-  mobile: 400
-};
-
-export const GLOBE_COUNTRY_POINT_GUARANTEE: Record<GlobeDisplayProfile, number> = {
-  desktop: 4,
-  mobile: 2
-};
+export const GLOBE_DISPLAY_BUDGET = 1200;
+export const GLOBE_COUNTRY_POINT_GUARANTEE = 4;
 
 export function limitGlobePoints({
   activePlaybackPoint,

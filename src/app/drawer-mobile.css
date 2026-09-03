@@ -1,41 +1,26 @@
 @media (max-width: 760px) {
   .drawer {
-    --mobile-handle-peek: 24px;
-    --mobile-nav-offset: calc(max(10px, env(safe-area-inset-top, 0px)) + 62px);
-    --mobile-mini-player-space: var(--mobile-player-height, calc(92px + env(safe-area-inset-bottom, 0px)));
-    --mobile-sheet-height: min(46svh, 360px, calc(100svh - var(--mobile-nav-offset) - var(--mobile-mini-player-space)));
-
     top: auto;
-    bottom: var(--mobile-mini-player-space);
+    bottom: var(--mobile-player-height, 0px);
     left: 0;
     width: 100vw;
-    height: var(--mobile-sheet-height);
-    max-height: calc(100svh - var(--mobile-nav-offset) - var(--mobile-mini-player-space));
+    height: var(--mobile-sheet-max-height, calc(100svh - 150px - var(--mobile-player-height, 0px)));
+    max-height: none;
     border-top: 1px solid var(--panel-border);
     border-left: 0;
     box-shadow: 0 -18px 52px var(--shadow-panel);
-    transition: height 220ms ease, transform 220ms ease;
-  }
-
-  .drawer[data-mobile-position="closed"] {
-    transform: translateY(calc(100% - var(--mobile-handle-peek)));
-  }
-
-  .drawer[data-mobile-position="full"] {
-    --mobile-sheet-height: calc(100svh - var(--mobile-nav-offset) - var(--mobile-mini-player-space));
+    transform: translateY(calc(var(--mobile-sheet-max-height, 40svh) - var(--mobile-sheet-visible-height, 40svh)));
+    transition: transform 240ms cubic-bezier(0.22, 0.8, 0.24, 1);
+    will-change: transform;
   }
 
   .drawer.collapsed {
-    transform: none;
+    transform: translateY(calc(var(--mobile-sheet-max-height, 40svh) - var(--mobile-sheet-visible-height, 40svh)));
   }
 
-  .drawer[data-mobile-position="closed"].collapsed {
-    transform: translateY(calc(100% - var(--mobile-handle-peek)));
-  }
-
-  .drawer[data-mobile-position="closed"] .drawer-inner {
-    pointer-events: none;
-    visibility: hidden;
+  .blomoon-shell[data-mobile-drawer-dragging="true"] .drawer,
+  .blomoon-shell[data-mobile-drawer-dragging="true"] .globe-stage {
+    transition: none;
   }
 
   .drawer-toggle {
@@ -43,9 +28,11 @@
   }
 
   .drawer-loading-panel {
-    top: -2px;
-    left: max(12px, env(safe-area-inset-left, 0px));
-    width: min(220px, calc(100vw - 118px));
+    position: fixed;
+    top: calc(max(10px, env(safe-area-inset-top, 0px)) + 70px);
+    left: max(10px, env(safe-area-inset-left, 0px));
+    z-index: 48;
+    width: min(220px, calc(100vw - 20px));
     min-height: 38px;
     padding: 8px 10px;
     border-radius: 8px;
@@ -73,8 +60,8 @@
     padding: 0;
     border: 1px solid var(--panel-border);
     border-bottom: 0;
+    border-radius: 12px 12px 0 0;
     background: var(--panel);
-    clip-path: polygon(13% 0, 87% 0, 100% 100%, 0 100%);
     color: var(--muted-strong);
     cursor: grab;
     touch-action: none;
@@ -87,27 +74,82 @@
     cursor: grabbing;
   }
 
+  .drawer-sheet-handle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
   .drawer-sheet-handle span {
-    width: 26px;
-    height: 2px;
+    width: 28px;
+    height: 3px;
     border-radius: 999px;
     background: var(--muted);
-    opacity: 0.78;
+    opacity: 0.82;
   }
 
   .drawer-inner {
     height: 100%;
+    overflow: hidden;
   }
 
-  .drawer-header,
+  .drawer-header {
+    width: 100%;
+    height: 92px;
+    min-height: 92px;
+    align-items: center;
+    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .drawer-header-copy {
+    align-self: center;
+  }
+
+  .drawer-title,
+  .favourites-header .drawer-title,
+  .drawer-directory-header .drawer-title {
+    display: block;
+    overflow: hidden;
+    margin: 0;
+    color: var(--accent-strong);
+    font-size: 21px;
+    font-weight: 850;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drawer-header .drawer-subtitle {
+    display: block;
+    overflow: hidden;
+    margin-top: 7px;
+    font-size: 12px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
   .drawer-list-toolbar {
-    padding-right: max(14px, env(safe-area-inset-right, 0px));
-    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    gap: 0;
+    padding: 0;
   }
 
-  .drawer-list-toolbar .drawer-heading-copy,
-  .drawer-header .drawer-kicker {
+  .drawer-list-toolbar > .drawer-heading-copy {
     display: none;
+  }
+
+  .drawer-directory-header {
+    border-bottom: 1px solid var(--line);
+  }
+
+  .drawer-search-controls {
+    margin: 10px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .drawer-list-toolbar .provider-notice,
+  .drawer-list-toolbar > div:not(.drawer-header, .drawer-search-controls) {
+    margin-right: max(14px, env(safe-area-inset-right, 0px));
+    margin-bottom: 10px;
+    margin-left: max(14px, env(safe-area-inset-left, 0px));
   }
 
   .point-row-main {

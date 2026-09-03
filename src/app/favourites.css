@@ -14,21 +14,9 @@
   border-bottom: 1px solid var(--line);
 }
 
-.favourites-header-copy {
-  min-width: 0;
-}
-
-.favourites-header h2 {
-  margin: 4px 0 0;
+.favourites-header .drawer-title {
   font-size: 20px;
   line-height: 1.15;
-}
-
-.favourites-header-actions {
-  display: flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 8px;
 }
 
 .favourites-actions {
@@ -174,12 +162,12 @@
     padding-left: max(14px, env(safe-area-inset-left, 0px));
   }
 
-  .favourites-header-actions .compact-action {
+  .favourites-header .drawer-header-actions .compact-action {
     width: 44px;
     padding: 0;
   }
 
-  .favourites-header-actions .compact-action span {
+  .favourites-header .drawer-header-actions .compact-action span {
     display: none;
   }
 }

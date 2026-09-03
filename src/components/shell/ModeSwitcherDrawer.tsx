@@ -2,6 +2,7 @@
 
 import { ChevronLeft } from "lucide-react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
+import { DrawerHeader } from "../drawer/DrawerHeader";
 import { modeIcons } from "./modeIcons";
 
 type ModeSwitcherDrawerProps = {
@@ -51,17 +52,15 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
 
   return (
     <div className="mode-switcher-view" aria-label="Change mode">
-      <div className="drawer-header">
-        <div>
-          <h2 className="drawer-title">Change mode</h2>
-          <p className="drawer-subtitle">More live entertainment modes are planned.</p>
-        </div>
-        {canGoBack ? (
+      <DrawerHeader
+        title="Change mode"
+        subtitle="More live entertainment modes are planned."
+        actions={canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />
           </button>
         ) : null}
-      </div>
+      />
       <div className="mode-switcher-list">
         {items.map((item) => {
           const Icon = modeIcons[item.icon];

@@ -7,6 +7,7 @@ import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
 import { AccountPanel, ContactPanel } from "../account/AccountPanels";
 import { ThemePicker } from "../account/ThemePicker";
+import { DrawerHeader } from "../drawer/DrawerHeader";
 import type { ShellDrawerView } from "./drawerState";
 
 type AccountDrawerProps = {
@@ -40,7 +41,7 @@ export function AccountDrawer({
 }: AccountDrawerProps) {
   if (view === "account-info") {
     return (
-      <AccountDrawerPanel title="Account info" onBack={onBack}>
+      <AccountDrawerPanel title="Account info" subtitle="Profile and account details" onBack={onBack}>
         <AccountPanel loading={loading} user={user} onAccountUpdated={onAccountUpdated} onAuthOpen={onAuthOpen} />
       </AccountDrawerPanel>
     );
@@ -48,7 +49,7 @@ export function AccountDrawer({
 
   if (view === "themes") {
     return (
-      <AccountDrawerPanel title="Themes" onBack={onBack}>
+      <AccountDrawerPanel title="Themes" subtitle="Choose your Blomoon appearance" onBack={onBack}>
         <ThemePicker selectedThemeId={selectedThemeId} onThemeChange={onThemeChange} />
       </AccountDrawerPanel>
     );
@@ -56,7 +57,7 @@ export function AccountDrawer({
 
   if (view === "contact") {
     return (
-      <AccountDrawerPanel title="Contact us" onBack={onBack}>
+      <AccountDrawerPanel title="Contact us" subtitle="Ways to reach the Blomoon team" onBack={onBack}>
         <ContactPanel links={contactLinks} />
       </AccountDrawerPanel>
     );
@@ -64,17 +65,15 @@ export function AccountDrawer({
 
   return (
     <div className="account-drawer-view" aria-label="Account">
-      <div className="drawer-header">
-        <div>
-          <h2 className="drawer-title">{user ? "Manage account" : "Account access"}</h2>
-          <p className="drawer-subtitle">{user ? user.email : "Log in or register to save lists across devices."}</p>
-        </div>
-        {canGoBack ? (
+      <DrawerHeader
+        title={user ? "Manage account" : "Account access"}
+        subtitle={user ? user.email : "Log in or register to save lists across devices."}
+        actions={canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />
           </button>
         ) : null}
-      </div>
+      />
       <div className="account-drawer-actions">
         {!user && !loading ? (
           <button type="button" onClick={onAuthOpen}>
@@ -112,22 +111,25 @@ export function AccountDrawer({
 function AccountDrawerPanel({
   children,
   onBack,
+  subtitle,
   title
 }: {
   children: ReactNode;
   onBack: () => void;
+  subtitle: string;
   title: string;
 }) {
   return (
     <div className="account-drawer-view" aria-label={title}>
-      <div className="drawer-header">
-        <div className="account-drawer-heading">
-          <h2 className="drawer-title">{title}</h2>
-        </div>
-        <button className="icon-button" type="button" aria-label="Back to account" onClick={onBack}>
-          <ChevronLeft size={17} aria-hidden="true" />
-        </button>
-      </div>
+      <DrawerHeader
+        title={title}
+        subtitle={subtitle}
+        actions={(
+          <button className="icon-button" type="button" aria-label="Back to account" onClick={onBack}>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
+        )}
+      />
       <div className="account-drawer-body">{children}</div>
     </div>
   );

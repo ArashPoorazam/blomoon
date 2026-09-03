@@ -1,50 +1,121 @@
-"use client";
+import type { DrawerMobilePosition } from "../shell/drawerState";
 
-export const DEFAULT_MOBILE_PLAYER_HEIGHT = 92;
+export const MOBILE_DRAWER_HEADER_HEIGHT = 92;
 
-const MOBILE_NAV_OFFSET = 72;
-const MOBILE_MINIMUM_SHEET_HEIGHT = 118;
-const MOBILE_CLOSE_SNAP_HEIGHT = 164;
-const MOBILE_FULL_SNAP_DISTANCE = 42;
+const DEFAULT_MOBILE_NAV_BOTTOM = 72;
+const MOBILE_LOADING_SLOT_HEIGHT = 78;
+const MOBILE_MIDDLE_VIEWPORT_RATIO = 0.4;
+const MOBILE_SWIPE_VELOCITY_THRESHOLD = 0.35;
 
 export type MobileSheetMetrics = {
-  closeSnapHeight: number;
-  fullSnapHeight: number;
-  fullTop: number;
-  maximumHeight: number;
-  minimumHeight: number;
+  closedHeight: number;
+  fullHeight: number;
+  middleHeight: number;
+  navBottom: number;
   playerHeight: number;
   sheetBottom: number;
+  viewportHeight: number;
 };
 
 export function getMeasuredMobilePlayerHeight() {
   const playerElement = document.querySelector(".media-mini-player");
 
   if (!(playerElement instanceof HTMLElement)) {
-    return DEFAULT_MOBILE_PLAYER_HEIGHT;
+    return 0;
   }
 
-  const height = Math.ceil(playerElement.getBoundingClientRect().height);
-
-  return height > 0 ? height : DEFAULT_MOBILE_PLAYER_HEIGHT;
+  return Math.max(0, Math.ceil(playerElement.getBoundingClientRect().height));
 }
 
-export function getMobileSheetMetrics(playerHeight = getMeasuredMobilePlayerHeight()): MobileSheetMetrics {
-  const viewportHeight = window.innerHeight;
+export function getMeasuredMobileNavBottom() {
+  const navElement = document.querySelector(".shell-mobile-nav");
+
+  if (!(navElement instanceof HTMLElement)) {
+    return DEFAULT_MOBILE_NAV_BOTTOM;
+  }
+
+  return Math.max(DEFAULT_MOBILE_NAV_BOTTOM, Math.ceil(navElement.getBoundingClientRect().bottom));
+}
+
+export function getMobileSheetMetrics({
+  navBottom = getMeasuredMobileNavBottom(),
+  playerHeight = getMeasuredMobilePlayerHeight(),
+  viewportHeight = window.innerHeight
+}: {
+  navBottom?: number;
+  playerHeight?: number;
+  viewportHeight?: number;
+} = {}): MobileSheetMetrics {
   const sheetBottom = viewportHeight - playerHeight;
-  const maximumHeight = Math.max(220, sheetBottom - MOBILE_NAV_OFFSET);
+  const fullHeight = Math.max(MOBILE_DRAWER_HEADER_HEIGHT, sheetBottom - navBottom - MOBILE_LOADING_SLOT_HEIGHT);
+  const middleHeight = clampMobileSheetHeight(Math.round(viewportHeight * MOBILE_MIDDLE_VIEWPORT_RATIO), {
+    closedHeight: MOBILE_DRAWER_HEADER_HEIGHT,
+    fullHeight
+  });
 
   return {
-    closeSnapHeight: MOBILE_CLOSE_SNAP_HEIGHT,
-    fullSnapHeight: maximumHeight - MOBILE_FULL_SNAP_DISTANCE,
-    fullTop: MOBILE_NAV_OFFSET,
-    maximumHeight,
-    minimumHeight: MOBILE_MINIMUM_SHEET_HEIGHT,
+    closedHeight: MOBILE_DRAWER_HEADER_HEIGHT,
+    fullHeight,
+    middleHeight,
+    navBottom,
     playerHeight,
-    sheetBottom
+    sheetBottom,
+    viewportHeight
   };
 }
 
-export function clampMobileSheetHeight(height: number, metrics: MobileSheetMetrics) {
-  return Math.min(metrics.maximumHeight, Math.max(metrics.minimumHeight, height));
+export function getMobileDrawerHeight(position: DrawerMobilePosition, metrics: MobileSheetMetrics) {
+  return metrics[`${position}Height`];
+}
+
+export function clampMobileSheetHeight(
+  height: number,
+  metrics: Pick<MobileSheetMetrics, "closedHeight" | "fullHeight">
+) {
+  return Math.min(metrics.fullHeight, Math.max(metrics.closedHeight, height));
+}
+
+export function resolveMobileDrawerDetent({
+  height,
+  heightVelocity,
+  metrics
+}: {
+  height: number;
+  heightVelocity: number;
+  metrics: MobileSheetMetrics;
+}): DrawerMobilePosition {
+  const detents = [
+    { height: metrics.closedHeight, position: "closed" },
+    { height: metrics.middleHeight, position: "middle" },
+    { height: metrics.fullHeight, position: "full" }
+  ] as const;
+
+  if (heightVelocity >= MOBILE_SWIPE_VELOCITY_THRESHOLD) {
+    return detents.find((detent) => detent.height > height + 8)?.position ?? "full";
+  }
+
+  if (heightVelocity <= -MOBILE_SWIPE_VELOCITY_THRESHOLD) {
+    return [...detents].reverse().find((detent) => detent.height < height - 8)?.position ?? "closed";
+  }
+
+  return detents.reduce((nearest, detent) => (
+    Math.abs(detent.height - height) < Math.abs(nearest.height - height) ? detent : nearest
+  )).position;
+}
+
+export function getMobileGlobeOffset(height: number, metrics: MobileSheetMetrics) {
+  const effectiveDrawerHeight = Math.min(height, metrics.middleHeight);
+  const drawerTop = metrics.sheetBottom - effectiveDrawerHeight;
+  const availableCenter = (metrics.navBottom + drawerTop) / 2;
+  return Math.round(availableCenter - metrics.viewportHeight / 2);
+}
+
+export function getAdjacentDrawerPosition(
+  position: DrawerMobilePosition,
+  direction: "close" | "open"
+): DrawerMobilePosition {
+  const positions: DrawerMobilePosition[] = ["closed", "middle", "full"];
+  const currentIndex = positions.indexOf(position);
+  const nextIndex = direction === "open" ? currentIndex + 1 : currentIndex - 1;
+  return positions[Math.min(positions.length - 1, Math.max(0, nextIndex))] ?? position;
 }

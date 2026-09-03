@@ -5,17 +5,19 @@ import { memo } from "react";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
-import { AdaptiveOrbitControls, CameraFocus } from "./globe/CameraControls";
+import { GlobeCameraController } from "./globe/CameraControls";
 import { Earth } from "./globe/Earth";
 import { PointMarkers } from "./globe/PointMarkers";
 
 type GlobeSceneProps = {
+  crosshairEnabled: boolean;
   dpr: [number, number];
   earthSpinEnabled: boolean;
   focusKey: string | null;
   focusPoint: TerraPoint | null;
   hoverEnabled: boolean;
   maxCameraDistance: number;
+  motionEnabled: boolean;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
   points: TerraPoint[];
@@ -25,17 +27,21 @@ type GlobeSceneProps = {
   selectedPoint: TerraPoint | null;
   theme: GlobeTheme;
   onCountrySelect: (country: CountryInfo | null) => void;
+  onCrosshairPoint: (point: TerraPoint) => void;
+  onGlobeMotionStart: () => void;
   onPointHover: (point: TerraPoint | null) => void;
   onPointSelect: (point: TerraPoint) => void;
 };
 
 export const GlobeScene = memo(function GlobeScene({
+  crosshairEnabled,
   dpr,
   earthSpinEnabled,
   focusKey,
   focusPoint,
   hoverEnabled,
   maxCameraDistance,
+  motionEnabled,
   markerColor,
   markerColorMode,
   points,
@@ -45,6 +51,8 @@ export const GlobeScene = memo(function GlobeScene({
   selectedPoint,
   theme,
   onCountrySelect,
+  onCrosshairPoint,
+  onGlobeMotionStart,
   onPointHover,
   onPointSelect
 }: GlobeSceneProps) {
@@ -70,11 +78,17 @@ export const GlobeScene = memo(function GlobeScene({
         onSelect={onPointSelect}
       />
 
-      <CameraFocus
+      <GlobeCameraController
+        crosshairEnabled={crosshairEnabled}
+        earthSpinEnabled={earthSpinEnabled}
         focusKey={focusKey}
         focusPoint={focusPoint}
+        maxDistance={maxCameraDistance}
+        motionEnabled={motionEnabled}
+        points={points}
+        onCrosshairPoint={onCrosshairPoint}
+        onMotionStart={onGlobeMotionStart}
       />
-      <AdaptiveOrbitControls earthSpinEnabled={earthSpinEnabled} maxDistance={maxCameraDistance} />
     </Canvas>
   );
 });

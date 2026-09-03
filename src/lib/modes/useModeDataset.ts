@@ -41,7 +41,7 @@ export function useModeDataset(
   const initialModeDataset = getInitialDataset(mode, initialDataset);
   const [points, setPoints] = useState<TerraPoint[]>(() => initialModeDataset?.points ?? []);
   const [source, setSource] = useState<DataSourceInfo | null>(() => initialModeDataset?.source ?? null);
-  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [selectedPoint, setSelectedPoint] = useState<TerraPoint | null>(null);
   const [detail, setDetail] = useState<TerraPointDetail | null>(null);
   const [query, setQuery] = useState("");
   const [debouncedQuery, setDebouncedQuery] = useState("");
@@ -84,7 +84,7 @@ export function useModeDataset(
 
       setLoading(!seededDataset);
       setRequestError(null);
-      setSelectedId(null);
+      setSelectedPoint(null);
       setDetail(null);
       setPoints(seededDataset?.points ?? []);
       setSource(seededDataset?.source ?? null);
@@ -225,14 +225,7 @@ export function useModeDataset(
     };
   }, [debouncedQuery, mode, selectedCountryCode, sortId]);
 
-  const allKnownPoints = useMemo(
-    () => mergePoints(points, countryMarkerPoints, visiblePoints),
-    [countryMarkerPoints, points, visiblePoints]
-  );
-  const selectedPoint = useMemo(
-    () => allKnownPoints.find((point) => point.id === selectedId) ?? null,
-    [allKnownPoints, selectedId]
-  );
+  const selectedId = selectedPoint?.id ?? null;
 
   useEffect(() => {
     let cancelled = false;
@@ -296,7 +289,7 @@ export function useModeDataset(
   const hasMoreVisiblePoints = nextVisiblePointOffset !== null;
   const totalVisiblePoints = visiblePointTotal;
   const totalVisiblePointsKind = visiblePointTotalKind;
-  const clearSelection = useCallback(() => setSelectedId(null), []);
+  const clearSelection = useCallback(() => setSelectedPoint(null), []);
   const loadMoreVisiblePoints = useCallback(async () => {
     if (nextVisiblePointOffset === null || loadingMoreVisiblePoints || listLoading) {
       return;
@@ -326,7 +319,7 @@ export function useModeDataset(
       setLoadingMoreVisiblePoints(false);
     }
   }, [debouncedQuery, listLoading, loadingMoreVisiblePoints, mode, nextVisiblePointOffset, selectedCountryCode, sortId]);
-  const selectPoint = useCallback((point: TerraPoint) => setSelectedId(point.id), []);
+  const selectPoint = useCallback((point: TerraPoint) => setSelectedPoint(point), []);
   const isLoadingDrawerTask = loading || listLoading || loadingMoreVisiblePoints || countryMarkerLoading;
 
   return {

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { useEffect, useState, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
@@ -9,18 +9,12 @@ import type { FavouriteListDto } from "@/lib/persistence/types";
 import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
-import { getMeasuredMobilePlayerHeight } from "./drawer/mobileSheetMetrics";
 import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
 import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
 import { AccountDrawer } from "./shell/AccountDrawer";
 import type { DrawerMobilePosition, ShellDrawerView } from "./shell/drawerState";
 import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
 import { SideDrawerList } from "./SideDrawerList";
-
-type DrawerRuntimeStyle = CSSProperties & {
-  "--mobile-player-height"?: string;
-  "--mobile-sheet-height"?: string;
-};
 
 type SideDrawerProps = {
   activeMode: TerraMode;
@@ -48,6 +42,7 @@ type SideDrawerProps = {
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
   selectedThemeId: TerraThemeId;
+  shellRef: RefObject<HTMLElement | null>;
   sortId: string;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
@@ -58,8 +53,8 @@ type SideDrawerProps = {
   onClearCountrySelection: () => void;
   onCreateFavouriteList: (name: string) => Promise<FavouriteListDto | null>;
   onDeleteFavouriteList: (listId: string) => Promise<void>;
-  onFavouritePointInspect: (modeId: TerraModeId, point: TerraPoint) => void;
-  onFavouritePointPlay: (modeId: TerraModeId, point: TerraPoint) => void;
+  onFavouritePointInspect: (point: TerraPoint) => void;
+  onFavouritePointPlay: (point: TerraPoint) => void;
   onLoginOpen: () => void;
   onLogoutRequest: () => void;
   onLoadMoreRemotePoints?: () => void;
@@ -104,6 +99,7 @@ export function SideDrawer({
   selectedCountry,
   selectedId,
   selectedThemeId,
+  shellRef,
   sortId,
   totalPoints,
   totalPointsKind,
@@ -135,144 +131,104 @@ export function SideDrawer({
 }: SideDrawerProps) {
   const isDetail = Boolean(selectedId) && view === "point-detail";
   const isAccountView = view === "account" || view === "account-info" || view === "themes" || view === "contact";
-  const [mobileSheetStyle, setMobileSheetStyle] = useState<CSSProperties | undefined>();
-  const mobilePlayerHeight = useMobilePlayerHeight();
-  const drawerStyle: DrawerRuntimeStyle = {
-    ...(mobilePlayerHeight ? { "--mobile-player-height": `${mobilePlayerHeight}px` } : undefined),
-    ...(mobilePosition === "custom" ? mobileSheetStyle : undefined)
-  };
-
   return (
-    <aside
-      className={`drawer ${collapsed ? "collapsed" : ""}`}
-      aria-label={`${activeMode.label} data`}
-      data-mobile-position={mobilePosition}
-      style={drawerStyle}
-    >
+    <>
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
-
-      <button
-        aria-label={collapsed ? "Open drawer" : "Close drawer"}
-        className="drawer-toggle"
-        type="button"
-        onClick={onToggleCollapsed}
+      <aside
+        className={`drawer ${collapsed ? "collapsed" : ""}`}
+        aria-label={`${activeMode.label} data`}
+        data-mobile-position={mobilePosition}
       >
-        {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
-      </button>
+        <button
+          aria-label={collapsed ? "Open drawer" : "Close drawer"}
+          className="drawer-toggle"
+          type="button"
+          onClick={onToggleCollapsed}
+        >
+          {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+        </button>
 
-      <MobileDrawerHandle
-        mobilePosition={mobilePosition}
-        onMobilePositionChange={onSetMobilePosition}
-        onMobileStyleChange={setMobileSheetStyle}
-      />
+        <MobileDrawerHandle
+          mobilePosition={mobilePosition}
+          shellRef={shellRef}
+          onMobilePositionChange={onSetMobilePosition}
+        />
 
-      <div className="drawer-inner">
-        {isDetail ? (
-          <PointDetailDrawer
-            activeMode={activeMode}
-            detail={detail}
-            detailAccessory={detailAccessory}
-            onBack={onBack}
-          />
-        ) : view === "mode-switcher" ? (
-          <ModeSwitcherDrawer
-            activeModeId={activeModeId}
-            canGoBack={canGoBack}
-            modes={modes}
-            onBack={onBack}
-            onModeSelect={onModeSelect}
-          />
-        ) : view === "favourites" ? (
-          <FavouritesDrawer
-            activePlaybackPointKey={activePlaybackPointKey}
-            canGoBack={canGoBack}
-            lists={favouriteLists}
-            loading={favouritesLoading}
-            onBack={onBack}
-            onCreateList={onCreateFavouriteList}
-            onDeleteList={onDeleteFavouriteList}
-            onFavouriteInspect={onFavouritePointInspect}
-            onFavouritePlay={onFavouritePointPlay}
-            onRemoveFavouriteFromList={onRemoveFavouriteFromList}
-            onRenameList={onRenameFavouriteList}
-          />
-        ) : isAccountView ? (
-          <AccountDrawer
-            canGoBack={canGoBack}
-            contactLinks={accountContactLinks}
-            loading={accountLoading}
-            selectedThemeId={selectedThemeId}
-            user={user}
-            view={view}
-            onAccountUpdated={onAccountUpdated}
-            onAuthOpen={onLoginOpen}
-            onBack={onBack}
-            onLogoutRequest={onLogoutRequest}
-            onThemeChange={onThemeChange}
-            onViewChange={onSetAccountView}
-          />
-        ) : (
-          <SideDrawerList
-            activeMode={activeMode}
-            activePlaybackPointKey={activePlaybackPointKey}
-            favouritePointIds={favouritePointIds}
-            hasMoreRemotePoints={hasMoreRemotePoints}
-            loading={loading}
-            loadingMoreRemotePoints={loadingMoreRemotePoints}
-            points={points}
-            providerError={providerError}
-            query={query}
-            selectedCountry={selectedCountry}
-            selectedId={selectedId}
-            sortId={sortId}
-            totalPoints={totalPoints}
-            totalPointsKind={totalPointsKind}
-            onCountryFilterChange={onCountryFilterChange}
-            onClearCountrySelection={onClearCountrySelection}
-            onLoadMoreRemotePoints={onLoadMoreRemotePoints}
-            onPointInspect={onPointInspect}
-            onPointPlay={onPointPlay}
-            onQueryChange={onQueryChange}
-            onSortChange={onSortChange}
-            onToggleFavourite={onOpenFavouritePicker}
-          />
-        )}
-      </div>
-    </aside>
+        <div className="drawer-inner">
+          {isDetail ? (
+            <PointDetailDrawer
+              activeMode={activeMode}
+              detail={detail}
+              detailAccessory={detailAccessory}
+              onBack={onBack}
+            />
+          ) : view === "mode-switcher" ? (
+            <ModeSwitcherDrawer
+              activeModeId={activeModeId}
+              canGoBack={canGoBack}
+              modes={modes}
+              onBack={onBack}
+              onModeSelect={onModeSelect}
+            />
+          ) : view === "favourites" ? (
+            <FavouritesDrawer
+              activePlaybackPointKey={activePlaybackPointKey}
+              canGoBack={canGoBack}
+              lists={favouriteLists}
+              loading={favouritesLoading}
+              onBack={onBack}
+              onCreateList={onCreateFavouriteList}
+              onDeleteList={onDeleteFavouriteList}
+              onFavouriteInspect={onFavouritePointInspect}
+              onFavouritePlay={onFavouritePointPlay}
+              onRemoveFavouriteFromList={onRemoveFavouriteFromList}
+              onRenameList={onRenameFavouriteList}
+            />
+          ) : isAccountView ? (
+            <AccountDrawer
+              canGoBack={canGoBack}
+              contactLinks={accountContactLinks}
+              loading={accountLoading}
+              selectedThemeId={selectedThemeId}
+              user={user}
+              view={view}
+              onAccountUpdated={onAccountUpdated}
+              onAuthOpen={onLoginOpen}
+              onBack={onBack}
+              onLogoutRequest={onLogoutRequest}
+              onThemeChange={onThemeChange}
+              onViewChange={onSetAccountView}
+            />
+          ) : (
+            <SideDrawerList
+              activeMode={activeMode}
+              activePlaybackPointKey={activePlaybackPointKey}
+              favouritePointIds={favouritePointIds}
+              hasMoreRemotePoints={hasMoreRemotePoints}
+              loading={loading}
+              loadingMoreRemotePoints={loadingMoreRemotePoints}
+              points={points}
+              providerError={providerError}
+              query={query}
+              selectedCountry={selectedCountry}
+              selectedId={selectedId}
+              sortId={sortId}
+              totalPoints={totalPoints}
+              totalPointsKind={totalPointsKind}
+              onCountryFilterChange={onCountryFilterChange}
+              onClearCountrySelection={onClearCountrySelection}
+              onLoadMoreRemotePoints={onLoadMoreRemotePoints}
+              onPointInspect={onPointInspect}
+              onPointPlay={onPointPlay}
+              onQueryChange={onQueryChange}
+              onSortChange={onSortChange}
+              onToggleFavourite={onOpenFavouritePicker}
+            />
+          )}
+        </div>
+      </aside>
+    </>
   );
-}
-
-function useMobilePlayerHeight() {
-  const [height, setHeight] = useState<number | null>(null);
-
-  useEffect(() => {
-    const updateHeight = () => {
-      setHeight((currentHeight) => {
-        const nextHeight = getMeasuredMobilePlayerHeight();
-
-        return currentHeight === nextHeight ? currentHeight : nextHeight;
-      });
-    };
-
-    updateHeight();
-
-    const playerElement = document.querySelector(".media-mini-player");
-    const resizeObserver = typeof ResizeObserver === "undefined" || !(playerElement instanceof HTMLElement)
-      ? null
-      : new ResizeObserver(updateHeight);
-
-    if (resizeObserver && playerElement instanceof HTMLElement) {
-      resizeObserver.observe(playerElement);
-    }
-    window.addEventListener("resize", updateHeight);
-
-    return () => {
-      resizeObserver?.disconnect();
-      window.removeEventListener("resize", updateHeight);
-    };
-  }, []);
-
-  return height;
 }
 
 function DrawerLoadingStatus({ active, label }: { active: boolean; label: string }) {

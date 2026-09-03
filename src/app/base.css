@@ -246,6 +246,106 @@ button.press-feedback-active::after {
   line-height: 1.2;
 }
 
+.mobile-crosshair {
+  display: none;
+}
+
+.crosshair-dot {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 999px;
+  background: var(--text);
+  box-shadow: 0 1px 5px var(--shadow-tooltip);
+  transform: translate(-50%, -50%);
+}
+
+.crosshair-point-card {
+  position: absolute;
+  top: calc(50% - 16px);
+  left: 50%;
+  display: grid;
+  width: min(280px, calc(100vw - 32px));
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 1px solid var(--info-border);
+  border-radius: 8px;
+  background: var(--panel);
+  box-shadow: 0 16px 42px var(--shadow-tooltip);
+  pointer-events: auto;
+  transform: translate(-50%, -100%);
+  backdrop-filter: blur(var(--panel-blur));
+}
+
+.crosshair-point-copy {
+  min-width: 0;
+}
+
+.crosshair-point-copy strong,
+.crosshair-point-copy span,
+.crosshair-point-copy small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.crosshair-point-copy strong {
+  color: var(--text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.crosshair-point-copy span,
+.crosshair-point-copy small {
+  margin-top: 4px;
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.2;
+}
+
+.crosshair-point-copy small {
+  color: var(--metric);
+}
+
+.crosshair-point-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.crosshair-point-actions button {
+  display: inline-flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  padding: 0 8px;
+  border: 1px solid var(--panel-border);
+  border-radius: 8px;
+  background: var(--control);
+  color: var(--muted-strong);
+  cursor: pointer;
+  font-size: 11px;
+  font-weight: 750;
+}
+
+.crosshair-point-actions button:hover:not(:disabled),
+.crosshair-point-actions button:focus-visible {
+  border-color: var(--info-border);
+  background: var(--control-hover);
+  color: var(--text);
+}
+
+.crosshair-point-actions button:disabled {
+  cursor: wait;
+  opacity: 0.7;
+}
+
 @media (max-width: 760px) {
   .blomoon-shell {
     min-height: 100svh;
@@ -329,6 +429,7 @@ button.press-feedback-active::after {
     z-index: 28;
     display: grid;
     gap: 10px;
+    transition: opacity 180ms ease;
   }
 
   .blomoon-shell {
@@ -336,8 +437,23 @@ button.press-feedback-active::after {
     padding-bottom: env(safe-area-inset-bottom, 0px);
   }
 
+  .globe-stage,
   .blomoon-shell.drawer-open .globe-stage {
-    transform: translateY(-8svh);
+    transform: translateY(var(--mobile-globe-offset-y, -8svh));
+  }
+
+  .mobile-crosshair {
+    position: absolute;
+    inset: 0;
+    z-index: 24;
+    display: block;
+    pointer-events: none;
+  }
+
+  .blomoon-shell[data-mobile-drawer-position="full"] .shell-globe-controls {
+    visibility: hidden;
+    opacity: 0;
+    pointer-events: none;
   }
 
   .account-menu-trigger,
@@ -352,5 +468,13 @@ button.press-feedback-active::after {
 
   .point-tooltip {
     display: none;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .globe-stage,
+  .drawer,
+  .shell-globe-controls {
+    transition-duration: 0ms;
   }
 }

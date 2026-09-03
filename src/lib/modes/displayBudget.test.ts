@@ -7,10 +7,9 @@ import {
 import type { TerraPoint } from "./types";
 
 describe("globe display budget", () => {
-  it("uses a lower mobile marker budget than desktop", () => {
-    expect(GLOBE_DISPLAY_BUDGET.mobile).toBeLessThan(GLOBE_DISPLAY_BUDGET.desktop);
-    expect(GLOBE_DISPLAY_BUDGET.mobile).toBe(400);
-    expect(GLOBE_COUNTRY_POINT_GUARANTEE.mobile).toBe(2);
+  it("uses the full marker budget on every globe profile", () => {
+    expect(GLOBE_DISPLAY_BUDGET).toBe(1200);
+    expect(GLOBE_COUNTRY_POINT_GUARANTEE).toBe(4);
   });
 
   it("caps displayed points while preserving selected and active playback points", () => {

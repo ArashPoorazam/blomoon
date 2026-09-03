@@ -46,18 +46,13 @@ describe("shell drawer state", () => {
     })).toBe("full");
 
     expect(resolveDrawerMobilePosition({
-      currentPosition: "standard",
+      currentPosition: "middle",
       requestedOpenPosition: "full"
-    })).toBe("standard");
+    })).toBe("middle");
 
     expect(resolveDrawerMobilePosition({
       currentPosition: "full",
-      requestedOpenPosition: "standard"
+      requestedOpenPosition: "middle"
     })).toBe("full");
-
-    expect(resolveDrawerMobilePosition({
-      currentPosition: "custom",
-      requestedOpenPosition: "standard"
-    })).toBe("custom");
   });
 });

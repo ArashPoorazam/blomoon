@@ -4,6 +4,7 @@ import Image from "next/image";
 import { ChevronLeft, ExternalLink, Share2 } from "lucide-react";
 import { useEffect, useState, type ReactNode } from "react";
 import type { TerraMode, TerraPointDetail } from "@/lib/modes/types";
+import { DrawerHeader } from "./DrawerHeader";
 
 type PointDetailDrawerProps = {
   activeMode: TerraMode;
@@ -20,15 +21,16 @@ export function PointDetailDrawer({
 }: PointDetailDrawerProps) {
   return (
     <>
-      <div className="drawer-header">
-        <div>
-          <h1 className="drawer-title">{detail?.name ?? `${activeMode.copy.itemSingular} info`}</h1>
-          {detail?.summary ? <p className="drawer-subtitle">{detail.summary}</p> : null}
-        </div>
-        <button className="icon-button" type="button" aria-label="Back" onClick={onBack}>
-          <ChevronLeft size={17} aria-hidden="true" />
-        </button>
-      </div>
+      <DrawerHeader
+        headingAs="h1"
+        title={detail?.name ?? `${activeMode.copy.itemSingular} info`}
+        subtitle={detail?.summary ?? `Loading ${activeMode.copy.itemSingular} information`}
+        actions={(
+          <button className="icon-button" type="button" aria-label="Back" onClick={onBack}>
+            <ChevronLeft size={17} aria-hidden="true" />
+          </button>
+        )}
+      />
 
       <div className="detail-body">
         <div className="detail-hero">

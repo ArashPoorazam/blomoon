@@ -2,9 +2,10 @@
 
 import { Check, ChevronLeft, Pencil, Plus, Star, Trash2 } from "lucide-react";
 import { useState } from "react";
-import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
+import type { TerraPoint } from "@/lib/modes/types";
 import { toFavouriteKey } from "@/lib/persistence/favouriteKeys";
 import type { FavouriteListDto } from "@/lib/persistence/types";
+import { DrawerHeader } from "../drawer/DrawerHeader";
 import { PointActionMenu } from "../drawer/PointActionMenu";
 
 type FavouritesDrawerProps = {
@@ -15,8 +16,8 @@ type FavouritesDrawerProps = {
   onBack: () => void;
   onCreateList: (name: string) => Promise<FavouriteListDto | null>;
   onDeleteList: (listId: string) => Promise<void>;
-  onFavouriteInspect: (modeId: TerraModeId, point: TerraPoint) => void;
-  onFavouritePlay: (modeId: TerraModeId, point: TerraPoint) => void;
+  onFavouriteInspect: (point: TerraPoint) => void;
+  onFavouritePlay: (point: TerraPoint) => void;
   onRemoveFavouriteFromList: (listId: string, point: TerraPoint) => Promise<void>;
   onRenameList: (listId: string, name: string) => Promise<void>;
 };
@@ -41,23 +42,24 @@ export function FavouritesDrawer({
 
   return (
     <div className="favourites-view" aria-label="Favourites">
-      <div className="favourites-header">
-        <div className="favourites-header-copy">
-          <h2>Favourites</h2>
-          <p className="drawer-subtitle">{formatFavouriteCount(favouriteCount, loading)}</p>
-        </div>
-        <div className="favourites-header-actions">
-          <button className="primary-action compact-action" type="button" onClick={() => setCreating(true)}>
-            <Plus size={15} aria-hidden="true" />
-            <span>New list</span>
-          </button>
-          {canGoBack ? (
-            <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
-              <ChevronLeft size={17} aria-hidden="true" />
+      <DrawerHeader
+        className="favourites-header"
+        title="Favourites"
+        subtitle={formatFavouriteCount(favouriteCount, loading)}
+        actions={(
+          <>
+            <button className="primary-action compact-action" type="button" onClick={() => setCreating(true)}>
+              <Plus size={15} aria-hidden="true" />
+              <span>New list</span>
             </button>
-          ) : null}
-        </div>
-      </div>
+            {canGoBack ? (
+              <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
+                <ChevronLeft size={17} aria-hidden="true" />
+              </button>
+            ) : null}
+          </>
+        )}
+      />
 
       <div className="favourites-body">
         {creating ? (
@@ -119,7 +121,7 @@ export function FavouritesDrawer({
                 <button
                   className="favourite-row-main"
                   type="button"
-                  onClick={() => onFavouritePlay(favourite.modeId, favourite.point)}
+                  onClick={() => onFavouritePlay(favourite.point)}
                 >
                   <Star size={15} aria-hidden="true" fill="currentColor" />
                   <span>
@@ -139,7 +141,7 @@ export function FavouritesDrawer({
                 </button>
                 <PointActionMenu
                   point={favourite.point}
-                  onInfo={(point) => onFavouriteInspect(favourite.modeId, point)}
+                  onInfo={onFavouriteInspect}
                 />
               </div>
             ))}

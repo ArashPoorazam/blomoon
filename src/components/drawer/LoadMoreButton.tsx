@@ -1,7 +1,5 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
-
 type LoadMoreButtonProps = {
   className: string;
   isLoading: boolean;
@@ -12,6 +10,7 @@ export function LoadMoreButton({ className, isLoading, onLoadMore }: LoadMoreBut
   return (
     <button
       className={className}
+      aria-busy={isLoading}
       disabled={isLoading}
       type="button"
       onClick={() => {
@@ -20,14 +19,7 @@ export function LoadMoreButton({ className, isLoading, onLoadMore }: LoadMoreBut
         }
       }}
     >
-      {isLoading ? (
-        <>
-          <LoaderCircle className="loading-status-icon spinning" size={14} aria-hidden="true" />
-          Loading
-        </>
-      ) : (
-        "Show 50 more"
-      )}
+      Show 50 more
     </button>
   );
 }

@@ -247,11 +247,6 @@
   color: var(--danger);
 }
 
-.account-drawer-heading {
-  flex: 1;
-  min-width: 0;
-}
-
 @media (max-width: 760px) {
   .favourite-list-form-actions {
     grid-template-columns: 1fr;
