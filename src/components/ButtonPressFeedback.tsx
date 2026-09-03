@@ -3,7 +3,7 @@
 import { useEffect, type RefObject } from "react";
 
 const PRESS_FEEDBACK_CLASS = "press-feedback-active";
-const PRESS_FEEDBACK_TIMEOUT_MS = 260;
+const PRESS_FEEDBACK_FALLBACK_TIMEOUT_MS = 1000;
 const PRESS_FEEDBACK_BUTTON_SELECTOR = [
   ".account-menu-trigger",
   ".shell-square-control",
@@ -74,7 +74,7 @@ export function ButtonPressFeedback({ rootRef }: ButtonPressFeedbackProps) {
       button.classList.add(PRESS_FEEDBACK_CLASS);
       activeButtons.add(button);
 
-      timers.set(button, window.setTimeout(() => clearButton(button), PRESS_FEEDBACK_TIMEOUT_MS));
+      timers.set(button, window.setTimeout(() => clearButton(button), PRESS_FEEDBACK_FALLBACK_TIMEOUT_MS));
     };
 
     const getButton = (target: EventTarget | null) => {

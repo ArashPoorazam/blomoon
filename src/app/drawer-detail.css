@@ -16,13 +16,14 @@
 }
 
 .point-action-trigger:hover,
-.point-action-trigger:focus-visible,
-.point-action-menu:has(.point-action-popover) .point-action-trigger {
-  background: var(--control-hover);
+.point-action-trigger[aria-expanded="true"] {
+  background: transparent;
   color: var(--text);
 }
 
 .point-action-trigger:focus-visible {
+  background: transparent;
+  color: var(--text);
   outline: 2px solid var(--focus-ring);
   outline-offset: 2px;
 }
@@ -61,6 +62,12 @@
 .point-action-popover button:focus-visible {
   background: var(--control-hover);
   color: var(--text);
+}
+
+@media (pointer: coarse) {
+  .point-action-trigger:hover {
+    background: transparent;
+  }
 }
 
 .detail-hero {

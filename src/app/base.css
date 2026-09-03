@@ -2,6 +2,10 @@
   box-sizing: border-box;
 }
 
+:root {
+  --press-feedback-duration: 190ms;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -91,7 +95,7 @@ button.press-feedback-active::after {
   opacity: 0;
   pointer-events: none;
   transform: scale(0.84);
-  animation: press-feedback-fade 190ms ease-out both;
+  animation: press-feedback-fade var(--press-feedback-duration) ease-out both;
 }
 
 .media-mini-player .media-control.press-feedback-active::after,

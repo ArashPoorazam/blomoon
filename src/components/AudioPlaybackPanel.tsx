@@ -167,7 +167,7 @@ function AudioPlaybackControls({
         <button
           aria-label={`Play previous ${itemSingularLabel}`}
           className="media-control icon-only"
-          disabled={!playback.canPlayPrevious || isBusy}
+          disabled={!playback.canPlayPrevious}
           title="Previous"
           type="button"
           onClick={() => {
@@ -208,7 +208,7 @@ function AudioPlaybackControls({
         <button
           aria-label={`Play next ${itemSingularLabel}`}
           className="media-control icon-only"
-          disabled={!canPlayNext || isBusy}
+          disabled={!canPlayNext}
           title="Next"
           type="button"
           onClick={onNext}
@@ -221,7 +221,7 @@ function AudioPlaybackControls({
           aria-label={`Shuffle ${itemPluralLabel}`}
           className="media-control icon-only"
           aria-busy={loadingRandom}
-          disabled={!canShuffle || isBusy}
+          disabled={!canShuffle}
           title="Shuffle"
           type="button"
           onClick={onShuffle}

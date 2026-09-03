@@ -493,10 +493,16 @@
   fill: transparent;
 }
 
-.favourite-star:hover,
-.favourite-star:focus-visible {
-  background: var(--control-hover);
+.favourite-star:hover {
+  background: transparent;
   color: var(--metric);
+}
+
+.favourite-star:focus-visible {
+  background: transparent;
+  color: var(--metric);
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
 }
 
 .favourite-star.active {
@@ -506,6 +512,12 @@
 
 .favourite-star.active svg {
   fill: currentColor;
+}
+
+@media (pointer: coarse) {
+  .favourite-star:hover {
+    background: transparent;
+  }
 }
 
 .empty-state {
