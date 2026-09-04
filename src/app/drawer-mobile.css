@@ -29,7 +29,7 @@
 
   .drawer-loading-panel {
     position: fixed;
-    top: calc(max(10px, env(safe-area-inset-top, 0px)) + 70px);
+    top: calc(max(10px, env(safe-area-inset-top, 0px)) + 56px);
     left: max(10px, env(safe-area-inset-left, 0px));
     z-index: 48;
     width: min(220px, calc(100vw - 20px));
@@ -41,6 +41,12 @@
     transform: translateX(0);
     transition: opacity 180ms ease, transform 220ms ease;
     animation: drawer-loading-slide-in 220ms ease both;
+  }
+
+  .drawer-loading-panel span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
   }
 
   .drawer-loading-panel.complete {
@@ -137,7 +143,9 @@
     display: none;
   }
 
-  .drawer-directory-header {
+  .drawer-list-toolbar > .drawer-directory-header {
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
     border-bottom: 1px solid var(--line);
   }
 
@@ -166,6 +174,7 @@
 
   .point-list-more {
     min-height: 44px;
+    display: none;
   }
 
   .has-mini-player .point-list,

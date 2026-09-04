@@ -8,7 +8,7 @@ export type PlaybackQueueSource = "list" | "favourites";
 type PointInteraction =
   | { kind: "preview"; point: TerraPoint }
   | { kind: "inspect"; point: TerraPoint }
-  | { kind: "play"; point: TerraPoint; queueSource: PlaybackQueueSource };
+  | { camera: "focus" | "preserve"; kind: "play"; point: TerraPoint; queueSource: PlaybackQueueSource };
 
 type PointInteractionDependencies = {
   activeModeId: TerraModeId;
@@ -53,7 +53,11 @@ export function usePointInteractions({
   }, [openPointDetail, playPoint, recordPointInteraction, selectPoint]);
 
   const dispatch = useCallback((interaction: PointInteraction) => {
-    if (interaction.kind !== "preview") {
+    const shouldFocus = interaction.kind === "inspect"
+      || (interaction.kind === "play" && interaction.camera === "focus");
+
+    if (shouldFocus) {
+      setCrosshairPoint(null);
       focusPoint(interaction.point);
     }
 
@@ -82,7 +86,11 @@ export function usePointInteractions({
   const clearCrosshairPoint = useCallback(() => setCrosshairPoint(null), []);
   const inspect = useCallback((point: TerraPoint) => dispatch({ kind: "inspect", point }), [dispatch]);
   const play = useCallback(
-    (point: TerraPoint, queueSource: PlaybackQueueSource) => dispatch({ kind: "play", point, queueSource }),
+    (point: TerraPoint, queueSource: PlaybackQueueSource) => dispatch({ camera: "focus", kind: "play", point, queueSource }),
+    [dispatch]
+  );
+  const playInPlace = useCallback(
+    (point: TerraPoint, queueSource: PlaybackQueueSource) => dispatch({ camera: "preserve", kind: "play", point, queueSource }),
     [dispatch]
   );
   const preview = useCallback((point: TerraPoint) => dispatch({ kind: "preview", point }), [dispatch]);
@@ -92,6 +100,7 @@ export function usePointInteractions({
     crosshairPoint,
     inspect,
     play,
+    playInPlace,
     preview
-  }), [clearCrosshairPoint, crosshairPoint, inspect, play, preview]);
+  }), [clearCrosshairPoint, crosshairPoint, inspect, play, playInPlace, preview]);
 }

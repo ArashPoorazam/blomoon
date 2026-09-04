@@ -3,7 +3,7 @@ import type { DrawerMobilePosition } from "../shell/drawerState";
 export const MOBILE_DRAWER_HEADER_HEIGHT = 92;
 
 const DEFAULT_MOBILE_NAV_BOTTOM = 72;
-const MOBILE_LOADING_SLOT_HEIGHT = 78;
+const MOBILE_LOADING_SLOT_HEIGHT = 46;
 const MOBILE_MIDDLE_VIEWPORT_RATIO = 0.4;
 const MOBILE_SWIPE_VELOCITY_THRESHOLD = 0.35;
 
@@ -34,7 +34,7 @@ export function getMeasuredMobileNavBottom() {
     return DEFAULT_MOBILE_NAV_BOTTOM;
   }
 
-  return Math.max(DEFAULT_MOBILE_NAV_BOTTOM, Math.ceil(navElement.getBoundingClientRect().bottom));
+  return Math.max(0, Math.ceil(navElement.getBoundingClientRect().bottom));
 }
 
 export function getMobileSheetMetrics({

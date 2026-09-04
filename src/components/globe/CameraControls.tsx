@@ -38,7 +38,7 @@ type GlobeCameraControllerProps = {
   motionEnabled: boolean;
   points: TerraPoint[];
   onCrosshairPoint: (point: TerraPoint) => void;
-  onMotionStart: () => void;
+  onUserInteractionStart: () => void;
 };
 
 const RIGHT_MOUSE_ORBIT_BUTTONS = {
@@ -54,7 +54,7 @@ export function GlobeCameraController({
   maxDistance,
   motionEnabled,
   onCrosshairPoint,
-  onMotionStart,
+  onUserInteractionStart,
   points
 }: GlobeCameraControllerProps) {
   const controlsRef = useRef<OrbitControlsImpl>(null);
@@ -62,28 +62,22 @@ export function GlobeCameraController({
   const lastFocusKey = useRef<string | null>(null);
   const focusTarget = useRef<CameraFocusTarget | null>(null);
   const userInteracting = useRef(false);
-  const motionActive = useRef(false);
   const lastMotionAt = useRef(performance.now());
   const lastEvaluatedPosition = useRef<THREE.Vector3 | null>(null);
   const onCrosshairPointRef = useRef(onCrosshairPoint);
-  const onMotionStartRef = useRef(onMotionStart);
+  const onUserInteractionStartRef = useRef(onUserInteractionStart);
   const { height, width } = useThree((state) => state.size);
   const origin = useMemo(() => new THREE.Vector3(), []);
   const targetPosition = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
     onCrosshairPointRef.current = onCrosshairPoint;
-    onMotionStartRef.current = onMotionStart;
-  }, [onCrosshairPoint, onMotionStart]);
+    onUserInteractionStartRef.current = onUserInteractionStart;
+  }, [onCrosshairPoint, onUserInteractionStart]);
 
   const markMotion = useCallback(() => {
     lastMotionAt.current = performance.now();
     lastEvaluatedPosition.current = null;
-
-    if (!motionActive.current) {
-      motionActive.current = true;
-      onMotionStartRef.current();
-    }
   }, []);
 
   useEffect(() => {
@@ -116,6 +110,9 @@ export function GlobeCameraController({
 
       event.preventDefault();
       focusTarget.current = null;
+      if (!pressedKeyCodes.current.has(event.code)) {
+        onUserInteractionStartRef.current();
+      }
       pressedKeyCodes.current.add(event.code);
       markMotion();
     }
@@ -179,7 +176,6 @@ export function GlobeCameraController({
         lastMotionAt.current = performance.now();
 
         if (currentFocus.source === "crosshair") {
-          motionActive.current = false;
           lastEvaluatedPosition.current = camera.position.clone();
           onCrosshairPointRef.current(currentFocus.point);
         }
@@ -196,8 +192,6 @@ export function GlobeCameraController({
     if (performance.now() - lastMotionAt.current < CROSSHAIR_IDLE_DELAY_MS) {
       return;
     }
-
-    motionActive.current = false;
 
     if (!crosshairEnabled || lastEvaluatedPosition.current?.distanceToSquared(camera.position) === 0) {
       return;
@@ -238,6 +232,7 @@ export function GlobeCameraController({
       onStart={() => {
         userInteracting.current = true;
         focusTarget.current = null;
+        onUserInteractionStartRef.current();
         markMotion();
       }}
     />

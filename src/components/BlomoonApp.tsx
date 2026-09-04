@@ -84,6 +84,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     crosshairPoint,
     inspect: inspectPoint,
     play: playPoint,
+    playInPlace: playPointInPlace,
     preview: previewPoint
   } = usePointInteractions({
     activeModeId,
@@ -96,7 +97,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setPlaybackQueueSource
   });
   const drawerOpen = !drawer.collapsed && drawer.mobilePosition !== "closed";
-  const crosshairEnabled = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
+  const crosshairVisible = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
+  const crosshairTargetingEnabled = crosshairVisible && !crosshairPoint;
   const hasMiniPlayer = Boolean(activeMode.playback);
   const favouritePoints = useMemo(
     () => uniquePoints(favourites.lists.flatMap((list) => list.items.map((favourite) => favourite.point))),
@@ -116,6 +118,18 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const playFromCurrentDrawer = useCallback((point: TerraPoint) => {
     playPoint(point, drawer.view === "favourites" ? "favourites" : "list");
   }, [drawer.view, playPoint]);
+  const playInPlaceFromCurrentDrawer = useCallback((point: TerraPoint) => {
+    playPointInPlace(point, drawer.view === "favourites" ? "favourites" : "list");
+  }, [drawer.view, playPointInPlace]);
+  const crosshairPlaybackStatus = crosshairPoint
+    && audioPlayback.point
+    && getPointKey(crosshairPoint) === getPointKey(audioPlayback.point)
+    ? audioPlayback.status
+    : "idle";
+  const toggleEarthSpin = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+    clearCrosshairPoint();
+    earthSpin.toggleEarthSpin(event);
+  }, [clearCrosshairPoint, earthSpin.toggleEarthSpin]);
   const displayedGlobe = useDisplayedGlobePoints({
     activeMode,
     activePlaybackPoint,
@@ -269,7 +283,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       <div className="globe-stage">
         <GlobeScene
           activePlaybackPoint={activePlaybackPoint}
-          crosshairEnabled={crosshairEnabled}
+          crosshairEnabled={crosshairTargetingEnabled}
           dpr={globeProfile.dpr}
           earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
           focusKey={cameraFocusRequest?.key ?? null}
@@ -286,20 +300,20 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
           theme={activeTheme.globe}
           onCountrySelect={selectCountry}
           onCrosshairPoint={previewPoint}
-          onGlobeMotionStart={clearCrosshairPoint}
+          onGlobeInteractionStart={clearCrosshairPoint}
           onPointHover={setHoveredPoint}
           onPointSelect={playFromCurrentDrawer}
         />
-        {crosshairEnabled ? (
+        {crosshairVisible ? (
           <MobileCrosshair
             metric={crosshairPoint
               ? activeMode.formatPointMetric(crosshairPoint)
               : null}
-            playbackLoading={audioPlayback.status === "loading"
-              && audioPlayback.pointId === crosshairPoint?.id}
+            playbackStatus={crosshairPlaybackStatus}
             point={crosshairPoint}
             onInfo={inspectPoint}
-            onPlay={playFromCurrentDrawer}
+            onPause={audioPlayback.pause}
+            onPlay={playInPlaceFromCurrentDrawer}
           />
         ) : null}
       </div>
@@ -331,7 +345,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onModeOpen={openModeSwitcher}
         onModeSelect={selectMode}
         onThemeChange={selectTheme}
-        onToggleEarthSpin={earthSpin.toggleEarthSpin}
+        onToggleEarthSpin={toggleEarthSpin}
         onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
       />
 

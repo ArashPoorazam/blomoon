@@ -66,13 +66,14 @@ export function DrawerListToolbar({
             totalCount: totalPoints,
             totalKind: totalPointsKind
           })}
-        actions={hasMorePoints && !loading ? (
-            <LoadMoreButton
-              className="directory-load-more"
-              isLoading={isLoadingMorePoints}
-              onLoadMore={onLoadMorePoints}
-            />
-          ) : null}
+        actions={(
+          <LoadMoreButton
+            className="directory-load-more"
+            disabled={loading || !hasMorePoints}
+            isLoading={isLoadingMorePoints}
+            onLoadMore={onLoadMorePoints}
+          />
+        )}
       />
 
       <div className="drawer-search-controls">

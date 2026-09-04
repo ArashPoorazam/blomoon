@@ -28,7 +28,7 @@ type GlobeSceneProps = {
   theme: GlobeTheme;
   onCountrySelect: (country: CountryInfo | null) => void;
   onCrosshairPoint: (point: TerraPoint) => void;
-  onGlobeMotionStart: () => void;
+  onGlobeInteractionStart: () => void;
   onPointHover: (point: TerraPoint | null) => void;
   onPointSelect: (point: TerraPoint) => void;
 };
@@ -52,7 +52,7 @@ export const GlobeScene = memo(function GlobeScene({
   theme,
   onCountrySelect,
   onCrosshairPoint,
-  onGlobeMotionStart,
+  onGlobeInteractionStart,
   onPointHover,
   onPointSelect
 }: GlobeSceneProps) {
@@ -87,7 +87,7 @@ export const GlobeScene = memo(function GlobeScene({
         motionEnabled={motionEnabled}
         points={points}
         onCrosshairPoint={onCrosshairPoint}
-        onMotionStart={onGlobeMotionStart}
+        onUserInteractionStart={onGlobeInteractionStart}
       />
     </Canvas>
   );

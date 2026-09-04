@@ -17,13 +17,14 @@ describe("mobile drawer sheet metrics", () => {
   it("reserves the header, middle viewport share, player, nav, and loading slot", () => {
     expect(metrics).toMatchObject({
       closedHeight: 92,
-      fullHeight: 558,
+      fullHeight: 590,
       middleHeight: 320,
       sheetBottom: 708
     });
     expect(getMobileDrawerHeight("closed", metrics)).toBe(92);
     expect(getMobileDrawerHeight("middle", metrics)).toBe(320);
-    expect(getMobileDrawerHeight("full", metrics)).toBe(558);
+    expect(getMobileDrawerHeight("full", metrics)).toBe(590);
+    expect(metrics.sheetBottom - metrics.fullHeight - metrics.navBottom).toBe(46);
   });
 
   it("uses the nearest detent for a slow release", () => {

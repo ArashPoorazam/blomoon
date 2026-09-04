@@ -320,11 +320,12 @@ button.press-feedback-active::after {
 
 .crosshair-point-actions button {
   display: inline-flex;
+  width: 34px;
   min-height: 34px;
+  flex: 0 0 34px;
   align-items: center;
   justify-content: center;
-  gap: 5px;
-  padding: 0 8px;
+  padding: 0;
   border: 1px solid var(--panel-border);
   border-radius: 8px;
   background: var(--control);
