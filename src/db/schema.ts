@@ -172,16 +172,27 @@ export const radioStations = pgTable("radio_stations", {
   check("radio_stations_provider_clicks_nonnegative", sql`${table.providerClicks} >= 0`)
 ]);
 
-export const userFavouriteLists = pgTable("user_favourite_lists", {
+export const userFavouriteFolders = pgTable("user_favourite_folders", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
   name: text("name").notNull(),
+  description: text("description"),
+  isDefault: boolean("is_default").notNull().default(false),
+  shareToken: text("share_token").unique(),
+  sharedAt: timestamp("shared_at", { withTimezone: true }),
+  importSourceFolderId: uuid("import_source_folder_id"),
+  importedAt: timestamp("imported_at", { withTimezone: true }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  uniqueIndex("user_favourite_lists_user_name_unique").on(table.userId, sql`lower(${table.name})`),
-  index("user_favourite_lists_user_updated_idx").on(table.userId, table.updatedAt),
-  check("user_favourite_lists_name_length", sql`length(btrim(${table.name})) BETWEEN 1 AND 80`)
+  uniqueIndex("user_favourite_folders_user_name_unique").on(table.userId, sql`lower(${table.name})`),
+  uniqueIndex("user_favourite_folders_one_default_unique").on(table.userId).where(sql`${table.isDefault}`),
+  uniqueIndex("user_favourite_folders_import_source_unique").on(table.userId, table.importSourceFolderId).where(sql`${table.importSourceFolderId} IS NOT NULL`),
+  index("user_favourite_folders_user_updated_idx").on(table.userId, table.updatedAt),
+  check("user_favourite_folders_name_length", sql`length(btrim(${table.name})) BETWEEN 1 AND 80`),
+  check("user_favourite_folders_description_length", sql`${table.description} IS NULL OR length(${table.description}) <= 240`),
+  check("user_favourite_folders_share_state", sql`(${table.shareToken} IS NULL) = (${table.sharedAt} IS NULL)`),
+  check("user_favourite_folders_import_state", sql`(${table.importSourceFolderId} IS NULL) = (${table.importedAt} IS NULL)`)
 ]);
 
 export const userSavedMediaItems = pgTable("user_saved_media_items", {
@@ -195,14 +206,14 @@ export const userSavedMediaItems = pgTable("user_saved_media_items", {
   index("user_saved_media_items_media_item_id_idx").on(table.mediaItemId)
 ]);
 
-export const userFavouriteListItems = pgTable("user_favourite_list_items", {
-  listId: uuid("list_id").notNull().references(() => userFavouriteLists.id, { onDelete: "cascade" }),
+export const userFavouriteFolderItems = pgTable("user_favourite_folder_items", {
+  folderId: uuid("folder_id").notNull().references(() => userFavouriteFolders.id, { onDelete: "cascade" }),
   mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  primaryKey({ columns: [table.listId, table.mediaItemId] }),
-  index("user_favourite_list_items_media_item_id_idx").on(table.mediaItemId)
+  primaryKey({ columns: [table.folderId, table.mediaItemId] }),
+  index("user_favourite_folder_items_media_item_id_idx").on(table.mediaItemId)
 ]);
 
 export const userMediaClicks = pgTable("user_media_clicks", {
@@ -219,7 +230,7 @@ export const userMediaClicks = pgTable("user_media_clicks", {
 
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
-  favouriteLists: many(userFavouriteLists),
+  favouriteFolders: many(userFavouriteFolders),
   savedMediaItems: many(userSavedMediaItems),
   sessions: many(sessions),
   mediaClicks: many(userMediaClicks)
@@ -262,7 +273,7 @@ export const mediaItemsRelations = relations(mediaItems, ({ many, one }) => ({
     references: [mediaProviders.id]
   }),
   radioStation: one(radioStations),
-  favouriteListItems: many(userFavouriteListItems),
+  favouriteFolderItems: many(userFavouriteFolderItems),
   savedByUsers: many(userSavedMediaItems),
   clicks: many(userMediaClicks)
 }));
@@ -274,12 +285,12 @@ export const radioStationsRelations = relations(radioStations, ({ one }) => ({
   })
 }));
 
-export const userFavouriteListsRelations = relations(userFavouriteLists, ({ many, one }) => ({
+export const userFavouriteFoldersRelations = relations(userFavouriteFolders, ({ many, one }) => ({
   user: one(users, {
-    fields: [userFavouriteLists.userId],
+    fields: [userFavouriteFolders.userId],
     references: [users.id]
   }),
-  items: many(userFavouriteListItems)
+  items: many(userFavouriteFolderItems)
 }));
 
 export const userSavedMediaItemsRelations = relations(userSavedMediaItems, ({ one }) => ({
@@ -293,13 +304,13 @@ export const userSavedMediaItemsRelations = relations(userSavedMediaItems, ({ on
   })
 }));
 
-export const userFavouriteListItemsRelations = relations(userFavouriteListItems, ({ one }) => ({
-  list: one(userFavouriteLists, {
-    fields: [userFavouriteListItems.listId],
-    references: [userFavouriteLists.id]
+export const userFavouriteFolderItemsRelations = relations(userFavouriteFolderItems, ({ one }) => ({
+  folder: one(userFavouriteFolders, {
+    fields: [userFavouriteFolderItems.folderId],
+    references: [userFavouriteFolders.id]
   }),
   mediaItem: one(mediaItems, {
-    fields: [userFavouriteListItems.mediaItemId],
+    fields: [userFavouriteFolderItems.mediaItemId],
     references: [mediaItems.id]
   })
 }));

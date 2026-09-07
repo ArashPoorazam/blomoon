@@ -4,11 +4,13 @@ import { useCallback, useMemo, useState } from "react";
 import {
   canGoBackFromDrawerStack,
   createDrawerStack,
+  getCurrentDrawerEntry,
   getCurrentDrawerView,
   openDrawerStackView,
   popDrawerStack,
   resolveDrawerMobilePosition,
   type DrawerMobilePosition,
+  type ShellDrawerEntry,
   type ShellDrawerStack,
   type ShellDrawerView
 } from "./drawerState";
@@ -18,10 +20,11 @@ export function useDrawerNavigation() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobilePosition, setMobilePosition] = useState<DrawerMobilePosition>("middle");
   const view = useMemo(() => getCurrentDrawerView(stack), [stack]);
+  const entry = useMemo(() => getCurrentDrawerEntry(stack), [stack]);
   const canGoBack = useMemo(() => canGoBackFromDrawerStack(stack), [stack]);
 
-  const open = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "middle") => {
-    setStack((currentStack) => openDrawerStackView(currentStack, nextView));
+  const open = useCallback((nextEntry: ShellDrawerEntry, nextMobilePosition: DrawerMobilePosition = "middle") => {
+    setStack((currentStack) => openDrawerStackView(currentStack, nextEntry));
     setCollapsed(false);
     setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
       currentPosition,
@@ -29,11 +32,11 @@ export function useDrawerNavigation() {
     }));
   }, []);
 
-  const openContent = useCallback((nextView: ShellDrawerView) => {
-    setStack((currentStack) => openDrawerStackView(currentStack, nextView));
+  const openContent = useCallback((nextEntry: ShellDrawerEntry) => {
+    setStack((currentStack) => openDrawerStackView(currentStack, nextEntry));
   }, []);
 
-  const replace = useCallback((nextView: ShellDrawerView, nextMobilePosition: DrawerMobilePosition = "middle") => {
+  const replace = useCallback((nextView: Exclude<ShellDrawerView, "favourite-folder" | "point-detail">, nextMobilePosition: DrawerMobilePosition = "middle") => {
     setStack(createDrawerStack(nextView));
     setCollapsed(false);
     setMobilePosition((currentPosition) => resolveDrawerMobilePosition({
@@ -42,7 +45,7 @@ export function useDrawerNavigation() {
     }));
   }, []);
 
-  const replaceContent = useCallback((nextView: ShellDrawerView) => {
+  const replaceContent = useCallback((nextView: Exclude<ShellDrawerView, "favourite-folder" | "point-detail">) => {
     setStack(createDrawerStack(nextView));
   }, []);
 
@@ -62,6 +65,7 @@ export function useDrawerNavigation() {
   return useMemo(() => ({
     canGoBack,
     collapsed,
+    entry,
     goBack,
     mobilePosition,
     open,
@@ -72,5 +76,5 @@ export function useDrawerNavigation() {
     stack,
     toggleCollapsed,
     view
-  }), [canGoBack, collapsed, goBack, mobilePosition, open, openContent, replace, replaceContent, stack, toggleCollapsed, view]);
+  }), [canGoBack, collapsed, entry, goBack, mobilePosition, open, openContent, replace, replaceContent, stack, toggleCollapsed, view]);
 }

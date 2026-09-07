@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { terraThemeIds } from "@/lib/theme/ids";
-import { favouriteListInputSchema, favouriteListItemInputSchema, themeInputSchema } from "./validation";
+import { favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
 
 describe("user API validation", () => {
   it("accepts known theme ids", () => {
@@ -14,14 +14,21 @@ describe("user API validation", () => {
   });
 
   it("requires bounded favourite refs", () => {
-    expect(favouriteListItemInputSchema.safeParse({ modeId: "radio", pointId: "abc" }).success).toBe(true);
-    expect(favouriteListItemInputSchema.safeParse({ modeId: "", pointId: "abc" }).success).toBe(false);
-    expect(favouriteListItemInputSchema.safeParse({ modeId: "radio", pointId: "" }).success).toBe(false);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "radio", pointId: "abc" }).success).toBe(true);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "", pointId: "abc" }).success).toBe(false);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "radio", pointId: "" }).success).toBe(false);
   });
 
-  it("requires bounded favourite list names", () => {
-    expect(favouriteListInputSchema.safeParse({ name: "Morning stations" }).success).toBe(true);
-    expect(favouriteListInputSchema.safeParse({ name: " " }).success).toBe(false);
-    expect(favouriteListInputSchema.safeParse({ name: "a".repeat(81) }).success).toBe(false);
+  it("requires bounded favourite folder fields", () => {
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning stations", description: "Drive-time picks" }).success).toBe(true);
+    expect(favouriteFolderInputSchema.safeParse({ name: " " }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "a".repeat(81) }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning", description: "a".repeat(241) }).success).toBe(false);
+  });
+
+  it("accepts only bounded URL-safe share tokens", () => {
+    expect(favouriteShareTokenSchema.safeParse("a".repeat(32)).success).toBe(true);
+    expect(favouriteShareTokenSchema.safeParse("short").success).toBe(false);
+    expect(favouriteShareTokenSchema.safeParse("a".repeat(31) + "/").success).toBe(false);
   });
 });

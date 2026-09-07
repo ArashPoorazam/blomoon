@@ -3,10 +3,12 @@ import { AuthGate } from "@/components/account/AuthGate";
 import { getAppClientConfig } from "@/lib/app-config/server";
 import { getOptionalUser, hasCompletedAuthentication } from "@/lib/auth/server";
 import { isDatabaseConfigured } from "@/db";
+import { safeLocalReturnPath } from "@/lib/sharing/links";
 
 export const dynamic = "force-dynamic";
 
-export default async function LoginPage() {
+export default async function LoginPage({ searchParams }: { searchParams: Promise<{ next?: string }> }) {
+  const nextPath = safeLocalReturnPath((await searchParams).next);
   let serviceError: string | null = null;
   let user = null;
 
@@ -20,13 +22,14 @@ export default async function LoginPage() {
     }
 
     if (await hasCompletedAuthentication(user)) {
-      redirect("/");
+      redirect(nextPath);
     }
   }
 
   return (
     <AuthGate
       googleAuthEnabled={getAppClientConfig().googleAuthEnabled}
+      nextPath={nextPath}
       serviceError={serviceError}
     />
   );

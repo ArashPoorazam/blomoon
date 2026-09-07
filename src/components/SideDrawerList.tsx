@@ -28,6 +28,7 @@ type SideDrawerListProps = {
   onLoadMoreRemotePoints?: () => void;
   onPointInspect: (point: TerraPoint) => void;
   onPointPlay: (point: TerraPoint) => void;
+  onPointShare: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
@@ -53,6 +54,7 @@ export function SideDrawerList({
   onLoadMoreRemotePoints,
   onPointInspect,
   onPointPlay,
+  onPointShare,
   onQueryChange,
   onSortChange,
   onToggleFavourite
@@ -104,7 +106,7 @@ export function SideDrawerList({
                 point={point}
                 onToggle={onToggleFavourite}
               />
-              <PointActionMenu point={point} onInfo={onPointInspect} />
+              <PointActionMenu point={point} onInfo={onPointInspect} onShare={onPointShare} />
             </div>
           ))
         )}

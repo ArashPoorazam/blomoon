@@ -13,7 +13,7 @@ type PointInteraction =
 type PointInteractionDependencies = {
   activeModeId: TerraModeId;
   focusPoint: (point: TerraPoint) => void;
-  openPointDetail: () => void;
+  openPointDetail: (point: TerraPoint) => void;
   playPoint: (point: TerraPoint) => void | Promise<void>;
   recordPointInteraction: (point: TerraPoint) => void;
   selectPoint: (point: TerraPoint) => void;
@@ -45,7 +45,7 @@ export function usePointInteractions({
     recordPointInteraction(interaction.point);
 
     if (interaction.kind === "inspect") {
-      openPointDetail();
+      openPointDetail(interaction.point);
       return;
     }
 

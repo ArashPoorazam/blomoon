@@ -9,8 +9,10 @@ const requiredTables = [
   "pending_registrations",
   "radio_stations",
   "sessions",
-  "user_favourites",
+  "user_favourite_folder_items",
+  "user_favourite_folders",
   "user_media_clicks",
+  "user_saved_media_items",
   "users",
   "verifications"
 ];
@@ -60,7 +62,28 @@ try {
     process.exit(1);
   }
 
-  console.log(`Database schema is ready: ${requiredTables.length} required tables found.`);
+  const [defaultFolderInvariant] = await sql`
+    select count(*)::integer as violations
+    from (
+      select u.id
+      from users u
+      left join user_favourite_folders f on f.user_id = u.id and f.is_default = true
+      group by u.id
+      having count(f.id) <> 1
+    ) invalid_users
+  `;
+  const [invalidDefaultNames] = await sql`
+    select count(*)::integer as violations
+    from user_favourite_folders
+    where is_default = true and name <> 'Favourites'
+  `;
+
+  if (defaultFolderInvariant.violations > 0 || invalidDefaultNames.violations > 0) {
+    console.error("Database schema violates the protected default favourite-folder invariant.");
+    process.exit(1);
+  }
+
+  console.log(`Database schema is ready: ${requiredTables.length} required tables found; every user has one protected Favourites folder.`);
 } finally {
   await sql.end();
 }

@@ -9,14 +9,15 @@ import { AuthCard } from "./AuthCard";
 
 type AuthGateProps = {
   googleAuthEnabled: boolean;
+  nextPath: string;
   serviceError?: string | null;
 };
 
-export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
+export function AuthGate({ googleAuthEnabled, nextPath, serviceError }: AuthGateProps) {
   const router = useRouter();
 
   async function finishAuthenticatedFlow() {
-    router.replace("/");
+    router.replace(nextPath);
     router.refresh();
   }
 
@@ -56,7 +57,8 @@ export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
         </section>
 
         <AuthCard
-          googleAuthEnabled={googleAuthEnabled}
+        googleAuthEnabled={googleAuthEnabled}
+        callbackURL={nextPath}
           modeLabel="Account access"
           serviceError={serviceError}
           titleSuffix="Sign in to open the live globe."

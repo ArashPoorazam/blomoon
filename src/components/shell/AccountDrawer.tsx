@@ -67,7 +67,7 @@ export function AccountDrawer({
     <div className="account-drawer-view" aria-label="Account">
       <DrawerHeader
         title={user ? "Manage account" : "Account access"}
-        subtitle={user ? user.email : "Log in or register to save lists across devices."}
+        subtitle={user ? user.email : "Log in or register to save folders across devices."}
         actions={canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />

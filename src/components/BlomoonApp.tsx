@@ -1,10 +1,9 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
-import { uniquePoints } from "@/lib/modes/pointCollections";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import { getNextPlaybackPoint } from "@/lib/modes/playbackNavigation";
@@ -18,13 +17,13 @@ import {
   getTerraTheme,
   type TerraThemeId
 } from "@/lib/theme/themes";
-import { AuthModal } from "./account/AuthModal";
-import { MobileLogoutConfirm } from "./account/MobileLogoutConfirm";
+import { ShellAccountOverlays } from "./account/ShellAccountOverlays";
 import { useViewer } from "./account/useViewer";
 import { AudioMiniPlayer, AudioPlaybackPanel } from "./AudioPlaybackPanel";
 import { ButtonPressFeedback } from "./ButtonPressFeedback";
-import { FavouriteListPicker } from "./favourites/FavouriteListPicker";
-import { useFavourites } from "./favourites/useFavourites";
+import { FavouriteOverlays } from "./favourites/FavouriteOverlays";
+import { useFavouriteGlobeContext } from "./favourites/useFavouriteGlobeContext";
+import { useFavouriteFolders } from "./favourites/useFavouriteFolders";
 import { GlobeScene } from "./GlobeScene";
 import { MobileCrosshair } from "./globe/MobileCrosshair";
 import { useCameraFocusRequest } from "./globe/useCameraFocusRequest";
@@ -49,6 +48,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [authModalOpen, setAuthModalOpen] = useState(false);
   const [playbackQueueSource, setPlaybackQueueSource] = useState<PlaybackQueueSource>("list");
   const [favouritePickerPoint, setFavouritePickerPoint] = useState<TerraPoint | null>(null);
+  const [stationSharePoint, setStationSharePoint] = useState<TerraPoint | null>(null);
   const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
   const shellRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
@@ -65,7 +65,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     excludePointId: audioPlayback.pointId
   });
   const viewer = useViewer();
-  const favourites = useFavourites({
+  const favourites = useFavouriteFolders({
     user: viewer.user,
     onAuthRequired: () => setAuthModalOpen(true)
   });
@@ -76,8 +76,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       void fetch(mode.clickEndpoint(point.id), { method: "POST" });
     }
   }, [viewer.user]);
-  const openPointDetail = useCallback(() => {
-    drawer.open("point-detail");
+  const openPointDetail = useCallback((point: TerraPoint) => {
+    drawer.open({ kind: "point-detail", modeId: point.modeId, pointId: point.id });
   }, [drawer.open]);
   const {
     clearCrosshairPoint,
@@ -100,26 +100,16 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const crosshairVisible = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
   const crosshairTargetingEnabled = crosshairVisible && !crosshairPoint;
   const hasMiniPlayer = Boolean(activeMode.playback);
-  const favouritePoints = useMemo(
-    () => uniquePoints(favourites.lists.flatMap((list) => list.items.map((favourite) => favourite.point))),
-    [favourites.lists]
-  );
-  const activeModeFavouritePoints = useMemo(
-    () => uniquePoints(favourites.lists
-      .flatMap((list) => list.items.map((favourite) => favourite.point))
-      .filter((point) => point.modeId === activeModeId)),
-    [activeModeId, favourites.lists]
-  );
-  const playbackQueuePoints = playbackQueueSource === "favourites" ? activeModeFavouritePoints : modeState.visiblePoints;
+  const { favouritePoints, playbackQueuePoints } = useFavouriteGlobeContext({ activeFolder: favourites.activeFolder, activeModeId, entry: drawer.entry, points: favourites.points, queueSource: playbackQueueSource, visiblePoints: modeState.visiblePoints });
   const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "paused")
     ? getPointKey(audioPlayback.point)
     : null;
   const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;
   const playFromCurrentDrawer = useCallback((point: TerraPoint) => {
-    playPoint(point, drawer.view === "favourites" ? "favourites" : "list");
+    playPoint(point, drawer.view === "favourites" || drawer.view === "favourite-folder" ? "favourites" : "list");
   }, [drawer.view, playPoint]);
   const playInPlaceFromCurrentDrawer = useCallback((point: TerraPoint) => {
-    playPointInPlace(point, drawer.view === "favourites" ? "favourites" : "list");
+    playPointInPlace(point, drawer.view === "favourites" || drawer.view === "favourite-folder" ? "favourites" : "list");
   }, [drawer.view, playPointInPlace]);
   const crosshairPlaybackStatus = crosshairPoint
     && audioPlayback.point
@@ -149,8 +139,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       return;
     }
 
-    setFavouritePickerPoint(point);
-  }, [viewer.user]);
+    void favourites.loadPoints().then(() => setFavouritePickerPoint(point));
+  }, [favourites.loadPoints, viewer.user]);
   const detailAccessory =
     activeMode.playback && modeState.detail ? (
       <AudioPlaybackPanel
@@ -182,8 +172,15 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     modeState.clearSelection();
     drawer.replace("favourites");
     setPlaybackQueueSource("favourites");
+    void favourites.loadPoints();
     clearCrosshairPoint();
-  }, [clearCrosshairPoint, drawer.replace, modeState.clearSelection]);
+  }, [clearCrosshairPoint, drawer.replace, favourites.loadPoints, modeState.clearSelection]);
+
+  const openFavouriteFolder = useCallback((folderId: string) => {
+    drawer.open({ kind: "favourite-folder", folderId });
+    void favourites.loadFolder(folderId);
+    setPlaybackQueueSource("favourites");
+  }, [drawer.open, favourites.loadFolder]);
 
   const openModeSwitcher = useCallback(() => {
     modeState.clearSelection();
@@ -370,7 +367,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         detail={modeState.detail}
         detailAccessory={detailAccessory}
         favouritePointIds={favourites.favouriteIds}
-        favouriteLists={favourites.lists}
+        activeFavouriteFolder={favourites.activeFolder}
+        favouriteFolders={favourites.folders}
+        favouriteFolderLoading={favourites.folderLoading}
         favouritesLoading={favourites.loading}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
         isLoadingDrawerTask={modeState.isLoadingDrawerTask}
@@ -391,11 +390,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         totalPointsKind={modeState.totalVisiblePointsKind}
         user={viewer.user}
         view={drawer.view}
+        entry={drawer.entry}
         onAccountUpdated={viewer.refresh}
         onCountryFilterChange={selectCountry}
         onClearCountrySelection={clearCountrySelection}
-        onCreateFavouriteList={favourites.createList}
-        onDeleteFavouriteList={favourites.deleteList}
+        onCreateFavouriteFolder={favourites.createFolder}
+        onDeleteFavouriteFolder={favourites.deleteFolder}
+        onOpenFavouriteFolder={openFavouriteFolder}
         onLoginOpen={() => setAuthModalOpen(true)}
         onLogoutRequest={() => setMobileLogoutConfirmOpen(true)}
         onLoadMoreRemotePoints={modeState.loadMoreVisiblePoints}
@@ -404,10 +405,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onOpenFavouritePicker={openFavouritePicker}
         onPointInspect={inspectPoint}
         onPointPlay={(point) => playPoint(point, "list")}
+        onPointShare={setStationSharePoint}
         onQueryChange={updateQuery}
-        onRemoveFavouriteFromList={favourites.removePointFromList}
-        onRenameFavouriteList={favourites.renameList}
-        onSetAccountView={drawer.open}
+        onRemoveFavouriteFromFolder={favourites.removePointFromFolder}
+        onRevokeFavouriteFolderShare={favourites.revokeShare}
+        onShareFavouriteFolder={favourites.shareFolder}
+        onUpdateFavouriteFolder={favourites.updateFolder}
+        onSetAccountView={(view) => drawer.open({ kind: view })}
         onSetMobilePosition={drawer.setMobilePosition}
         onSortChange={modeState.setSortId}
         onThemeChange={selectTheme}
@@ -416,41 +420,11 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onFavouritePointPlay={(point) => playPoint(point, "favourites")}
       />
 
-      {favouritePickerPoint ? (
-        <FavouriteListPicker
-          lists={favourites.lists}
-          point={favouritePickerPoint}
-          selectedListIds={favourites.getPointListIds(favouritePickerPoint)}
-          onAddToList={favourites.addPointToList}
-          onClose={() => setFavouritePickerPoint(null)}
-          onCreateList={favourites.createList}
-          onRemoveFromList={favourites.removePointFromList}
-        />
-      ) : null}
+      <FavouriteOverlays favourites={favourites} pickerPoint={favouritePickerPoint} sharePoint={stationSharePoint} onCleanUrl={() => router.replace("/")} onClosePicker={() => setFavouritePickerPoint(null)} onCloseShare={() => setStationSharePoint(null)} onOpenFolder={openFavouriteFolder} onStationEntry={inspectPoint} />
 
-      {mobileLogoutConfirmOpen ? (
-        <MobileLogoutConfirm
-          onClose={() => setMobileLogoutConfirmOpen(false)}
-          onConfirm={async () => {
-            await authClient.signOut();
-            setMobileLogoutConfirmOpen(false);
-            setThemeId(defaultTheme.id);
-            await viewer.refresh();
-            router.replace("/login");
-            router.refresh();
-          }}
-        />
-      ) : null}
-
-      <AuthModal
-        googleAuthEnabled={appConfig.googleAuthEnabled}
-        open={authModalOpen}
-        serviceError={viewer.error}
-        onClose={() => setAuthModalOpen(false)}
-        onAuthenticated={async () => {
-          await viewer.refresh();
-        }}
-      />
+      <ShellAccountOverlays authOpen={authModalOpen} googleAuthEnabled={appConfig.googleAuthEnabled} logoutOpen={mobileLogoutConfirmOpen} serviceError={viewer.error} onAuthenticated={viewer.refresh} onAuthClose={() => setAuthModalOpen(false)} onLogoutClose={() => setMobileLogoutConfirmOpen(false)} onLogoutConfirm={async () => {
+        await authClient.signOut(); setMobileLogoutConfirmOpen(false); setThemeId(defaultTheme.id); await viewer.refresh(); router.replace("/login"); router.refresh();
+      }} />
 
       {activeMode.playback ? (
         <AudioMiniPlayer

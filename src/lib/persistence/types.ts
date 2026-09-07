@@ -5,19 +5,38 @@ export type FavouriteRef = {
   pointId: string;
 };
 
-export type FavouriteDto = FavouriteRef & {
+export type FavouriteFolderMembershipDto = FavouriteRef & {
   createdAt: string;
-  listId: string;
+  folderId: string;
+};
+
+export type FavouriteFolderItemDto = FavouriteFolderMembershipDto & {
   point: TerraPoint;
 };
 
-export type FavouriteListDto = {
+export type FavouriteFolderSummaryDto = {
   createdAt: string;
+  description: string | null;
   id: string;
+  importedAt: string | null;
+  isDefault: boolean;
+  isImported: boolean;
+  isShared: boolean;
   itemCount: number;
-  items: FavouriteDto[];
   name: string;
+  sharedAt: string | null;
   updatedAt: string;
+};
+
+export type FavouriteFolderDto = FavouriteFolderSummaryDto & {
+  items: FavouriteFolderItemDto[];
+};
+
+export type SharedFolderPreviewDto = {
+  description: string | null;
+  itemCount: number;
+  name: string;
+  sampleStationNames: string[];
 };
 
 export type ModePersistenceAdapter = {

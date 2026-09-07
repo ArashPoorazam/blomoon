@@ -10,6 +10,7 @@ import { getDb, isDatabaseConfigured, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
 import { sendAccountVerificationEmail, sendAccountVerificationOtp } from "@/lib/email/verification";
 import { recordSuccessfulLogin } from "@/lib/auth/login-tracking";
+import { ensureDefaultFavouriteFolder } from "@/lib/persistence/favouriteFolders";
 import { logger } from "@/lib/server/logging";
 import { isTerraThemeId, type TerraThemeId } from "@/lib/theme/ids";
 
@@ -197,6 +198,7 @@ function createAuth() {
             }
 
             try {
+              await ensureDefaultFavouriteFolder(userId);
               await recordSuccessfulLogin(userId);
             } catch (error) {
               logger.error("auth.login_tracking.failed", {

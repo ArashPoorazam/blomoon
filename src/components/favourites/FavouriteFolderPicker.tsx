@@ -3,29 +3,29 @@
 import { Check, Plus, Star, X } from "lucide-react";
 import { useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
-import type { FavouriteListDto } from "@/lib/persistence/types";
-import { FavouriteListForm } from "./FavouritesDrawer";
+import type { FavouriteFolderSummaryDto } from "@/lib/persistence/types";
+import { FavouriteFolderForm } from "./FavouriteFolderForm";
 
-type FavouriteListPickerProps = {
-  lists: FavouriteListDto[];
+type FavouriteFolderPickerProps = {
+  folders: FavouriteFolderSummaryDto[];
   point: TerraPoint;
-  selectedListIds: Set<string>;
-  onAddToList: (listId: string, point: TerraPoint) => Promise<void>;
+  selectedFolderIds: Set<string>;
+  onAddToFolder: (folderId: string, point: TerraPoint) => Promise<void>;
   onClose: () => void;
-  onCreateList: (name: string) => Promise<FavouriteListDto | null>;
-  onRemoveFromList: (listId: string, point: TerraPoint) => Promise<void>;
+  onCreateFolder: (name: string, description: string | null) => Promise<FavouriteFolderSummaryDto | null>;
+  onRemoveFromFolder: (folderId: string, point: TerraPoint) => Promise<void>;
 };
 
-export function FavouriteListPicker({
-  lists,
-  onAddToList,
+export function FavouriteFolderPicker({
+  folders,
+  onAddToFolder,
   onClose,
-  onCreateList,
-  onRemoveFromList,
+  onCreateFolder,
+  onRemoveFromFolder,
   point,
-  selectedListIds
-}: FavouriteListPickerProps) {
-  const [creating, setCreating] = useState(lists.length === 0);
+  selectedFolderIds
+}: FavouriteFolderPickerProps) {
+  const [creating, setCreating] = useState(false);
   const [busyListId, setBusyListId] = useState<string | null>(null);
 
   return (
@@ -35,7 +35,7 @@ export function FavouriteListPicker({
           <div>
             <div className="drawer-kicker">Save station</div>
             <h2 id="favourite-picker-title">{point.name}</h2>
-            <p>Choose one or more lists.</p>
+            <p>Choose one or more folders.</p>
           </div>
           <button className="icon-button" type="button" aria-label="Close favourite picker" onClick={onClose}>
             <X size={16} aria-hidden="true" />
@@ -43,26 +43,26 @@ export function FavouriteListPicker({
         </div>
 
         <div className="favourite-picker-list">
-          {lists.map((list) => {
-            const selected = selectedListIds.has(list.id);
+          {folders.map((folder) => {
+            const selected = selectedFolderIds.has(folder.id);
 
             return (
               <button
                 aria-pressed={selected}
                 className={`favourite-picker-option ${selected ? "selected" : ""}`}
-                disabled={busyListId === list.id}
-                key={list.id}
+                disabled={busyListId === folder.id}
+                key={folder.id}
                 type="button"
                 onClick={() => {
-                  setBusyListId(list.id);
-                  const action = selected ? onRemoveFromList : onAddToList;
-                  void action(list.id, point).finally(() => setBusyListId(null));
+                  setBusyListId(folder.id);
+                  const action = selected ? onRemoveFromFolder : onAddToFolder;
+                  void action(folder.id, point).finally(() => setBusyListId(null));
                 }}
               >
                 <Star size={16} aria-hidden="true" />
                 <span>
-                  <strong>{list.name}</strong>
-                  <span>{formatListCount(list.itemCount)}</span>
+                  <strong>{folder.name}</strong>
+                  <span>{formatListCount(folder.itemCount)}</span>
                 </span>
                 {selected ? <Check size={16} aria-hidden="true" /> : null}
               </button>
@@ -71,22 +71,24 @@ export function FavouriteListPicker({
         </div>
 
         {creating ? (
-          <FavouriteListForm
+          <FavouriteFolderForm
             submitLabel="Create"
-            title="Create new list"
+            title="Create new folder"
             onCancel={() => setCreating(false)}
-            onSubmit={async (name) => {
-              const list = await onCreateList(name);
-              if (list) {
-                await onAddToList(list.id, point);
+            onSubmit={async (name, description) => {
+              const folder = await onCreateFolder(name, description);
+              if (folder) {
+                await onAddToFolder(folder.id, point);
                 setCreating(false);
+                return true;
               }
+              return false;
             }}
           />
         ) : (
           <button className="secondary-action compact-action" type="button" onClick={() => setCreating(true)}>
             <Plus size={15} aria-hidden="true" />
-            <span>Create new list</span>
+            <span>Create new folder</span>
           </button>
         )}
       </section>

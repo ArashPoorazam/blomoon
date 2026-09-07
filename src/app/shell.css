@@ -3,56 +3,6 @@
   padding: 0 12px;
 }
 
-.favourite-list-actions {
-  display: inline-flex;
-  flex: 0 0 auto;
-  align-items: center;
-  gap: 6px;
-}
-
-.favourite-list-actions .icon-button {
-  width: 30px;
-  height: 30px;
-}
-
-.favourite-list-form {
-  display: grid;
-  gap: 9px;
-  margin-bottom: 12px;
-  padding: 12px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface-soft);
-}
-
-.favourite-list-form strong {
-  color: var(--text);
-  font-size: 13px;
-}
-
-.favourite-list-form input {
-  min-height: 40px;
-  min-width: 0;
-  padding: 0 10px;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  outline: 0;
-  background: var(--control);
-  color: var(--text);
-  font-size: 13px;
-}
-
-.favourite-list-form input:focus {
-  border-color: var(--focus-ring);
-  box-shadow: 0 0 0 3px color-mix(in srgb, var(--focus-ring) 18%, transparent);
-}
-
-.favourite-list-form-actions {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(96px, auto);
-  gap: 8px;
-}
-
 .favourite-modal-backdrop {
   position: fixed;
   inset: 0;
@@ -245,10 +195,4 @@
 
 .account-drawer-actions .logout-action {
   color: var(--danger);
-}
-
-@media (max-width: 760px) {
-  .favourite-list-form-actions {
-    grid-template-columns: 1fr;
-  }
 }

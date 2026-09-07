@@ -10,7 +10,7 @@ type MobileLogoutConfirmProps = {
 export function MobileLogoutConfirm({ onClose, onConfirm }: MobileLogoutConfirmProps) {
   return (
     <AccountModalShell
-      description="This clears your active session on this device. Your saved lists and theme preference stay on your account."
+      description="This clears your active session on this device. Your saved folders and theme preference stay on your account."
       kicker="Session"
       title="Log out?"
       onClose={onClose}

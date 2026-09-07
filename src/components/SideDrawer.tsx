@@ -5,14 +5,15 @@ import { useEffect, useState, type ReactNode, type RefObject } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-import type { FavouriteListDto } from "@/lib/persistence/types";
+import type { FavouriteFolderDto, FavouriteFolderSummaryDto } from "@/lib/persistence/types";
 import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
 import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
-import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
+import { FavouriteFolderDetail } from "./favourites/FavouriteFolderDetail";
+import { FavouriteFolderIndex } from "./favourites/FavouriteFolderIndex";
 import { AccountDrawer } from "./shell/AccountDrawer";
-import type { DrawerMobilePosition, ShellDrawerView } from "./shell/drawerState";
+import type { DrawerMobilePosition, ShellDrawerEntry, ShellDrawerView } from "./shell/drawerState";
 import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
 import { SideDrawerList } from "./SideDrawerList";
 
@@ -27,8 +28,10 @@ type SideDrawerProps = {
   detail: TerraPointDetail | null;
   detailAccessory?: ReactNode;
   favouritePointIds: Set<string>;
-  favouriteLists: FavouriteListDto[];
+  activeFavouriteFolder: FavouriteFolderDto | null;
+  favouriteFolders: FavouriteFolderSummaryDto[];
   favouritesLoading: boolean;
+  favouriteFolderLoading: boolean;
   hasMoreRemotePoints?: boolean;
   isLoadingDrawerTask: boolean;
   loading: boolean;
@@ -48,11 +51,13 @@ type SideDrawerProps = {
   totalPointsKind: "exact" | "lowerBound";
   user: ViewerDto | null;
   view: ShellDrawerView;
+  entry: ShellDrawerEntry;
   onAccountUpdated: () => void | Promise<void>;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
-  onCreateFavouriteList: (name: string) => Promise<FavouriteListDto | null>;
-  onDeleteFavouriteList: (listId: string) => Promise<void>;
+  onCreateFavouriteFolder: (name: string, description: string | null) => Promise<FavouriteFolderSummaryDto | null>;
+  onDeleteFavouriteFolder: (folderId: string) => Promise<boolean>;
+  onOpenFavouriteFolder: (folderId: string) => void;
   onFavouritePointInspect: (point: TerraPoint) => void;
   onFavouritePointPlay: (point: TerraPoint) => void;
   onLoginOpen: () => void;
@@ -63,9 +68,12 @@ type SideDrawerProps = {
   onOpenFavouritePicker: (point: TerraPoint) => void;
   onPointInspect: (point: TerraPoint) => void;
   onPointPlay: (point: TerraPoint) => void;
+  onPointShare: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
-  onRemoveFavouriteFromList: (listId: string, point: TerraPoint) => Promise<void>;
-  onRenameFavouriteList: (listId: string, name: string) => Promise<void>;
+  onRemoveFavouriteFromFolder: (folderId: string, point: TerraPoint) => Promise<void>;
+  onRevokeFavouriteFolderShare: (folderId: string) => Promise<boolean>;
+  onShareFavouriteFolder: (folderId: string) => Promise<string | null>;
+  onUpdateFavouriteFolder: (folderId: string, name: string, description: string | null) => Promise<boolean>;
   onSetAccountView: (view: Extract<ShellDrawerView, "account-info" | "themes" | "contact">) => void;
   onSetMobilePosition: (position: DrawerMobilePosition) => void;
   onSortChange: (sortId: string) => void;
@@ -77,6 +85,7 @@ export function SideDrawer({
   activeMode,
   activeModeId,
   activePlaybackPointKey,
+  activeFavouriteFolder,
   accountContactLinks,
   accountLoading,
   canGoBack,
@@ -84,7 +93,8 @@ export function SideDrawer({
   detail,
   detailAccessory,
   favouritePointIds,
-  favouriteLists,
+  favouriteFolders,
+  favouriteFolderLoading,
   favouritesLoading,
   hasMoreRemotePoints,
   isLoadingDrawerTask,
@@ -105,11 +115,13 @@ export function SideDrawer({
   totalPointsKind,
   user,
   view,
+  entry,
   onAccountUpdated,
   onCountryFilterChange,
   onClearCountrySelection,
-  onCreateFavouriteList,
-  onDeleteFavouriteList,
+  onCreateFavouriteFolder,
+  onDeleteFavouriteFolder,
+  onOpenFavouriteFolder,
   onFavouritePointInspect,
   onFavouritePointPlay,
   onLoginOpen,
@@ -120,9 +132,12 @@ export function SideDrawer({
   onOpenFavouritePicker,
   onPointInspect,
   onPointPlay,
+  onPointShare,
   onQueryChange,
-  onRemoveFavouriteFromList,
-  onRenameFavouriteList,
+  onRemoveFavouriteFromFolder,
+  onRevokeFavouriteFolderShare,
+  onShareFavouriteFolder,
+  onUpdateFavouriteFolder,
   onSetAccountView,
   onSetMobilePosition,
   onSortChange,
@@ -161,6 +176,7 @@ export function SideDrawer({
               detail={detail}
               detailAccessory={detailAccessory}
               onBack={onBack}
+              onShare={onPointShare}
             />
           ) : view === "mode-switcher" ? (
             <ModeSwitcherDrawer
@@ -171,18 +187,28 @@ export function SideDrawer({
               onModeSelect={onModeSelect}
             />
           ) : view === "favourites" ? (
-            <FavouritesDrawer
-              activePlaybackPointKey={activePlaybackPointKey}
+            <FavouriteFolderIndex
               canGoBack={canGoBack}
-              lists={favouriteLists}
+              folders={favouriteFolders}
               loading={favouritesLoading}
               onBack={onBack}
-              onCreateList={onCreateFavouriteList}
-              onDeleteList={onDeleteFavouriteList}
-              onFavouriteInspect={onFavouritePointInspect}
-              onFavouritePlay={onFavouritePointPlay}
-              onRemoveFavouriteFromList={onRemoveFavouriteFromList}
-              onRenameList={onRenameFavouriteList}
+              onCreate={onCreateFavouriteFolder}
+              onOpen={onOpenFavouriteFolder}
+            />
+          ) : view === "favourite-folder" && entry.kind === "favourite-folder" ? (
+            <FavouriteFolderDetail
+              activePlaybackPointKey={activePlaybackPointKey}
+              folder={activeFavouriteFolder?.id === entry.folderId ? activeFavouriteFolder : null}
+              loading={favouriteFolderLoading}
+              onBack={onBack}
+              onDelete={onDeleteFavouriteFolder}
+              onInspect={onFavouritePointInspect}
+              onPlay={onFavouritePointPlay}
+              onRemove={onRemoveFavouriteFromFolder}
+              onRevokeShare={onRevokeFavouriteFolderShare}
+              onShare={onShareFavouriteFolder}
+              onSharePoint={onPointShare}
+              onUpdate={onUpdateFavouriteFolder}
             />
           ) : isAccountView ? (
             <AccountDrawer
@@ -220,6 +246,7 @@ export function SideDrawer({
               onLoadMoreRemotePoints={onLoadMoreRemotePoints}
               onPointInspect={onPointInspect}
               onPointPlay={onPointPlay}
+              onPointShare={onPointShare}
               onQueryChange={onQueryChange}
               onSortChange={onSortChange}
               onToggleFavourite={onOpenFavouritePicker}

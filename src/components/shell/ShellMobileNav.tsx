@@ -59,8 +59,8 @@ export function ShellMobileNav({
         />
       </button>
       <button
-        aria-pressed={activeView === "favourites"}
-        className={`shell-mobile-nav-button ${activeView === "favourites" ? "active" : ""}`}
+        aria-pressed={activeView === "favourites" || activeView === "favourite-folder"}
+        className={`shell-mobile-nav-button ${activeView === "favourites" || activeView === "favourite-folder" ? "active" : ""}`}
         type="button"
         onClick={onFavouritesOpen}
       >

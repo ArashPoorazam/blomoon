@@ -42,7 +42,7 @@ export function useDisplayedGlobePoints({
 }: DisplayedGlobePointsParams) {
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken)
     ?? activeTheme.globe.markers.defaultSingle;
-  const activeDrawerPoints = drawerView === "favourites" && !modeSelectedId ? favouritePoints : modeVisiblePoints;
+  const activeDrawerPoints = (drawerView === "favourites" || drawerView === "favourite-folder") && !modeSelectedId ? favouritePoints : modeVisiblePoints;
   const defaultGlobePoints = useMemo(
     () => uniquePoints([...modeGlobePoints, ...activeDrawerPoints]),
     [activeDrawerPoints, modeGlobePoints]

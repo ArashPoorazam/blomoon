@@ -11,13 +11,15 @@ type PointDetailDrawerProps = {
   detail: TerraPointDetail | null;
   detailAccessory?: ReactNode;
   onBack: () => void;
+  onShare: (detail: TerraPointDetail) => void;
 };
 
 export function PointDetailDrawer({
   activeMode,
   detail,
   detailAccessory,
-  onBack
+  onBack,
+  onShare
 }: PointDetailDrawerProps) {
   return (
     <>
@@ -36,7 +38,7 @@ export function PointDetailDrawer({
         <div className="detail-hero">
           <StationArtwork detail={detail} />
           <div className="detail-hero-actions">
-            <button className="icon-button detail-share-button" type="button" aria-label="Share station" disabled>
+            <button className="icon-button detail-share-button" type="button" aria-label="Share station" disabled={!detail} onClick={() => detail && onShare(detail)}>
               <Share2 size={16} aria-hidden="true" />
             </button>
             {detail?.sourceUrl ? (
