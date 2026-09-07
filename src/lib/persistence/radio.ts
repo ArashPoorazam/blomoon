@@ -8,6 +8,7 @@ import type { RadioStationPersistenceSnapshot } from "@/lib/modes/radio/types";
 import type { TerraPoint } from "@/lib/modes/types";
 import { logger } from "@/lib/server/logging";
 import type { ModePersistenceAdapter } from "./types";
+import { ProviderPointLookupError } from "./points";
 
 type BlomoonTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 
@@ -18,17 +19,23 @@ const RADIO_BROWSER_PROVIDER_URL = "https://www.radio-browser.info";
 const RADIO_BROWSER_ATTRIBUTION = "Radio Browser community database";
 
 export const radioPersistenceAdapter: ModePersistenceAdapter = {
+  isPointId: isRadioStationId,
   label: "Radio",
   modeId: RADIO_MODE_ID,
-  async upsertFavouritePoint(pointId) {
-    return logger.measure("persistence.radio.favourite_point.upsert", {
+  async upsertPoint(pointId) {
+    return logger.measure("persistence.radio.point.upsert", {
       pointId
     }, async () => {
       if (!isRadioStationId(pointId)) {
         return null;
       }
 
-      const snapshot = await getRadioStationPersistenceSnapshot(pointId);
+      let snapshot: RadioStationPersistenceSnapshot | null;
+      try {
+        snapshot = await getRadioStationPersistenceSnapshot(pointId);
+      } catch (error) {
+        throw new ProviderPointLookupError(RADIO_MODE_ID, { cause: error });
+      }
 
       if (!snapshot) {
         return null;
@@ -43,12 +50,12 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
       });
     });
   },
-  async hydrateFavouritePoints(pointIds) {
+  async hydratePoints(pointIds) {
     if (pointIds.length === 0) {
       return [];
     }
 
-    const rows = await logger.measure("persistence.radio.favourite_points.hydrate", {
+    const rows = await logger.measure("persistence.radio.points.hydrate", {
       count: pointIds.length
     }, () => getDb()
         .select({

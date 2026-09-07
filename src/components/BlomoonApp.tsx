@@ -6,7 +6,7 @@ import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
-import { getNextPlaybackPoint } from "@/lib/modes/playbackNavigation";
+import { getNextPlaybackPoint, type PlaybackQueueSource } from "@/lib/modes/playbackNavigation";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
@@ -22,8 +22,9 @@ import { useViewer } from "./account/useViewer";
 import { AudioMiniPlayer, AudioPlaybackPanel } from "./AudioPlaybackPanel";
 import { ButtonPressFeedback } from "./ButtonPressFeedback";
 import { FavouriteOverlays } from "./favourites/FavouriteOverlays";
-import { useFavouriteGlobeContext } from "./favourites/useFavouriteGlobeContext";
+import { useFavouriteDrawerPoints } from "./favourites/useFavouriteDrawerPoints";
 import { useFavouriteFolders } from "./favourites/useFavouriteFolders";
+import { usePlaybackHistory } from "./history/usePlaybackHistory";
 import { GlobeScene } from "./GlobeScene";
 import { MobileCrosshair } from "./globe/MobileCrosshair";
 import { useCameraFocusRequest } from "./globe/useCameraFocusRequest";
@@ -33,7 +34,8 @@ import { useGlobeProfile } from "./globe/useGlobeProfile";
 import { ShellChrome } from "./shell/ShellChrome";
 import { useDrawerNavigation } from "./shell/useDrawerNavigation";
 import { SideDrawer } from "./SideDrawer";
-import { usePointInteractions, type PlaybackQueueSource } from "./usePointInteractions";
+import { usePointInteractions } from "./usePointInteractions";
+import { getDrawerPointSource, usePointSources } from "./usePointSources";
 
 type BlomoonAppProps = { appConfig: AppClientConfig; initialDatasets?: Partial<Record<TerraModeId, TerraDataset>> };
 
@@ -58,13 +60,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const { focusPoint, request: cameraFocusRequest } = useCameraFocusRequest();
   const earthSpin = useEarthSpinControls(globeProfile.motionEnabled);
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id]);
-  const audioPlayback = useAudioPlayback(activeMode.playback ?? null);
+  const viewer = useViewer();
+  const playbackHistory = usePlaybackHistory(viewer.user?.id ?? null);
+  const audioPlayback = useAudioPlayback(activeMode.playback ?? null, playbackHistory.record);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
     enabled: Boolean(activeMode.playback?.randomPointEndpoint),
     endpoint: activeMode.playback?.randomPointEndpoint,
     excludePointId: audioPlayback.pointId
   });
-  const viewer = useViewer();
   const favourites = useFavouriteFolders({
     user: viewer.user,
     onAuthRequired: () => setAuthModalOpen(true)
@@ -100,17 +103,28 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const crosshairVisible = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
   const crosshairTargetingEnabled = crosshairVisible && !crosshairPoint;
   const hasMiniPlayer = Boolean(activeMode.playback);
-  const { favouritePoints, playbackQueuePoints } = useFavouriteGlobeContext({ activeFolder: favourites.activeFolder, activeModeId, entry: drawer.entry, points: favourites.points, queueSource: playbackQueueSource, visiblePoints: modeState.visiblePoints });
+  const favouritePoints = useFavouriteDrawerPoints({ activeFolder: favourites.activeFolder, entry: drawer.entry, points: favourites.points });
+  const historyState = playbackHistory.getState(activeModeId);
+  const historyPoints = historyState.items.map((item) => item.point);
+  const drawerSource = getDrawerPointSource(drawer.stack);
+  const { drawerListsPoints, listedPoints, playbackQueuePoints } = usePointSources({
+    activeModeId,
+    drawerSource,
+    favouritePoints,
+    historyPoints,
+    listPoints: modeState.visiblePoints,
+    queueSource: playbackQueueSource
+  });
   const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "paused")
     ? getPointKey(audioPlayback.point)
     : null;
   const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;
   const playFromCurrentDrawer = useCallback((point: TerraPoint) => {
-    playPoint(point, drawer.view === "favourites" || drawer.view === "favourite-folder" ? "favourites" : "list");
-  }, [drawer.view, playPoint]);
+    playPoint(point, drawerSource ?? "list");
+  }, [drawerSource, playPoint]);
   const playInPlaceFromCurrentDrawer = useCallback((point: TerraPoint) => {
-    playPointInPlace(point, drawer.view === "favourites" || drawer.view === "favourite-folder" ? "favourites" : "list");
-  }, [drawer.view, playPointInPlace]);
+    playPointInPlace(point, drawerSource ?? "list");
+  }, [drawerSource, playPointInPlace]);
   const crosshairPlaybackStatus = crosshairPoint
     && audioPlayback.point
     && getPointKey(crosshairPoint) === getPointKey(audioPlayback.point)
@@ -124,9 +138,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     activeMode,
     activePlaybackPoint,
     activeTheme,
-    drawerView: drawer.view,
-    favouritePoints,
+    drawerListsPoints,
     globeProfile,
+    listedPoints,
     modeGlobePoints: modeState.globePoints,
     modeSelectedId: modeState.selectedId,
     modeSelectedPoint: modeState.selectedPoint,
@@ -175,6 +189,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     void favourites.loadPoints();
     clearCrosshairPoint();
   }, [clearCrosshairPoint, drawer.replace, favourites.loadPoints, modeState.clearSelection]);
+
+  const openHistory = useCallback(() => {
+    modeState.clearSelection();
+    drawer.replace("history");
+    setPlaybackQueueSource("history");
+    void playbackHistory.load(activeModeId);
+    clearCrosshairPoint();
+  }, [activeModeId, clearCrosshairPoint, drawer.replace, modeState.clearSelection, playbackHistory.load]);
 
   const openFavouriteFolder = useCallback((folderId: string) => {
     drawer.open({ kind: "favourite-folder", folderId });
@@ -337,8 +359,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
           router.refresh();
         }}
         onFavouritesOpen={openFavourites}
+        onHistoryOpen={openHistory}
         onHome={restoreHomeDrawer}
-        onModeListOpen={restoreHomeDrawer}
         onModeOpen={openModeSwitcher}
         onModeSelect={selectMode}
         onThemeChange={selectTheme}
@@ -372,6 +394,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         favouriteFolderLoading={favourites.folderLoading}
         favouritesLoading={favourites.loading}
         hasMoreRemotePoints={modeState.hasMoreVisiblePoints}
+        history={historyState}
         isLoadingDrawerTask={modeState.isLoadingDrawerTask}
         loading={modeState.listLoading}
         loadingTaskLabel={modeState.loadingTaskLabel}
@@ -418,6 +441,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onToggleCollapsed={drawer.toggleCollapsed}
         onFavouritePointInspect={inspectPoint}
         onFavouritePointPlay={(point) => playPoint(point, "favourites")}
+        onHistoryPointPlay={(point) => playPoint(point, "history")}
+        onHistoryRetry={() => void playbackHistory.load(activeModeId)}
       />
 
       <FavouriteOverlays favourites={favourites} pickerPoint={favouritePickerPoint} sharePoint={stationSharePoint} onCleanUrl={() => router.replace("/")} onClosePicker={() => setFavouritePickerPoint(null)} onCloseShare={() => setStationSharePoint(null)} onOpenFolder={openFavouriteFolder} onStationEntry={inspectPoint} />

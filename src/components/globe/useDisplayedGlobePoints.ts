@@ -10,15 +10,14 @@ import {
   resolveMarkerColor,
   type TerraTheme
 } from "@/lib/theme/themes";
-import type { ShellDrawerView } from "../shell/drawerState";
 import type { GlobeProfile } from "./useGlobeProfile";
 
 type DisplayedGlobePointsParams = {
   activeMode: TerraMode;
   activePlaybackPoint: TerraPoint | null;
   activeTheme: TerraTheme;
-  drawerView: ShellDrawerView;
-  favouritePoints: TerraPoint[];
+  drawerListsPoints: boolean;
+  listedPoints: TerraPoint[];
   globeProfile: GlobeProfile;
   modeGlobePoints: TerraPoint[];
   modeSelectedId: string | null;
@@ -31,8 +30,8 @@ export function useDisplayedGlobePoints({
   activeMode,
   activePlaybackPoint,
   activeTheme,
-  drawerView,
-  favouritePoints,
+  drawerListsPoints,
+  listedPoints,
   globeProfile,
   modeGlobePoints,
   modeSelectedId,
@@ -42,7 +41,7 @@ export function useDisplayedGlobePoints({
 }: DisplayedGlobePointsParams) {
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken)
     ?? activeTheme.globe.markers.defaultSingle;
-  const activeDrawerPoints = (drawerView === "favourites" || drawerView === "favourite-folder") && !modeSelectedId ? favouritePoints : modeVisiblePoints;
+  const activeDrawerPoints = drawerListsPoints && !modeSelectedId ? listedPoints : modeVisiblePoints;
   const defaultGlobePoints = useMemo(
     () => uniquePoints([...modeGlobePoints, ...activeDrawerPoints]),
     [activeDrawerPoints, modeGlobePoints]

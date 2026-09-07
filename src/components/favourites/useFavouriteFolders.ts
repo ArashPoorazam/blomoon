@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
-import { toFavouriteKey } from "@/lib/persistence/favouriteKeys";
+import { getPointKey, getPointRefKey } from "@/lib/modes/pointKeys";
 import type {
   FavouriteFolderDto,
   FavouriteFolderMembershipDto,
@@ -96,8 +96,8 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
   }, [refreshAfterMutation]);
 
   const getPointFolderIds = useCallback((point: TerraPoint) => {
-    const key = toFavouriteKey({ modeId: point.modeId, pointId: point.id });
-    return new Set(memberships.filter((item) => toFavouriteKey(item) === key).map((item) => item.folderId));
+    const key = getPointKey(point);
+    return new Set(memberships.filter((item) => getPointRefKey(item) === key).map((item) => item.folderId));
   }, [memberships]);
 
   return {
@@ -107,5 +107,3 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
     refreshAfterMutation, removePointFromFolder, revokeShare, shareFolder, updateFolder
   };
 }
-
-function getPointKey(point: TerraPoint) { return toFavouriteKey({ modeId: point.modeId, pointId: point.id }); }

@@ -1,6 +1,6 @@
 import type { TerraModeId } from "@/lib/modes/types";
 
-export type ShellDrawerView = "main" | "mode-switcher" | "favourites" | "favourite-folder" | "account" | "account-info" | "themes" | "contact" | "point-detail";
+export type ShellDrawerView = "main" | "mode-switcher" | "history" | "favourites" | "favourite-folder" | "account" | "account-info" | "themes" | "contact" | "point-detail";
 export type ShellDrawerEntry =
   | { kind: Exclude<ShellDrawerView, "favourite-folder" | "point-detail"> }
   | { kind: "favourite-folder"; folderId: string }

@@ -3,10 +3,10 @@ import "server-only";
 import { randomBytes } from "node:crypto";
 import { and, count, desc, eq, sql } from "drizzle-orm";
 import { getDb, schema, type BlomoonDb } from "@/db";
-import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { logger } from "@/lib/server/logging";
-import { toFavouriteKey } from "./favouriteKeys";
+import { getPointRefKey } from "@/lib/modes/pointKeys";
 import { getModePersistenceAdapter } from "./registry";
+import { hydratePersistedPoints } from "./points";
 import { resolveImportedFolderName } from "./favouriteFolderNames";
 import type {
   FavouriteFolderDto,
@@ -84,13 +84,13 @@ export async function getFavouriteFolder(userId: string, folderId: string): Prom
   const first = rows[0];
   if (!first) return null;
   const refs = rows.flatMap((row) => row.modeId && row.pointId ? [{ modeId: row.modeId, pointId: row.pointId }] : []);
-  const points = await hydratePoints(refs);
+  const points = await hydratePersistedPoints(refs);
 
   return {
     ...folderRowToSummary({ ...first, id: first.folderId, itemCount: refs.length }),
     items: rows.flatMap((row) => {
       if (!row.modeId || !row.pointId || !row.itemCreatedAt) return [];
-      const point = points.get(toFavouriteKey({ modeId: row.modeId, pointId: row.pointId }));
+      const point = points.get(getPointRefKey({ modeId: row.modeId, pointId: row.pointId }));
       return point ? [{
         createdAt: row.itemCreatedAt.toISOString(),
         folderId,
@@ -114,7 +114,7 @@ export async function listFavouritePoints(userId: string) {
     .where(eq(schema.userFavouriteFolders.userId, userId));
   return {
     memberships: refs.map((ref) => ({ ...ref, createdAt: ref.createdAt.toISOString() })),
-    points: [...(await hydratePoints(refs)).values()]
+    points: [...(await hydratePersistedPoints(refs)).values()]
   };
 }
 
@@ -160,7 +160,7 @@ export async function deleteFavouriteFolder(userId: string, folderId: string): P
 
 export async function addFavouriteFolderItem(userId: string, folderId: string, ref: FavouriteRef): Promise<FavouriteFolderMembershipDto | null> {
   const adapter = getModePersistenceAdapter(ref.modeId);
-  if (!adapter || !await adapter.upsertFavouritePoint(ref.pointId)) return null;
+  if (!adapter || !await adapter.upsertPoint(ref.pointId)) return null;
 
   return getDb().transaction(async (tx) => {
     const [folder] = await tx.select({ id: schema.userFavouriteFolders.id }).from(schema.userFavouriteFolders)
@@ -271,18 +271,6 @@ function folderRowToSummary(row: {
     isImported: Boolean(row.importedAt), isShared: Boolean(row.sharedAt), itemCount: Number(row.itemCount),
     name: row.name, sharedAt: row.sharedAt?.toISOString() ?? null, updatedAt: row.updatedAt.toISOString()
   };
-}
-
-async function hydratePoints(refs: FavouriteRef[]) {
-  const idsByMode = new Map<TerraModeId, Set<string>>();
-  refs.forEach(({ modeId, pointId }) => idsByMode.set(modeId, (idsByMode.get(modeId) ?? new Set()).add(pointId)));
-  const result = new Map<string, TerraPoint>();
-  await Promise.all([...idsByMode].map(async ([modeId, ids]) => {
-    const adapter = getModePersistenceAdapter(modeId);
-    if (!adapter) return;
-    (await adapter.hydrateFavouritePoints([...ids])).forEach((point) => result.set(toFavouriteKey({ modeId: point.modeId, pointId: point.id }), point));
-  }));
-  return result;
 }
 
 function normalizeName(name: string) { return name.trim().replace(/\s+/g, " "); }

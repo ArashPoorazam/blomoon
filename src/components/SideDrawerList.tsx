@@ -1,12 +1,10 @@
 "use client";
 
-import { formatDateTime, type CountryInfo } from "@/lib/geo";
-import { getPointKey } from "@/lib/modes/pointKeys";
+import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
-import { PointActionMenu } from "./drawer/PointActionMenu";
-import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
+import { PointListRow } from "./drawer/PointListRow";
 
 type SideDrawerListProps = {
   activeMode: TerraMode;
@@ -88,27 +86,18 @@ export function SideDrawerList({
         {points.length === 0 ? (
           <div className="empty-state">{loading ? activeMode.copy.loadingLabel : activeMode.copy.emptyLabel}</div>
         ) : (
-          listedPoints.map((point) => (
-            <div
-              className={`point-row ${selectedId === point.id ? "selected" : ""} ${activePlaybackPointKey === getPointKey(point) ? "playback-active" : ""}`}
-              key={point.id}
-            >
-              <button className="point-row-main" type="button" onClick={() => onPointPlay(point)}>
-                <span className="point-copy">
-                  <span className="point-name">{point.name}</span>
-                  <span className="point-meta">
-                    {point.summary} · {activeMode.formatPointMetric(point)} · {formatDateTime(point.timestamp)}
-                  </span>
-                </span>
-              </button>
-              <FavouriteStarButton
-                favourited={favouritePointIds.has(getPointKey(point))}
-                point={point}
-                onToggle={onToggleFavourite}
-              />
-              <PointActionMenu point={point} onInfo={onPointInspect} onShare={onPointShare} />
-            </div>
-          ))
+          listedPoints.map((point) => <PointListRow
+            activeMode={activeMode}
+            activePlaybackPointKey={activePlaybackPointKey}
+            favouritePointIds={favouritePointIds}
+            key={point.id}
+            point={point}
+            selected={selectedId === point.id}
+            onInspect={onPointInspect}
+            onPlay={onPointPlay}
+            onShare={onPointShare}
+            onToggleFavourite={onToggleFavourite}
+          />)
         )}
         {hasMorePoints ? (
           <LoadMoreButton

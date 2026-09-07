@@ -2,6 +2,7 @@ import { relations, sql } from "drizzle-orm";
 import {
   boolean,
   check,
+  date,
   doublePrecision,
   foreignKey,
   index,
@@ -228,12 +229,24 @@ export const userMediaClicks = pgTable("user_media_clicks", {
   check("user_media_clicks_click_count_positive", sql`${table.clickCount} >= 0`)
 ]);
 
+export const userPlaybackHistory = pgTable("user_playback_history", {
+  userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  mediaItemId: uuid("media_item_id").notNull().references(() => mediaItems.id, { onDelete: "cascade" }),
+  playedOn: date("played_on", { mode: "string" }).notNull(),
+  lastPlayedAt: timestamp("last_played_at", { withTimezone: true }).notNull().defaultNow()
+}, (table) => [
+  primaryKey({ columns: [table.userId, table.mediaItemId, table.playedOn] }),
+  index("user_playback_history_user_recent_idx").on(table.userId, table.lastPlayedAt.desc()),
+  index("user_playback_history_media_item_idx").on(table.mediaItemId)
+]);
+
 export const usersRelations = relations(users, ({ many }) => ({
   accounts: many(accounts),
   favouriteFolders: many(userFavouriteFolders),
   savedMediaItems: many(userSavedMediaItems),
   sessions: many(sessions),
-  mediaClicks: many(userMediaClicks)
+  mediaClicks: many(userMediaClicks),
+  playbackHistory: many(userPlaybackHistory)
 }));
 
 export const sessionsRelations = relations(sessions, ({ one }) => ({
@@ -275,7 +288,8 @@ export const mediaItemsRelations = relations(mediaItems, ({ many, one }) => ({
   radioStation: one(radioStations),
   favouriteFolderItems: many(userFavouriteFolderItems),
   savedByUsers: many(userSavedMediaItems),
-  clicks: many(userMediaClicks)
+  clicks: many(userMediaClicks),
+  playbackHistory: many(userPlaybackHistory)
 }));
 
 export const radioStationsRelations = relations(radioStations, ({ one }) => ({
@@ -322,6 +336,17 @@ export const userMediaClicksRelations = relations(userMediaClicks, ({ one }) => 
   }),
   mediaItem: one(mediaItems, {
     fields: [userMediaClicks.mediaItemId],
+    references: [mediaItems.id]
+  })
+}));
+
+export const userPlaybackHistoryRelations = relations(userPlaybackHistory, ({ one }) => ({
+  user: one(users, {
+    fields: [userPlaybackHistory.userId],
+    references: [users.id]
+  }),
+  mediaItem: one(mediaItems, {
+    fields: [userPlaybackHistory.mediaItemId],
     references: [mediaItems.id]
   })
 }));

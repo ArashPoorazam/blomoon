@@ -28,8 +28,8 @@ type ShellChromeProps = {
   onAuthOpen: () => void;
   onDesktopLogout: () => void | Promise<void>;
   onFavouritesOpen: () => void;
+  onHistoryOpen: () => void;
   onHome: () => void;
-  onModeListOpen: () => void;
   onModeOpen: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
   onThemeChange: (themeId: TerraThemeId) => void;
@@ -50,8 +50,8 @@ export function ShellChrome({
   onAuthOpen,
   onDesktopLogout,
   onFavouritesOpen,
+  onHistoryOpen,
   onHome,
-  onModeListOpen,
   onModeOpen,
   onModeSelect,
   onThemeChange,
@@ -80,18 +80,20 @@ export function ShellChrome({
         activeView={drawerView}
         onAccountOpen={onAccountOpen}
         onFavouritesOpen={onFavouritesOpen}
+        onHistoryOpen={onHistoryOpen}
         onHome={onHome}
-        onModeListOpen={onModeListOpen}
         onModeOpen={onModeOpen}
       />
 
       <ShellControlRail
         activeModeId={activeModeId}
+        activeView={drawerView}
         earthSpinEnabled={earthSpinEnabled}
         earthSpinDisabled={earthSpinDisabled}
         modes={modes}
         showListedOnGlobe={showListedOnGlobe}
         onOpenFavourites={onFavouritesOpen}
+        onOpenHistory={onHistoryOpen}
         onModeSelect={onModeSelect}
         onToggleEarthSpin={onToggleEarthSpin}
         onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}

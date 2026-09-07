@@ -1,4 +1,11 @@
 import type { TerraPoint } from "./types";
+import { uniquePoints } from "./pointCollections";
+
+export type PlaybackQueueSource = "list" | "favourites" | "history";
+
+export function getPlaybackQueuePoints(source: PlaybackQueueSource, sources: Record<PlaybackQueueSource, TerraPoint[]>) {
+  return uniquePoints(sources[source]);
+}
 
 export function getNextPlaybackPoint(queue: TerraPoint[], currentPointId: string | null) {
   if (queue.length === 0) {

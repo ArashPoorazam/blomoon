@@ -12,6 +12,7 @@ const requiredTables = [
   "user_favourite_folder_items",
   "user_favourite_folders",
   "user_media_clicks",
+  "user_playback_history",
   "user_saved_media_items",
   "users",
   "verifications"

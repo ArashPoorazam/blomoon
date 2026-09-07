@@ -57,6 +57,13 @@
       "when": 1788748800000,
       "tag": "0007_favourite_folders",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "7",
+      "when": 1788835200000,
+      "tag": "0008_playback_history",
+      "breakpoints": true
     }
   ]
 }

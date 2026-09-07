@@ -6,12 +6,14 @@ import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { FavouriteFolderDto, FavouriteFolderSummaryDto } from "@/lib/persistence/types";
+import type { PlaybackHistoryModeState } from "./history/usePlaybackHistory";
 import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
 import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
 import { FavouriteFolderDetail } from "./favourites/FavouriteFolderDetail";
 import { FavouriteFolderIndex } from "./favourites/FavouriteFolderIndex";
+import { PlaybackHistoryDrawer } from "./history/PlaybackHistoryDrawer";
 import { AccountDrawer } from "./shell/AccountDrawer";
 import type { DrawerMobilePosition, ShellDrawerEntry, ShellDrawerView } from "./shell/drawerState";
 import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
@@ -33,6 +35,7 @@ type SideDrawerProps = {
   favouritesLoading: boolean;
   favouriteFolderLoading: boolean;
   hasMoreRemotePoints?: boolean;
+  history: PlaybackHistoryModeState;
   isLoadingDrawerTask: boolean;
   loading: boolean;
   loadingTaskLabel: string;
@@ -60,6 +63,8 @@ type SideDrawerProps = {
   onOpenFavouriteFolder: (folderId: string) => void;
   onFavouritePointInspect: (point: TerraPoint) => void;
   onFavouritePointPlay: (point: TerraPoint) => void;
+  onHistoryPointPlay: (point: TerraPoint) => void;
+  onHistoryRetry: () => void;
   onLoginOpen: () => void;
   onLogoutRequest: () => void;
   onLoadMoreRemotePoints?: () => void;
@@ -97,6 +102,7 @@ export function SideDrawer({
   favouriteFolderLoading,
   favouritesLoading,
   hasMoreRemotePoints,
+  history,
   isLoadingDrawerTask,
   loading,
   loadingTaskLabel,
@@ -124,6 +130,8 @@ export function SideDrawer({
   onOpenFavouriteFolder,
   onFavouritePointInspect,
   onFavouritePointPlay,
+  onHistoryPointPlay,
+  onHistoryRetry,
   onLoginOpen,
   onLogoutRequest,
   onLoadMoreRemotePoints,
@@ -194,6 +202,20 @@ export function SideDrawer({
               onBack={onBack}
               onCreate={onCreateFavouriteFolder}
               onOpen={onOpenFavouriteFolder}
+            />
+          ) : view === "history" ? (
+            <PlaybackHistoryDrawer
+              activeMode={activeMode}
+              activePlaybackPointKey={activePlaybackPointKey}
+              favouritePointIds={favouritePointIds}
+              history={history}
+              selectedId={selectedId}
+              onBack={onBack}
+              onInspect={onPointInspect}
+              onPlay={onHistoryPointPlay}
+              onRetry={onHistoryRetry}
+              onShare={onPointShare}
+              onToggleFavourite={onOpenFavouritePicker}
             />
           ) : view === "favourite-folder" && entry.kind === "favourite-folder" ? (
             <FavouriteFolderDetail

@@ -2,8 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import type { TerraModeId, TerraPoint } from "@/lib/modes/types";
-
-export type PlaybackQueueSource = "list" | "favourites";
+import type { PlaybackQueueSource } from "@/lib/modes/playbackNavigation";
 
 type PointInteraction =
   | { kind: "preview"; point: TerraPoint }

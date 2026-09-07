@@ -16,6 +16,7 @@ const requiredTables = [
   "user_favourite_folders",
   "user_saved_media_items",
   "user_media_clicks",
+  "user_playback_history",
   "users",
   "verifications"
 ] as const;

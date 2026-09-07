@@ -1,17 +1,20 @@
 "use client";
 
-import { Earth, MapPin, Star } from "lucide-react";
+import { Earth, History, MapPin, Star } from "lucide-react";
 import type { MouseEvent } from "react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 import { modeIcons } from "./shell/modeIcons";
+import type { ShellDrawerView } from "./shell/drawerState";
 
 type ShellControlRailProps = {
   activeModeId: TerraModeId;
+  activeView: ShellDrawerView;
   earthSpinEnabled: boolean;
   earthSpinDisabled: boolean;
   modes: TerraMode[];
   showListedOnGlobe: boolean;
   onOpenFavourites: () => void;
+  onOpenHistory: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
   onToggleEarthSpin: (event: MouseEvent<HTMLButtonElement>) => void;
   onToggleShowListedOnGlobe: () => void;
@@ -26,11 +29,13 @@ export type ModeControlItem = {
 
 export function ShellControlRail({
   activeModeId,
+  activeView,
   earthSpinEnabled,
   earthSpinDisabled,
   modes,
   onToggleShowListedOnGlobe,
   onOpenFavourites,
+  onOpenHistory,
   onModeSelect,
   onToggleEarthSpin,
   showListedOnGlobe
@@ -40,13 +45,23 @@ export function ShellControlRail({
   return (
     <nav className="shell-control-rail" aria-label="Blomoon shortcuts">
       <button
-        className={`shell-square-control ${showListedOnGlobe ? "active" : ""}`}
+        className={`shell-square-control ${activeView === "favourites" || activeView === "favourite-folder" ? "active" : ""}`}
         type="button"
         aria-label="Open favourites"
         title="Favourites"
         onClick={onOpenFavourites}
       >
         <Star size={18} aria-hidden="true" />
+      </button>
+      <button
+        aria-label="Open playback history"
+        aria-pressed={activeView === "history"}
+        className={`shell-square-control ${activeView === "history" ? "active" : ""}`}
+        title="History"
+        type="button"
+        onClick={onOpenHistory}
+      >
+        <History size={18} aria-hidden="true" />
       </button>
       <button
         className="shell-square-control"

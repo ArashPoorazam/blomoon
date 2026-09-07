@@ -29,11 +29,12 @@ type PlayableAudioResponse = {
 const PLAYABLE_RESOLUTION_TIMEOUT_MS = 20_000;
 const AUDIO_START_TIMEOUT_MS = 12_000;
 
-export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPlaybackController {
+export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybackStart?: (point: TerraPoint) => void): AudioPlaybackController {
   const audioRef = useRef<HTMLAudioElement | null>(null);
   const historyRef = useRef<TerraPoint[]>([]);
   const playRequestRef = useRef(0);
   const resolutionAbortRef = useRef<AbortController | null>(null);
+  const onPlaybackStartRef = useRef(onPlaybackStart);
   const stateRef = useRef<AudioPlaybackState>({
     error: null,
     point: null,
@@ -47,6 +48,10 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
     status: "idle"
   });
   const [history, setHistory] = useState<TerraPoint[]>([]);
+
+  useEffect(() => {
+    onPlaybackStartRef.current = onPlaybackStart;
+  }, [onPlaybackStart]);
 
   const setPlaybackState = useCallback((nextState: AudioPlaybackState | ((current: AudioPlaybackState) => AudioPlaybackState)) => {
     if (typeof nextState !== "function") {
@@ -170,6 +175,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
       }
 
       const audio = new Audio(playable.streamUrl);
+      let startReported = false;
 
       audio.preload = "none";
       audio.addEventListener("playing", () => {
@@ -183,6 +189,10 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null): AudioPla
           pointId: point.id,
           status: "playing"
         });
+        if (!startReported) {
+          startReported = true;
+          onPlaybackStartRef.current?.(point);
+        }
       });
       audio.addEventListener("pause", () => {
         if (playRequestRef.current !== requestId) {

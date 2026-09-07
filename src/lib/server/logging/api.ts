@@ -10,7 +10,10 @@ type RouteHandler<Context> = (request: Request, context: Context) => Response | 
 export function withApiLogging<Context>(
   event: string,
   handler: RouteHandler<Context>,
-  options: { context?: (request: Request, context: Context) => LogContext | Promise<LogContext> } = {}
+  options: {
+    context?: (request: Request, context: Context) => LogContext | Promise<LogContext>;
+    noStore?: boolean;
+  } = {}
 ) {
   return async function loggedRouteHandler(request: Request, context: Context) {
     const startedAt = performance.now();
@@ -32,7 +35,7 @@ export function withApiLogging<Context>(
     });
 
     try {
-      const response = addRequestIdHeader(await handler(request, context), requestId);
+      const response = finalizeResponse(await handler(request, context), requestId, options.noStore);
       const level = response.status >= 500 ? "warn" : "info";
       logger[level]("api.request.complete", {
         context: {
@@ -50,7 +53,7 @@ export function withApiLogging<Context>(
         requestId,
         route: event
       });
-      const responseWithRequestId = addRequestIdHeader(response, requestId);
+      const responseWithRequestId = finalizeResponse(response, requestId, options.noStore);
       logger.warn("api.request.failed", {
         context: {
           ...baseContext,
@@ -64,6 +67,12 @@ export function withApiLogging<Context>(
       return responseWithRequestId;
     }
   };
+}
+
+function finalizeResponse(response: Response, requestId: string, noStore = false) {
+  const finalized = addRequestIdHeader(response, requestId);
+  if (noStore) finalized.headers.set("Cache-Control", "no-store");
+  return finalized;
 }
 
 function getRequestId(request: Request) {

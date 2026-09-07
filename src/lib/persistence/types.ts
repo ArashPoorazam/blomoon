@@ -40,9 +40,16 @@ export type SharedFolderPreviewDto = {
 };
 
 export type ModePersistenceAdapter = {
-  hydrateFavouritePoints: (pointIds: string[]) => Promise<TerraPoint[]>;
+  hydratePoints: (pointIds: string[]) => Promise<TerraPoint[]>;
+  isPointId: (pointId: string) => boolean;
   label: string;
   modeId: TerraModeId;
   recordClick: (userId: string, pointId: string) => Promise<{ clickCount: number } | null>;
-  upsertFavouritePoint: (pointId: string) => Promise<TerraPoint | null>;
+  upsertPoint: (pointId: string) => Promise<TerraPoint | null>;
+};
+
+export type PlaybackHistoryItemDto = {
+  playedAt: string;
+  playedOn: string;
+  point: TerraPoint;
 };

@@ -17,3 +17,9 @@ export const favouriteShareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32,128
 export const themeInputSchema = z.object({
   themeId: z.enum(terraThemeIds)
 });
+
+export const playbackHistoryInputSchema = z.object({
+  modeId: z.string().min(1).max(40),
+  pointId: z.string().min(1).max(160),
+  timezoneOffsetMinutes: z.number().int().min(-840).max(720)
+});

@@ -1,7 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import { Grid2X2, Star, UserCircle } from "lucide-react";
+import { History, Star, UserCircle } from "lucide-react";
 import blomoonFullLogo from "@/assets/images/full_logo/Blomoon_Full_Logo.png";
 import type { TerraMode } from "@/lib/modes/types";
 import { isAccountDrawerView, type ShellDrawerView } from "./drawerState";
@@ -12,8 +12,8 @@ type ShellMobileNavProps = {
   activeView: ShellDrawerView;
   onAccountOpen: () => void;
   onFavouritesOpen: () => void;
+  onHistoryOpen: () => void;
   onHome: () => void;
-  onModeListOpen: () => void;
   onModeOpen: () => void;
 };
 
@@ -22,8 +22,8 @@ export function ShellMobileNav({
   activeView,
   onAccountOpen,
   onFavouritesOpen,
+  onHistoryOpen,
   onHome,
-  onModeListOpen,
   onModeOpen
 }: ShellMobileNavProps) {
   const accountActive = isAccountDrawerView(activeView);
@@ -37,19 +37,19 @@ export function ShellMobileNav({
         type="button"
         onClick={onModeOpen}
       >
-        <Grid2X2 size={19} aria-hidden="true" />
+        <ModeIcon size={19} aria-hidden="true" />
         <span className="sr-only">Change mode</span>
       </button>
       <button
-        aria-current={activeView === "main" ? "page" : undefined}
-        className={`shell-mobile-nav-button ${activeView === "main" ? "active" : ""}`}
+        aria-pressed={activeView === "history"}
+        className={`shell-mobile-nav-button ${activeView === "history" ? "active" : ""}`}
         type="button"
-        onClick={onModeListOpen}
+        onClick={onHistoryOpen}
       >
-        <ModeIcon size={19} aria-hidden="true" />
-        <span className="sr-only">{activeMode.label} list</span>
+        <History size={19} aria-hidden="true" />
+        <span className="sr-only">{activeMode.label} playback history</span>
       </button>
-      <button className="shell-mobile-logo-button" type="button" onClick={onHome}>
+      <button aria-current={activeView === "main" ? "page" : undefined} className="shell-mobile-logo-button" type="button" onClick={onHome}>
         <Image
           alt="Blomoon"
           className="shell-mobile-logo"
