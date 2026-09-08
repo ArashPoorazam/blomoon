@@ -66,7 +66,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const randomPlaybackPoint = usePrefetchedRandomPoint({
     enabled: Boolean(activeMode.playback?.randomPointEndpoint),
     endpoint: activeMode.playback?.randomPointEndpoint,
-    excludePointId: audioPlayback.pointId
+    excludePointId: audioPlayback.pointId,
+    prefetchEnabled: modeState.listSettled
   });
   const favourites = useFavouriteFolders({
     user: viewer.user,

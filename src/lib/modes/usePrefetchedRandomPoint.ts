@@ -12,11 +12,13 @@ type PrefetchedRandomPointState = {
 export function usePrefetchedRandomPoint({
   enabled,
   endpoint,
-  excludePointId
+  excludePointId,
+  prefetchEnabled = true
 }: {
   enabled: boolean;
   endpoint?: string;
   excludePointId: string | null;
+  prefetchEnabled?: boolean;
 }): PrefetchedRandomPointState {
   const requestRef = useRef<Promise<TerraPoint | null> | null>(null);
   const versionRef = useRef(0);
@@ -77,13 +79,17 @@ export function usePrefetchedRandomPoint({
       return;
     }
 
+    if (!prefetchEnabled) {
+      return;
+    }
+
     requestRef.current = fetchRandomPoint({
       excludeOverride,
       store: true
     }).finally(() => {
       requestRef.current = null;
     });
-  }, [fetchRandomPoint]);
+  }, [fetchRandomPoint, prefetchEnabled]);
 
   useEffect(() => {
     if (!enabled || !endpoint) {
@@ -103,7 +109,7 @@ export function usePrefetchedRandomPoint({
     }
 
     prefetch(excludePointId);
-  }, [enabled, endpoint, excludePointId, point, prefetch]);
+  }, [enabled, endpoint, excludePointId, point, prefetch, prefetchEnabled]);
 
   const takePoint = useCallback(async () => {
     if (point && point.id !== excludePointId) {

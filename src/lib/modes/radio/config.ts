@@ -1,9 +1,7 @@
 export const RADIO_BROWSER_DIRECTORY_URL = "https://all.api.radio-browser.info/json/servers";
 
 export const RADIO_BROWSER_FALLBACK_HOSTS = [
-  "de1.api.radio-browser.info",
-  "nl1.api.radio-browser.info",
-  "at1.api.radio-browser.info"
+  "de1.api.radio-browser.info"
 ] as const;
 
 export const RADIO_BROWSER_USER_AGENT = "Blomoon/0.1 (+https://github.com/daedalus/blomoon)";
@@ -17,10 +15,9 @@ export const RADIO_STARTUP_SOFT_TIMEOUT_MS = 1_800;
 
 export const WORLD_MARKER_LIMIT = 500;
 export const RADIO_PROVIDER_CATALOG_TIMEOUT_MS = 12_000;
-export const RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY = 4;
-export const RADIO_PROVIDER_WORLD_PAGE_LIMIT = 100;
+export const RADIO_PROVIDER_WORLD_PAGE_LIMIT = 500;
 export const RADIO_PROVIDER_WORLD_SCAN_LIMIT = 5_000;
-export const RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY = 8;
+export const RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY = 2;
 export const RADIO_PROVIDER_COUNTRY_PAGE_LIMIT = 50;
 export const COUNTRY_COVERAGE_LIMIT = 4;
 export const COUNTRY_MARKER_LIMIT = 50;

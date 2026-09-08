@@ -58,7 +58,7 @@ describe("radio startup dataset", () => {
 
     await scheduledRefreshes[0]();
 
-    expect(loadRecords).not.toHaveBeenCalled();
+    expect(loadRecords).toHaveBeenCalledTimes(1);
     expect(loadCoveredRecords).toHaveBeenCalledTimes(1);
   });
 

@@ -11,7 +11,7 @@ import {
   compareRadioRecords,
   getLiveCountryMarkerRecords,
   getLiveCountryRecordPage,
-  getLiveWorldRecords,
+  getLiveTopVotedWorldRecords,
   sortRadioRecords
 } from "./livePages";
 import { createRadioFallbackSource, createRadioLiveSource } from "./source";
@@ -56,13 +56,42 @@ export async function getRadioDataset(force = false): Promise<TerraDataset> {
 }
 
 export function getRadioFixtureDataset(): TerraDataset {
-  const catalog = createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, Date.now(), true);
+  const catalog = createRadioCatalog(getRadioFixtureRecords(), RADIO_FIXTURE_SOURCE, Date.now(), true);
 
   return {
     modeId: "radio",
     source: catalog.source,
     points: catalog.worldRecords.map((record) => record.point)
   };
+}
+
+export function getRadioFixtureRecords(): RadioStationRecord[] {
+  return RADIO_FIXTURE_RECORDS
+    .filter((record): record is typeof record & { point: typeof record.point & { countryCode: string } } => (
+      Boolean(record.point.countryCode)
+    ))
+    .map((record) => {
+      const votes = getNumericMetric(record.point, "Votes");
+      const clickCount = getNumericMetric(record.point, "Clicks");
+      const point = {
+        ...record.point,
+        locationPrecision: "station" as const,
+        countryCode: record.point.countryCode
+      };
+      const detail = {
+        ...record.detail,
+        ...point
+      };
+
+      return {
+        clickCount,
+        detail,
+        point,
+        searchText: `${point.name} ${point.summary} ${Object.values(point.metrics ?? {}).join(" ")}`.toLowerCase(),
+        streamUrl: record.streamUrl,
+        votes
+      };
+    });
 }
 
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
@@ -337,7 +366,7 @@ async function getRadioCatalog(force = false): Promise<RadioCatalog> {
 
 async function refreshRadioCatalog(fetchedAt: number) {
   try {
-    const records = await getLiveWorldRecords();
+    const records = await getLiveTopVotedWorldRecords();
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable stations");
@@ -358,7 +387,7 @@ async function refreshRadioCatalog(fetchedAt: number) {
     });
     catalogCache = catalogCache && !catalogCache.isFallback
       ? catalogCache
-      : createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, fetchedAt, true);
+      : createRadioCatalog(getRadioFixtureRecords(), RADIO_FIXTURE_SOURCE, fetchedAt, true);
   }
 
   return catalogCache;
@@ -551,35 +580,6 @@ function sortFallbackRecords(records: RadioStationRecord[], sort: RadioSortOptio
 
     return a.point.name.localeCompare(b.point.name);
   });
-}
-
-function createFixtureRecords(): RadioStationRecord[] {
-  return RADIO_FIXTURE_RECORDS
-    .filter((record): record is typeof record & { point: typeof record.point & { countryCode: string } } => (
-      Boolean(record.point.countryCode)
-    ))
-    .map((record) => {
-      const votes = getNumericMetric(record.point, "Votes");
-      const clickCount = getNumericMetric(record.point, "Clicks");
-      const point = {
-        ...record.point,
-        locationPrecision: "station" as const,
-        countryCode: record.point.countryCode
-      };
-      const detail = {
-        ...record.detail,
-        ...point
-      };
-
-      return {
-        clickCount,
-        detail,
-        point,
-        searchText: `${point.name} ${point.summary} ${Object.values(point.metrics ?? {}).join(" ")}`.toLowerCase(),
-        streamUrl: record.streamUrl,
-        votes
-      };
-    });
 }
 
 function getNumericMetric(record: { metrics?: Record<string, string | number | null> }, key: string) {

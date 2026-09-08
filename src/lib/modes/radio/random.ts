@@ -1,7 +1,7 @@
 import { normalizeStation } from "./normalize";
 import { fetchRadioBrowserJsonWithOptions } from "./provider";
 import { getRandomCatalogRecord, getRandomOffset } from "./randomSelection";
-import { getLiveGlobalStationCount } from "./searchPages";
+import { getLiveGlobalStationCount } from "./stationCounts";
 import type { RadioBrowserStation, RadioStationRecord } from "./types";
 
 const RANDOM_PROVIDER_PAGE_LIMIT = 5;

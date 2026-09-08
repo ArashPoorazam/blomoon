@@ -1,27 +1,20 @@
-import { getAlphaCountryCode, getKnownCountries } from "@/lib/geo";
+import { getAlphaCountryCode } from "@/lib/geo";
+import { getLiveCountryCoverageRecords } from "./coverage";
 import {
-  COUNTRY_COVERAGE_LIMIT,
   COUNTRY_MARKER_LIMIT,
-  RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY,
   RADIO_PROVIDER_COUNTRY_PAGE_LIMIT,
   RADIO_PROVIDER_CATALOG_TIMEOUT_MS,
-  RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY,
   RADIO_PROVIDER_WORLD_PAGE_LIMIT,
   RADIO_PROVIDER_WORLD_SCAN_LIMIT,
   STATION_CACHE_TTL_MS,
   WORLD_MARKER_LIMIT
 } from "./config";
-import { normalizeStation } from "./normalize";
+import { getRadioBrowserHosts } from "./provider";
 import {
-  fetchRadioBrowserHostJson,
-  fetchRadioBrowserJsonWithOptions,
-  getRadioBrowserHosts
-} from "./provider";
-import { logger } from "@/lib/server/logging";
-import type {
-  RadioBrowserStation,
-  RadioStationRecord
-} from "./types";
+  fetchNormalizedRadioStationPage,
+  type RadioProviderPageRequest
+} from "./stationPages";
+import type { RadioStationRecord } from "./types";
 
 export type RadioCountryRecordPage = {
   nextOffset: number | null;
@@ -39,19 +32,18 @@ type CountryQueryRecordCache = {
   recordsById: Map<string, RadioStationRecord>;
 };
 
-type ProviderPageRequest = {
-  host?: string;
-  limit: number;
-  offset: number;
-  params: Record<string, string>;
-  path: string;
-  timeoutMs?: number;
-};
-
 const countryQueryRecordCache = new Map<string, CountryQueryRecordCache>();
 
-export async function getLiveWorldRecords() {
-  return getLiveRecordsFromAvailableHost(getLiveWorldRecordsFromHost);
+export async function getLiveWorldRecords(topRecords?: RadioStationRecord[]) {
+  const records = topRecords ?? await getLiveTopVotedWorldRecords();
+  const countryCoverageRecords = await getLiveCountryCoverageRecords(records);
+  const recordsById = new Map<string, RadioStationRecord>();
+
+  [...records, ...countryCoverageRecords].forEach((record) => {
+    recordsById.set(record.point.id, record);
+  });
+
+  return sortRadioRecords(Array.from(recordsById.values()));
 }
 
 export async function getLiveTopVotedWorldRecords() {
@@ -79,125 +71,37 @@ async function getLiveRecordsFromAvailableHost(
   throw lastError ?? new Error("Radio Browser request failed");
 }
 
-async function getLiveWorldRecordsFromHost(host: string) {
-  const [worldRecords, countryCoverageRecords] = await Promise.all([
-    getLiveTopVotedWorldRecordsFromHost(host),
-    getLiveCountryCoverageRecordsFromHost(host)
-  ]);
-  const recordsById = new Map<string, RadioStationRecord>();
-
-  [...worldRecords, ...countryCoverageRecords].forEach((record) => {
-    recordsById.set(record.point.id, record);
-  });
-
-  return sortRadioRecords(Array.from(recordsById.values()));
-}
-
-async function getLiveTopVotedWorldRecordsFromHost(host: string) {
+export async function getLiveTopVotedWorldRecordsFromHost(host: string) {
   const recordsById = new Map<string, RadioStationRecord>();
   let exhausted = false;
   let nextOffset = 0;
 
   while (recordsById.size < WORLD_MARKER_LIMIT && !exhausted && nextOffset < RADIO_PROVIDER_WORLD_SCAN_LIMIT) {
-    const offsets = Array.from(
-      { length: RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY },
-      (_, index) => nextOffset + index * RADIO_PROVIDER_WORLD_PAGE_LIMIT
-    ).filter((offset) => offset < RADIO_PROVIDER_WORLD_SCAN_LIMIT);
-    const pages = await mapWithConcurrency(offsets, RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY, (offset) => (
-      fetchNormalizedStationPage({
-        host,
-        limit: RADIO_PROVIDER_WORLD_PAGE_LIMIT,
-        offset,
-        params: {
-          hidebroken: "true"
-        },
-        path: "/json/stations/topvote",
-        timeoutMs: RADIO_PROVIDER_CATALOG_TIMEOUT_MS
-      })
-    ));
-
-    pages.forEach((page) => {
-      page.records.forEach((record) => {
-        if (recordsById.size < WORLD_MARKER_LIMIT) {
-          recordsById.set(record.point.id, record);
-        }
-      });
-
-      if (page.nextOffset === null) {
-        exhausted = true;
-      }
-    });
-    nextOffset += RADIO_PROVIDER_WORLD_PAGE_LIMIT * RADIO_PROVIDER_WORLD_PAGE_CONCURRENCY;
-  }
-
-  return sortRadioRecords(Array.from(recordsById.values())).slice(0, WORLD_MARKER_LIMIT);
-}
-
-async function getLiveCountryCoverageRecordsFromHost(host: string) {
-  const countries = getKnownCountries()
-    .map((country) => ({
-      alphaCode: getAlphaCountryCode(country.code),
-      code: country.code
-    }))
-    .filter((country): country is { alphaCode: string; code: string } => Boolean(country.alphaCode));
-  const countryRecords = await mapWithConcurrency(
-    countries,
-    RADIO_PROVIDER_COUNTRY_COVERAGE_CONCURRENCY,
-    async (country) => {
-      try {
-        return await getLiveCountryCoverageRecordsForHost(host, country);
-      } catch {
-        return [];
-      }
-    }
-  );
-
-  return countryRecords.flat();
-}
-
-async function getLiveCountryCoverageRecordsForHost(
-  host: string,
-  {
-    alphaCode,
-    code
-  }: {
-    alphaCode: string;
-    code: string;
-  }
-) {
-  const recordsById = new Map<string, RadioStationRecord>();
-  let exhausted = false;
-  let nextOffset = 0;
-
-  while (recordsById.size < COUNTRY_COVERAGE_LIMIT && !exhausted) {
-    const page = await fetchNormalizedStationPage(
-      {
-        ...getCountryStationPageRequest({
-          alphaCode,
-          offset: nextOffset,
-          query: ""
-        }),
-        host,
-        timeoutMs: RADIO_PROVIDER_CATALOG_TIMEOUT_MS
+    const page = await fetchNormalizedRadioStationPage({
+      host,
+      limit: RADIO_PROVIDER_WORLD_PAGE_LIMIT,
+      offset: nextOffset,
+      params: {
+        hidebroken: "true"
       },
-      (record) => record.point.countryCode === code
-    );
+      path: "/json/stations/topvote",
+      timeoutMs: RADIO_PROVIDER_CATALOG_TIMEOUT_MS
+    });
 
     page.records.forEach((record) => {
-      if (recordsById.size < COUNTRY_COVERAGE_LIMIT) {
+      if (recordsById.size < WORLD_MARKER_LIMIT) {
         recordsById.set(record.point.id, record);
       }
     });
 
     if (page.nextOffset === null) {
       exhausted = true;
-      break;
+    } else {
+      nextOffset = page.nextOffset;
     }
-
-    nextOffset = page.nextOffset;
   }
 
-  return sortRadioRecords(Array.from(recordsById.values())).slice(0, COUNTRY_COVERAGE_LIMIT);
+  return sortRadioRecords(Array.from(recordsById.values())).slice(0, WORLD_MARKER_LIMIT);
 }
 
 export async function getLiveCountryMarkerRecords(countryCode: string) {
@@ -279,24 +183,6 @@ export function compareRadioRecords(a: RadioStationRecord, b: RadioStationRecord
   return a.point.name.localeCompare(b.point.name);
 }
 
-function normalizeStations(stations: RadioBrowserStation[]) {
-  const normalized = stations.map(normalizeStation);
-  const records = normalized.filter((record): record is RadioStationRecord => Boolean(record));
-  const droppedCount = stations.length - records.length;
-
-  if (droppedCount > 0) {
-    logger.warn("provider.radio.normalization_dropped", {
-      context: {
-        droppedCount,
-        stationCount: stations.length
-      },
-      message: "Radio Browser stations were dropped during normalization"
-    });
-  }
-
-  return records;
-}
-
 async function fillCountryQueryRecordCache({
   alphaCode,
   cache,
@@ -307,7 +193,7 @@ async function fillCountryQueryRecordCache({
   targetCount: number;
 }) {
   while (cache.recordsById.size < targetCount && !cache.exhausted) {
-    const page = await fetchNormalizedStationPage(
+    const page = await fetchNormalizedRadioStationPage(
       getCountryStationPageRequest({
         alphaCode,
         offset: cache.nextProviderOffset,
@@ -330,30 +216,6 @@ async function fillCountryQueryRecordCache({
   }
 }
 
-async function fetchNormalizedStationPage(
-  request: ProviderPageRequest,
-  recordFilter: (record: RadioStationRecord) => boolean = () => true
-) {
-  const params = {
-    ...request.params,
-    limit: String(request.limit),
-    offset: String(request.offset)
-  };
-  const stations = request.host
-    ? await fetchRadioBrowserHostJson<RadioBrowserStation[]>(request.host, request.path, params, {
-      timeoutMs: request.timeoutMs
-    })
-    : await fetchRadioBrowserJsonWithOptions<RadioBrowserStation[]>(request.path, params, {
-      timeoutMs: request.timeoutMs
-    });
-  const records = normalizeStations(stations).filter(recordFilter);
-
-  return {
-    nextOffset: stations.length < request.limit ? null : request.offset + stations.length,
-    records
-  };
-}
-
 function getCountryStationPageRequest({
   alphaCode,
   offset,
@@ -362,7 +224,7 @@ function getCountryStationPageRequest({
   alphaCode: string;
   offset: number;
   query: string;
-}): ProviderPageRequest {
+}): RadioProviderPageRequest {
   const trimmedQuery = query.trim();
   const params = getOrderedStationParams();
 
@@ -433,25 +295,4 @@ function getCountryQueryCacheKey({
   query: string;
 }) {
   return `${countryCode}:${query.trim().toLowerCase()}`;
-}
-
-async function mapWithConcurrency<T, R>(
-  items: T[],
-  concurrency: number,
-  mapper: (item: T) => Promise<R>
-) {
-  const results = new Array<R>(items.length);
-  let nextIndex = 0;
-  const workerCount = Math.min(concurrency, items.length);
-
-  async function worker() {
-    while (nextIndex < items.length) {
-      const currentIndex = nextIndex;
-      nextIndex += 1;
-      results[currentIndex] = await mapper(items[currentIndex]);
-    }
-  }
-
-  await Promise.all(Array.from({ length: workerCount }, worker));
-  return results;
 }

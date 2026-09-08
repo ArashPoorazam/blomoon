@@ -6,19 +6,20 @@ import {
 } from "./config";
 import { getLiveTopVotedWorldRecords, getLiveWorldRecords, sortRadioRecords } from "./livePages";
 import { createRadioLiveSource } from "./source";
-import { getRadioFixtureDataset } from "./catalog";
+import { getRadioFixtureDataset, getRadioFixtureRecords } from "./catalog";
 import { logger } from "@/lib/server/logging";
 import type { RadioStationRecord } from "./types";
 
 type StartupDatasetCache = {
-  coverageComplete: boolean;
+  coverageAttemptedAt: number | null;
   dataset: TerraDataset;
-  fetchedAt: number;
   isFallback: boolean;
+  records: RadioStationRecord[];
+  topAttemptedAt: number;
 };
 
 export type RadioStartupDatasetOptions = {
-  loadCoveredRecords?: () => Promise<RadioStationRecord[]>;
+  loadCoveredRecords?: (topRecords: RadioStationRecord[]) => Promise<RadioStationRecord[]>;
   loadRecords?: () => Promise<RadioStationRecord[]>;
   now?: () => number;
   scheduleRefresh?: (refresh: () => Promise<void>) => void;
@@ -28,21 +29,19 @@ export type RadioStartupDatasetOptions = {
 let startupCache: StartupDatasetCache | null = null;
 let startupRefresh: Promise<TerraDataset> | null = null;
 let coverageRefresh: Promise<TerraDataset> | null = null;
+let backgroundRefreshScheduled = false;
 
 export async function getRadioStartupDataset(options: RadioStartupDatasetOptions = {}): Promise<TerraDataset> {
   const now = options.now ?? Date.now;
   const cached = startupCache;
 
-  if (cached && now() - cached.fetchedAt < getCacheTtl(cached)) {
-    if (!cached.coverageComplete) {
+  if (cached) {
+    if (now() - cached.topAttemptedAt >= getCacheTtl(cached)) {
+      scheduleStartupRefresh(options);
+    } else if (cached.coverageAttemptedAt === null || now() - cached.coverageAttemptedAt >= STATION_CACHE_TTL_MS) {
       scheduleCoverageRefresh(options);
     }
 
-    return cached.dataset;
-  }
-
-  if (cached) {
-    scheduleCoverageRefresh(options);
     return cached.dataset;
   }
 
@@ -66,6 +65,7 @@ export function clearRadioStartupDatasetCacheForTest() {
   startupCache = null;
   startupRefresh = null;
   coverageRefresh = null;
+  backgroundRefreshScheduled = false;
 }
 
 async function loadRadioStartupDataset({
@@ -81,10 +81,11 @@ async function loadRadioStartupDataset({
 
     const dataset = createStartupDataset(records);
     startupCache = {
-      coverageComplete: false,
+      coverageAttemptedAt: null,
       dataset,
-      fetchedAt: now(),
-      isFallback: false
+      isFallback: false,
+      records,
+      topAttemptedAt: now()
     };
     logger.info("radio.startup.refresh", {
       context: {
@@ -101,15 +102,17 @@ async function loadRadioStartupDataset({
     });
 
     if (startupCache) {
+      startupCache.topAttemptedAt = now();
       return startupCache.dataset;
     }
 
     const dataset = getRadioFixtureDataset();
     startupCache = {
-      coverageComplete: false,
+      coverageAttemptedAt: null,
       dataset,
-      fetchedAt: now(),
-      isFallback: true
+      isFallback: true,
+      records: getRadioFixtureRecords(),
+      topAttemptedAt: now()
     };
     return dataset;
   }
@@ -119,8 +122,17 @@ async function loadRadioStartupCoverageDataset({
   loadCoveredRecords = getLiveWorldRecords,
   now = Date.now
 }: RadioStartupDatasetOptions = {}) {
+  const cached = startupCache;
+
+  if (!cached) {
+    return getRadioFixtureDataset();
+  }
+
+  const attemptedAt = now();
+  cached.coverageAttemptedAt = attemptedAt;
+
   try {
-    const records = await loadCoveredRecords();
+    const records = await loadCoveredRecords(cached.records);
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable country coverage stations");
@@ -128,10 +140,11 @@ async function loadRadioStartupCoverageDataset({
 
     const dataset = createStartupDataset(records);
     startupCache = {
-      coverageComplete: true,
+      coverageAttemptedAt: attemptedAt,
       dataset,
-      fetchedAt: now(),
-      isFallback: false
+      isFallback: false,
+      records,
+      topAttemptedAt: cached.topAttemptedAt
     };
     logger.info("radio.startup.coverage_refresh", {
       context: {
@@ -147,18 +160,7 @@ async function loadRadioStartupCoverageDataset({
       message: "Radio startup country coverage refresh failed; keeping current startup data"
     });
 
-    if (startupCache) {
-      return startupCache.dataset;
-    }
-
-    const dataset = getRadioFixtureDataset();
-    startupCache = {
-      coverageComplete: false,
-      dataset,
-      fetchedAt: now(),
-      isFallback: true
-    };
-    return dataset;
+    return startupCache?.dataset ?? cached.dataset;
   }
 }
 
@@ -199,13 +201,22 @@ function getCoverageRefresh(options: RadioStartupDatasetOptions) {
 }
 
 function scheduleCoverageRefresh(options: RadioStartupDatasetOptions) {
-  const scheduleRefresh = options.scheduleRefresh;
-
-  if (!scheduleRefresh || coverageRefresh) {
+  if (coverageRefresh) {
     return;
   }
 
-  scheduleRefresh(async () => {
+  scheduleBackgroundRefresh(options, async () => {
+    await getCoverageRefresh(options);
+  });
+}
+
+function scheduleStartupRefresh(options: RadioStartupDatasetOptions) {
+  if (startupRefresh) {
+    return;
+  }
+
+  scheduleBackgroundRefresh(options, async () => {
+    await getStartupRefresh(options);
     await getCoverageRefresh(options);
   });
 }
@@ -214,9 +225,27 @@ function scheduleSettledCoverageRefresh(
   refresh: Promise<TerraDataset>,
   options: RadioStartupDatasetOptions
 ) {
-  options.scheduleRefresh?.(async () => {
+  scheduleBackgroundRefresh(options, async () => {
     await refresh;
     await getCoverageRefresh(options);
+  });
+}
+
+function scheduleBackgroundRefresh(
+  options: RadioStartupDatasetOptions,
+  refresh: () => Promise<void>
+) {
+  if (!options.scheduleRefresh || backgroundRefreshScheduled) {
+    return;
+  }
+
+  backgroundRefreshScheduled = true;
+  options.scheduleRefresh(async () => {
+    try {
+      await refresh();
+    } finally {
+      backgroundRefreshScheduled = false;
+    }
   });
 }
 
