@@ -1,6 +1,9 @@
 import type { TerraDetailSection, TerraMode, TerraPoint, TerraPointDetail } from "../types";
+import { matchesSearchText } from "@/lib/search/text";
 
 const radioSortOptions = [
+  { id: "suggested", label: "Suggested" },
+  { id: "relevance", label: "Best match" },
   { id: "votes_desc", label: "Most votes" },
   { id: "votes_asc", label: "Least votes" }
 ];
@@ -25,6 +28,16 @@ export const radioMode = {
   },
   dataEndpoint: "/api/modes/radio/points",
   defaultSortId: "votes_desc",
+  searchSortId: "relevance",
+  recommendations: {
+    sortId: "suggested",
+    label: "Suggested stations",
+    endpoint: ({ limit, offset, pageToken }) => {
+      const params = new URLSearchParams({ limit: String(limit), offset: String(offset) });
+      if (pageToken) params.set("pageToken", pageToken);
+      return `/api/modes/radio/recommendations?${params}`;
+    },
+  },
   listEndpoint: (params) => {
     const searchParams = new URLSearchParams({
       limit: String(params.limit),
@@ -87,7 +100,7 @@ function matchTextPoint(point: TerraPoint, query: string) {
 
   const metricText = Object.values(point.metrics ?? {}).join(" ");
   const haystack = `${point.name} ${point.summary} ${metricText}`.toLowerCase();
-  return haystack.includes(value);
+  return matchesSearchText(haystack, value);
 }
 
 function matchCountryCode(point: TerraPoint, countryCode: string) {

@@ -85,6 +85,18 @@ services:
       DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
       NODE_ENV: production
 
+  catalog:
+    image: ${BLOMOON_MIGRATE_IMAGE:?Set BLOMOON_MIGRATE_IMAGE before running the catalog worker}
+    command: ["npm", "run", "catalog:worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      NODE_ENV: production
+      BLOMOON_LOG_LEVEL: ${BLOMOON_LOG_LEVEL:-info}
+    restart: unless-stopped
+
   backup:
     image: postgres:17-alpine
     profiles:

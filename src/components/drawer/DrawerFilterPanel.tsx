@@ -1,4 +1,5 @@
 "use client";
+import { matchesCountrySearch } from "@/lib/geo/countrySearch";
 
 import { ChevronDown, Search, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
@@ -9,6 +10,7 @@ type DrawerFilterPanelProps = {
   activeMode: TerraMode;
   selectedCountry: CountryInfo | null;
   sortId: string;
+  query?: string;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onSortChange: (sortId: string) => void;
@@ -18,6 +20,7 @@ export function DrawerFilterPanel({
   activeMode,
   selectedCountry,
   sortId,
+  query = "",
   onCountryFilterChange,
   onClearCountrySelection,
   onSortChange
@@ -28,6 +31,11 @@ export function DrawerFilterPanel({
   const [countryQuery, setCountryQuery] = useState("");
   const countryMenuId = useId();
   const sortMenuId = useId();
+  const sortOptions = activeMode.sortOptions.filter((option) => {
+    if (option.id === activeMode.recommendations?.sortId) return !query.trim() && !selectedCountry;
+    if (option.id === activeMode.searchSortId) return Boolean(query.trim());
+    return true;
+  });
   const selectedSort = activeMode.sortOptions.find((option) => option.id === sortId) ?? activeMode.sortOptions[0];
   const filteredCountries = useMemo(() => {
     const terms = countryQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
@@ -36,10 +44,7 @@ export function DrawerFilterPanel({
       return countries;
     }
 
-    return countries.filter((country) => {
-      const searchValue = `${country.name} ${country.code}`.toLowerCase();
-      return terms.every((term) => searchValue.includes(term));
-    });
+    return countries.filter((country) => matchesCountrySearch(country.code, countryQuery));
   }, [countries, countryQuery]);
 
   function selectCountry(country: CountryInfo | null) {
@@ -83,6 +88,8 @@ export function DrawerFilterPanel({
                 <input
                   autoFocus
                   placeholder="Search countries"
+                  aria-label="Search countries"
+                  maxLength={120}
                   type="search"
                   value={countryQuery}
                   onChange={(event) => setCountryQuery(event.target.value)}
@@ -145,7 +152,7 @@ export function DrawerFilterPanel({
           {sortMenuOpen ? (
             <div className="filter-menu sort-menu" id={sortMenuId}>
               <div className="filter-menu-options">
-                {activeMode.sortOptions.map((option) => (
+                {sortOptions.map((option) => (
                   <button
                     className={option.id === sortId ? "selected" : ""}
                     key={option.id}

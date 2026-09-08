@@ -1,5 +1,6 @@
-import { COUNTRY_PAGE_LIMIT, COUNTRY_PAGE_MAX_LIMIT, getRadioCountryPointPage } from "@/lib/modes/radio";
-import { normalizeRadioCountryCode, parseIntegerParam, parseRadioQuery } from "@/lib/modes/radio/api";
+import { COUNTRY_PAGE_LIMIT, COUNTRY_PAGE_MAX_LIMIT } from "@/lib/modes/radio";
+import { searchRadioStations } from "@/lib/modes/radio/search";
+import { normalizeRadioCountryCode, parseIntegerParam, parseRadioQuery, parseRadioSort } from "@/lib/modes/radio/api";
 import { withApiLogging } from "@/lib/server/logging/api";
 
 export const dynamic = "force-dynamic";
@@ -27,12 +28,14 @@ export const GET = withApiLogging("api.modes.radio.countries.search", async (
     min: 0
   });
   const query = parseRadioQuery(searchParams);
+  const sort = parseRadioSort(searchParams);
 
-  if (limit.error || offset.error || query.error) {
-    return Response.json({ error: limit.error ?? offset.error ?? query.error }, { status: 400 });
+  if (limit.error || offset.error || query.error || sort.error) {
+    return Response.json({ error: limit.error ?? offset.error ?? query.error ?? sort.error }, { status: 400 });
   }
 
-  const page = await getRadioCountryPointPage({
+  const page = await searchRadioStations({
+    sort: sort.sort,
     countryCode: normalizedCountryCode,
     limit: limit.value,
     offset: offset.value,

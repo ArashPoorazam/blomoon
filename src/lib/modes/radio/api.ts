@@ -1,6 +1,6 @@
 import { findCountryByCode } from "@/lib/geo";
 
-export const RADIO_SORT_OPTIONS = ["votes_desc", "votes_asc"] as const;
+export const RADIO_SORT_OPTIONS = ["votes_desc", "votes_asc", "relevance"] as const;
 
 export type RadioSortOption = typeof RADIO_SORT_OPTIONS[number];
 
@@ -27,7 +27,7 @@ export function parseIntegerParam(
     };
   }
 
-  const value = Number.parseInt(rawValue, 10);
+  const value = /^\d+$/.test(rawValue) ? Number(rawValue) : NaN;
 
   if (!Number.isInteger(value) || value < min || value > max) {
     return {
@@ -51,11 +51,11 @@ export function parseRadioQuery(searchParams: URLSearchParams) {
 }
 
 export function parseRadioSort(searchParams: URLSearchParams) {
-  const value = searchParams.get("sort") ?? "votes_desc";
+  const value = searchParams.get("sort") ?? (searchParams.get("q")?.trim() ? "relevance" : "votes_desc");
 
   return isRadioSortOption(value)
     ? { error: null, sort: value }
-    : { error: "sort must be votes_desc or votes_asc.", sort: "votes_desc" as RadioSortOption };
+    : { error: "sort must be votes_desc, votes_asc, or relevance.", sort: "votes_desc" as RadioSortOption };
 }
 
 export function isRadioStationId(value: string) {

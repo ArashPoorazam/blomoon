@@ -18,6 +18,8 @@ type DrawerListToolbarProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   sortId: string;
+  suggestionTitle?: string;
+  onRefreshSuggestions?: () => void;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
@@ -37,6 +39,8 @@ export function DrawerListToolbar({
   query,
   selectedCountry,
   sortId,
+  suggestionTitle,
+  onRefreshSuggestions,
   totalPoints,
   totalPointsKind,
   onCountryFilterChange,
@@ -48,7 +52,9 @@ export function DrawerListToolbar({
   const [filtersOpen, setFiltersOpen] = useState(false);
   const filterPanelId = useId();
   const hasActiveSearch = query.trim().length > 0;
-  const hasActiveFilters = Boolean(selectedCountry) || sortId !== activeMode.defaultSortId;
+  const defaultSort = hasActiveSearch ? activeMode.searchSortId ?? activeMode.defaultSortId
+    : activeMode.recommendations?.sortId ?? activeMode.defaultSortId;
+  const hasActiveFilters = Boolean(selectedCountry) || sortId !== defaultSort;
 
   return (
     <div className="drawer-list-toolbar">
@@ -58,7 +64,7 @@ export function DrawerListToolbar({
       </div>
       <DrawerHeader
         className="drawer-directory-header"
-        title="Directory"
+        title={suggestionTitle ?? "Directory"}
         subtitle={loading
           ? activeMode.copy.loadingLabel
           : formatVisibleCount({
@@ -81,6 +87,8 @@ export function DrawerListToolbar({
           <Search className="search-icon" size={16} aria-hidden="true" />
           <input
             className="search-input"
+            aria-label={activeMode.copy.searchPlaceholder}
+            maxLength={120}
             placeholder={activeMode.copy.searchPlaceholder}
             type="search"
             value={query}
@@ -105,12 +113,14 @@ export function DrawerListToolbar({
         </button>
       </div>
 
+      {onRefreshSuggestions ? <button className="secondary-action compact-action" type="button" disabled={loading} onClick={onRefreshSuggestions}>Refresh suggestions</button> : null}
       <ProviderNotice message={providerError} />
 
       {filtersOpen ? (
         <div id={filterPanelId}>
           <DrawerFilterPanel
             activeMode={activeMode}
+            query={query}
             selectedCountry={selectedCountry}
             sortId={sortId}
             onCountryFilterChange={onCountryFilterChange}

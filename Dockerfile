@@ -34,4 +34,5 @@ COPY --from=deps /app/node_modules ./node_modules
 COPY package.json package-lock.json drizzle.config.ts tsconfig.json ./
 COPY drizzle ./drizzle
 COPY src ./src
+COPY scripts ./scripts
 CMD ["npm", "run", "db:migrate"]

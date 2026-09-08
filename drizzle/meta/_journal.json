@@ -64,6 +64,27 @@
       "when": 1788835200000,
       "tag": "0008_playback_history",
       "breakpoints": true
+    },
+    {
+      "idx": 9,
+      "version": "7",
+      "when": 1788912000000,
+      "tag": "0009_radio_discovery",
+      "breakpoints": true
+    },
+    {
+      "idx": 10,
+      "version": "7",
+      "when": 1788912000001,
+      "tag": "0010_radio_search_vocabulary",
+      "breakpoints": true
+    },
+    {
+      "idx": 11,
+      "version": "7",
+      "when": 1788912000002,
+      "tag": "0011_radio_snapshot_account_cleanup",
+      "breakpoints": true
     }
   ]
 }

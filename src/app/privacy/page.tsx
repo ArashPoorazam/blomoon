@@ -53,6 +53,7 @@ export default function PrivacyPage() {
             <ul>
               <li>Authenticate your account and keep you signed in.</li>
               <li>Store favorites, account preferences, and recent playback history.</li>
+              <li>Suggest radio stations using your saved stations and recent playback history. Temporary suggestion lists are kept for browsing and expire after one hour.</li>
               <li>Send account verification and security-related emails.</li>
               <li>Diagnose service reliability issues and protect the app from abuse.</li>
             </ul>

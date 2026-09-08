@@ -1,18 +1,13 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  beginModeListRefresh,
-  createInitialModeListSnapshot,
-  createModeListRequestKey,
-  createModeListSnapshot
-} from "./modeListState";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { useModeList } from "./useModeList";
 import type { DataSourceInfo, TerraDataset, TerraMode, TerraPoint, TerraPointDetail, TerraPointPage } from "./types";
 
-const LIST_PAGE_SIZE = 50;
-const SEARCH_DEBOUNCE_MS = 250;
-
 export type ModeDatasetState = {
+  recommendation: TerraPointPage["recommendation"];
+  suggested: boolean;
+  refreshList: () => void;
   detail: TerraPointDetail | null;
   globePoints: TerraPoint[];
   hasMoreVisiblePoints: boolean;
@@ -43,52 +38,25 @@ export type ModeDatasetState = {
 export function useModeDataset(
   mode: TerraMode,
   selectedCountryCode: string | null,
-  initialDataset?: TerraDataset
+  initialDataset?: TerraDataset,
+  viewerKey = "guest"
 ): ModeDatasetState {
+  const list = useModeList(mode, selectedCountryCode, viewerKey);
+  const { page: visiblePage, query, debouncedQuery, sortId, setQuery, setSortId } = list;
+  const listLoading = list.loading;
+  const loadingMoreVisiblePoints = list.loadingMore;
   const initialModeDataset = getInitialDataset(mode, initialDataset);
   const [points, setPoints] = useState<TerraPoint[]>(() => initialModeDataset?.points ?? []);
   const [source, setSource] = useState<DataSourceInfo | null>(() => initialModeDataset?.source ?? null);
   const [selectedPoint, setSelectedPoint] = useState<TerraPoint | null>(null);
   const [detail, setDetail] = useState<TerraPointDetail | null>(null);
-  const [query, setQuery] = useState("");
-  const [debouncedQuery, setDebouncedQuery] = useState("");
-  const [sortId, setSortId] = useState(mode.defaultSortId);
   const [loading, setLoading] = useState(() => !initialModeDataset);
   const [refreshingLivePoints, setRefreshingLivePoints] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
   const [countryMarkerPoints, setCountryMarkerPoints] = useState<TerraPoint[]>([]);
   const [countryMarkerLoading, setCountryMarkerLoading] = useState(false);
-  const [visiblePage, setVisiblePage] = useState(() => createInitialModeListSnapshot(initialModeDataset, LIST_PAGE_SIZE));
   const [countrySource, setCountrySource] = useState<DataSourceInfo | null>(null);
-  const [listLoading, setListLoading] = useState(() => !initialModeDataset);
   const [countryRequestError, setCountryRequestError] = useState<string | null>(null);
-  const [listRequestError, setListRequestError] = useState<string | null>(null);
-  const [loadingMoreVisiblePoints, setLoadingMoreVisiblePoints] = useState(false);
-  const visibleRequestKey = createModeListRequestKey({
-    countryCode: selectedCountryCode,
-    modeId: mode.id,
-    query: debouncedQuery,
-    sortId
-  });
-  const visibleRequestKeyRef = useRef<string | null>(initialModeDataset && !selectedCountryCode
-    ? visibleRequestKey
-    : null);
-  const [settledListModeId, setSettledListModeId] = useState<string | null>(null);
-
-  useEffect(() => {
-    const timeout = window.setTimeout(() => {
-      setDebouncedQuery(query);
-    }, SEARCH_DEBOUNCE_MS);
-
-    return () => {
-      window.clearTimeout(timeout);
-    };
-  }, [query]);
-
-  useEffect(() => {
-    setSortId(mode.defaultSortId);
-  }, [mode]);
-
   useEffect(() => {
     let cancelled = false;
 
@@ -188,61 +156,6 @@ export function useModeDataset(
     };
   }, [mode, selectedCountryCode]);
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function loadVisiblePoints() {
-      const requestKey = createModeListRequestKey({
-        countryCode: selectedCountryCode,
-        modeId: mode.id,
-        query: debouncedQuery,
-        sortId
-      });
-      const currentRequestKey = visibleRequestKeyRef.current;
-
-      setListLoading(true);
-      setLoadingMoreVisiblePoints(false);
-      setListRequestError(null);
-      setVisiblePage((snapshot) => beginModeListRefresh({
-        currentRequestKey,
-        nextRequestKey: requestKey,
-        snapshot
-      }));
-      visibleRequestKeyRef.current = requestKey;
-
-      try {
-        const firstPage = await fetchPointPage(mode.listEndpoint({
-          countryCode: selectedCountryCode,
-          limit: LIST_PAGE_SIZE,
-          offset: 0,
-          query: debouncedQuery,
-          sortId
-        }), controller.signal);
-
-        if (!cancelled) {
-          setVisiblePage(createModeListSnapshot(firstPage));
-        }
-      } catch (error) {
-        if (!cancelled && !isAbortError(error)) {
-          setListRequestError(`${mode.label} ${mode.copy.itemPlural} are unavailable.`);
-        }
-      } finally {
-        if (!cancelled) {
-          setListLoading(false);
-          setLoadingMoreVisiblePoints(false);
-          setSettledListModeId(mode.id);
-        }
-      }
-    }
-
-    void loadVisiblePoints();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [debouncedQuery, mode, selectedCountryCode, sortId]);
 
   const selectedId = selectedPoint?.id ?? null;
 
@@ -303,45 +216,22 @@ export function useModeDataset(
   );
   const providerError = requestError
     ?? countryRequestError
-    ?? listRequestError
+    ?? list.error
+    ?? visiblePage.source?.notice
     ?? (visiblePage.source?.isFallback || countrySource?.isFallback || (!refreshingLivePoints && source?.isFallback) ? mode.copy.fallbackNotice : null);
   const hasMoreVisiblePoints = visiblePage.nextOffset !== null;
   const totalVisiblePoints = visiblePage.total;
   const totalVisiblePointsKind = visiblePage.totalKind;
-  const listSettled = settledListModeId === mode.id;
+  const listSettled = list.settled;
   const clearSelection = useCallback(() => setSelectedPoint(null), []);
-  const loadMoreVisiblePoints = useCallback(async () => {
-    if (visiblePage.nextOffset === null || loadingMoreVisiblePoints || listLoading) {
-      return;
-    }
-
-    setLoadingMoreVisiblePoints(true);
-    setListRequestError(null);
-
-    try {
-      const nextPage = await fetchPointPage(mode.listEndpoint({
-        countryCode: selectedCountryCode,
-        limit: LIST_PAGE_SIZE,
-        offset: visiblePage.nextOffset,
-        query: debouncedQuery,
-        sortId
-      }));
-
-      setVisiblePage((currentPage) => ({
-        ...createModeListSnapshot(nextPage),
-        points: mergePoints(currentPage.points, nextPage.points)
-      }));
-    } catch {
-      setVisiblePage((currentPage) => ({ ...currentPage, nextOffset: null }));
-      setListRequestError(`${mode.label} ${mode.copy.itemPlural} are unavailable.`);
-    } finally {
-      setLoadingMoreVisiblePoints(false);
-    }
-  }, [debouncedQuery, listLoading, loadingMoreVisiblePoints, mode, selectedCountryCode, sortId, visiblePage.nextOffset]);
+  const loadMoreVisiblePoints = list.loadMore;
   const selectPoint = useCallback((point: TerraPoint) => setSelectedPoint(point), []);
   const isLoadingDrawerTask = loading || listLoading || loadingMoreVisiblePoints || countryMarkerLoading;
 
   return {
+    recommendation: visiblePage.recommendation,
+    suggested: list.suggested,
+    refreshList: list.refresh,
     detail,
     globePoints,
     hasMoreVisiblePoints,
@@ -422,19 +312,6 @@ function mergePoints(...pointGroups: TerraPoint[][]) {
 
 function getInitialDataset(mode: TerraMode, initialDataset?: TerraDataset) {
   return initialDataset?.modeId === mode.id ? initialDataset : null;
-}
-
-async function fetchPointPage(endpoint: string, signal?: AbortSignal) {
-  const response = await fetch(endpoint, {
-    cache: "no-store",
-    signal
-  });
-
-  if (!response.ok) {
-    throw new Error(`Request failed with ${response.status}`);
-  }
-
-  return (await response.json()) as TerraPointPage;
 }
 
 function isAbortError(error: unknown) {

@@ -59,8 +59,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const globeProfile = useGlobeProfile();
   const { focusPoint, request: cameraFocusRequest } = useCameraFocusRequest();
   const earthSpin = useEarthSpinControls(globeProfile.motionEnabled);
-  const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id]);
   const viewer = useViewer();
+  const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id],
+    viewer.loading ? "loading" : viewer.user?.id ?? "guest");
   const playbackHistory = usePlaybackHistory(viewer.user?.id ?? null);
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null, playbackHistory.record);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
@@ -410,6 +411,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         selectedThemeId={themeId}
         shellRef={shellRef}
         sortId={modeState.sortId}
+        suggestionTitle={modeState.suggested ? (modeState.recommendation?.kind === "personalized" ? activeMode.recommendations?.label : "Discover stations") : undefined}
+        onRefreshSuggestions={modeState.suggested ? modeState.refreshList : undefined}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
         user={viewer.user}

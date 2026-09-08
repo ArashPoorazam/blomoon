@@ -1,6 +1,8 @@
 import type { DataSourceInfo, TerraDataset, TerraPoint, TerraPointPage } from "./types";
 
 export type ModeListSnapshot = {
+  pageToken?: string;
+  recommendation?: TerraPointPage["recommendation"];
   nextOffset: number | null;
   points: TerraPoint[];
   source: DataSourceInfo | null;
@@ -39,6 +41,8 @@ export function beginModeListRefresh({
 
 export function createModeListSnapshot(page: TerraPointPage): ModeListSnapshot {
   return {
+    ...(page.pageToken ? { pageToken: page.pageToken } : {}),
+    ...(page.recommendation ? { recommendation: page.recommendation } : {}),
     nextOffset: page.nextOffset,
     points: page.points,
     source: page.source,

@@ -50,6 +50,8 @@ type SideDrawerProps = {
   selectedThemeId: TerraThemeId;
   shellRef: RefObject<HTMLElement | null>;
   sortId: string;
+  suggestionTitle?: string;
+  onRefreshSuggestions?: () => void;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   user: ViewerDto | null;
@@ -117,6 +119,8 @@ export function SideDrawer({
   selectedThemeId,
   shellRef,
   sortId,
+  suggestionTitle,
+  onRefreshSuggestions,
   totalPoints,
   totalPointsKind,
   user,
@@ -261,6 +265,8 @@ export function SideDrawer({
               selectedCountry={selectedCountry}
               selectedId={selectedId}
               sortId={sortId}
+            suggestionTitle={suggestionTitle}
+            onRefreshSuggestions={onRefreshSuggestions}
               totalPoints={totalPoints}
               totalPointsKind={totalPointsKind}
               onCountryFilterChange={onCountryFilterChange}

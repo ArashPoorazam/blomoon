@@ -42,6 +42,7 @@ export type DataSourceInfo = {
   attribution: string;
   lastUpdated: string;
   isFallback?: boolean;
+  notice?: string;
 };
 
 export type TerraDataset = {
@@ -51,6 +52,8 @@ export type TerraDataset = {
 };
 
 export type TerraPointPage = TerraDataset & {
+  pageToken?: string;
+  recommendation?: { kind: "personalized" | "discovery" };
   limit: number;
   nextOffset: number | null;
   offset: number;
@@ -96,6 +99,7 @@ export type TerraModeListParams = {
   offset: number;
   query: string;
   sortId: string;
+  pageToken?: string;
 };
 
 export type TerraPlayableAudio = {
@@ -113,6 +117,8 @@ export type TerraMode = {
   copy: TerraModeCopy;
   dataEndpoint: string;
   defaultSortId: string;
+  searchSortId?: string;
+  recommendations?: { sortId: string; label: string; endpoint: (params: { limit: number; offset: number; pageToken?: string }) => string };
   listEndpoint: (params: TerraModeListParams) => string;
   sortOptions: TerraModeSortOption[];
   countryCatalog?: {

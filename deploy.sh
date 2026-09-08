@@ -35,7 +35,7 @@ fi
 docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" pull traefik postgres app migrate
 docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" up -d postgres traefik
 docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" --profile migrate run --rm migrate
-docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" up -d app
+docker compose --env-file "$ENV_PATH" -f "$COMPOSE_FILE" up -d app catalog
 
 HEALTH_URL="${BLOMOON_HEALTH_URL:-https://${BLOMOON_DOMAIN:-localhost}/api/health}"
 for attempt in 1 2 3 4 5 6 7 8 9 10; do

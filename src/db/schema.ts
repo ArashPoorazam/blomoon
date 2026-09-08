@@ -16,6 +16,7 @@ import {
   uuid
 } from "drizzle-orm/pg-core";
 import { terraThemeIds } from "../lib/theme/ids";
+export * from "./radioCatalogSchema";
 
 export const users = pgTable("users", {
   id: uuid("id").primaryKey().defaultRandom(),
