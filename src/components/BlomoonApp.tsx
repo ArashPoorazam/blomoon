@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useCallback, useEffect, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { formatCoordinate, type CountryInfo } from "@/lib/geo";
 import type { AppClientConfig } from "@/lib/app-config/types";
 import { getPointKey } from "@/lib/modes/pointKeys";
@@ -35,7 +35,7 @@ import { ShellChrome } from "./shell/ShellChrome";
 import { useDrawerNavigation } from "./shell/useDrawerNavigation";
 import { SideDrawer } from "./SideDrawer";
 import { usePointInteractions } from "./usePointInteractions";
-import { getDrawerPointSource, usePointSources } from "./usePointSources";
+import { getDrawerPointSource, getListContextEntry, usePointSources } from "./usePointSources";
 
 type BlomoonAppProps = { appConfig: AppClientConfig; initialDatasets?: Partial<Record<TerraModeId, TerraDataset>> };
 
@@ -105,9 +105,10 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const crosshairVisible = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
   const crosshairTargetingEnabled = crosshairVisible && !crosshairPoint;
   const hasMiniPlayer = Boolean(activeMode.playback);
-  const favouritePoints = useFavouriteDrawerPoints({ activeFolder: favourites.activeFolder, entry: drawer.entry, points: favourites.points });
+  const favouritePoints = useFavouriteDrawerPoints({ activeFolder: favourites.activeFolder,
+    entry: getListContextEntry(drawer.stack), points: favourites.points });
   const historyState = playbackHistory.getState(activeModeId);
-  const historyPoints = historyState.items.map((item) => item.point);
+  const historyPoints = useMemo(() => historyState.items.map((item) => item.point), [historyState.items]);
   const drawerSource = getDrawerPointSource(drawer.stack);
   const { drawerListsPoints, listedPoints, playbackQueuePoints } = usePointSources({
     activeModeId,
@@ -140,13 +141,10 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     activeMode,
     activePlaybackPoint,
     activeTheme,
-    drawerListsPoints,
     globeProfile,
     listedPoints,
     modeGlobePoints: modeState.globePoints,
-    modeSelectedId: modeState.selectedId,
     modeSelectedPoint: modeState.selectedPoint,
-    modeVisiblePoints: modeState.visiblePoints,
     showListedOnGlobe
   });
   const openFavouritePicker = useCallback((point: TerraPoint) => {
@@ -303,7 +301,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
       <div className="globe-stage">
         <GlobeScene
-          activePlaybackPoint={activePlaybackPoint}
+          activePlaybackPoint={displayedGlobe.activePlaybackPoint}
           crosshairEnabled={crosshairTargetingEnabled}
           dpr={globeProfile.dpr}
           earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
@@ -340,6 +338,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       </div>
 
       <ShellChrome
+        listedPointsDisabled={!drawerListsPoints}
         activeMode={activeMode}
         activeModeId={activeModeId}
         appConfig={appConfig}

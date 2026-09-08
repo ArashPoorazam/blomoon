@@ -12,6 +12,7 @@ import { ShellGlobeControls } from "./ShellGlobeControls";
 import { ShellMobileNav } from "./ShellMobileNav";
 
 type ShellChromeProps = {
+  listedPointsDisabled: boolean;
   activeMode: TerraMode;
   activeModeId: TerraModeId;
   appConfig: AppClientConfig;
@@ -38,6 +39,7 @@ type ShellChromeProps = {
 };
 
 export function ShellChrome({
+  listedPointsDisabled,
   activeMode,
   activeModeId,
   appConfig,
@@ -86,6 +88,7 @@ export function ShellChrome({
       />
 
       <ShellControlRail
+        listedPointsDisabled={listedPointsDisabled}
         activeModeId={activeModeId}
         activeView={drawerView}
         earthSpinEnabled={earthSpinEnabled}
@@ -100,6 +103,7 @@ export function ShellChrome({
       />
 
       <ShellGlobeControls
+        listedPointsDisabled={listedPointsDisabled}
         earthSpinEnabled={earthSpinEnabled}
         earthSpinDisabled={earthSpinDisabled}
         showListedOnGlobe={showListedOnGlobe}

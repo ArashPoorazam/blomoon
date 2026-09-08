@@ -1,10 +1,11 @@
 "use client";
 
-import { Check, Plus, Star, X } from "lucide-react";
+import { Check, Plus, Star } from "lucide-react";
 import { useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { FavouriteFolderSummaryDto } from "@/lib/persistence/types";
 import { FavouriteFolderForm } from "./FavouriteFolderForm";
+import { ModalShell } from "../ui/ModalShell";
 
 type FavouriteFolderPickerProps = {
   folders: FavouriteFolderSummaryDto[];
@@ -29,21 +30,22 @@ export function FavouriteFolderPicker({
   const [busyListId, setBusyListId] = useState<string | null>(null);
 
   return (
-    <div className="favourite-modal-backdrop" role="presentation">
-      <section className="favourite-modal favourite-picker" role="dialog" aria-modal="true" aria-labelledby="favourite-picker-title">
-        <div className="favourite-picker-header">
-          <div>
-            <div className="drawer-kicker">Save station</div>
-            <h2 id="favourite-picker-title">{point.name}</h2>
-            <p>Choose one or more folders.</p>
-          </div>
-          <button className="icon-button" type="button" aria-label="Close favourite picker" onClick={onClose}>
-            <X size={16} aria-hidden="true" />
-          </button>
-        </div>
-
+    <ModalShell className="favourite-picker" kicker="Save station · Choose one or more folders" title={point.name} onClose={onClose}>
         <div className="favourite-picker-list">
-          {folders.map((folder) => {
+          {creating ? (
+            <FavouriteFolderForm
+              submitLabel="Create"
+              title="Create new folder"
+              onCancel={() => setCreating(false)}
+              onSubmit={async (name, description) => {
+                const folder = await onCreateFolder(name, description);
+                if (!folder) return false;
+                await onAddToFolder(folder.id, point);
+                setCreating(false);
+                return true;
+              }}
+            />
+          ) : folders.map((folder) => {
             const selected = selectedFolderIds.has(folder.id);
 
             return (
@@ -70,29 +72,13 @@ export function FavouriteFolderPicker({
           })}
         </div>
 
-        {creating ? (
-          <FavouriteFolderForm
-            submitLabel="Create"
-            title="Create new folder"
-            onCancel={() => setCreating(false)}
-            onSubmit={async (name, description) => {
-              const folder = await onCreateFolder(name, description);
-              if (folder) {
-                await onAddToFolder(folder.id, point);
-                setCreating(false);
-                return true;
-              }
-              return false;
-            }}
-          />
-        ) : (
+        {!creating ? (
           <button className="secondary-action compact-action" type="button" onClick={() => setCreating(true)}>
             <Plus size={15} aria-hidden="true" />
             <span>Create new folder</span>
           </button>
-        )}
-      </section>
-    </div>
+        ) : null}
+    </ModalShell>
   );
 }
 

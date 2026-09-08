@@ -7,6 +7,7 @@ import { modeIcons } from "./shell/modeIcons";
 import type { ShellDrawerView } from "./shell/drawerState";
 
 type ShellControlRailProps = {
+  listedPointsDisabled: boolean;
   activeModeId: TerraModeId;
   activeView: ShellDrawerView;
   earthSpinEnabled: boolean;
@@ -28,6 +29,7 @@ export type ModeControlItem = {
 };
 
 export function ShellControlRail({
+  listedPointsDisabled,
   activeModeId,
   activeView,
   earthSpinEnabled,
@@ -66,6 +68,7 @@ export function ShellControlRail({
       <button
         className="shell-square-control"
         aria-label={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
+        disabled={listedPointsDisabled}
         aria-pressed={showListedOnGlobe}
         title="Display listed points on globe"
         type="button"

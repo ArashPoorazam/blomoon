@@ -22,6 +22,8 @@ import { fetchRadioBrowserJson } from "./provider";
 import { getLiveRandomRadioRecord } from "./random";
 import { getRandomCatalogRecord } from "./randomSelection";
 import { logger } from "@/lib/server/logging";
+import { canonicalizeAvailableRecords, lookupCanonicalRecord, registerRadioRecord } from "./identityStore";
+import { canonicalizeRadioRecords } from "./stationIdentity";
 import type {
   PlayableCacheEntry,
   RadioBrowserStation,
@@ -96,7 +98,8 @@ export function getRadioFixtureRecords(): RadioStationRecord[] {
 
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
   try {
-    const records = await getLiveCountryMarkerRecords(countryCode);
+    const records = (await canonicalizeAvailableRecords(await getLiveCountryMarkerRecords(countryCode)))
+      .filter((record) => record.point.countryCode === countryCode);
 
     return {
       modeId: "radio",
@@ -236,7 +239,7 @@ export async function getRandomRadioPoint({
   excludePointId?: string | null;
 } = {}): Promise<TerraRandomPoint | null> {
   try {
-    const record = await getLiveRandomRadioRecord({ excludePointId });
+    const record = await registerRadioRecord(await getLiveRandomRadioRecord({ excludePointId }));
 
     if (catalogCache) {
       addRecordToCatalog(catalogCache, record);
@@ -394,11 +397,13 @@ async function refreshRadioCatalog(fetchedAt: number) {
 }
 
 async function getRadioStationRecord(id: string) {
+  const canonical = await lookupCanonicalRecord(id);
+  if (canonical) return canonical;
   const catalog = await getRadioCatalog();
   const cachedRecord = catalog.recordsById.get(id);
 
   if (cachedRecord) {
-    return cachedRecord;
+    return registerRadioRecord(cachedRecord);
   }
 
   try {
@@ -407,7 +412,7 @@ async function getRadioStationRecord(id: string) {
 
     if (record && catalogCache) {
       addRecordToCatalog(catalogCache, record);
-      return record;
+      return registerRadioRecord(record);
     }
   } catch (error) {
     logger.warn("radio.catalog.detail_fetch_failed", {
@@ -427,7 +432,7 @@ function createRadioCatalog(
   fetchedAt: number,
   isFallback: boolean
 ): RadioCatalog {
-  const sortedRecords = sortRadioRecords(records);
+  const sortedRecords = sortRadioRecords(canonicalizeRadioRecords(records).records);
   const recordsById = new Map(sortedRecords.map((record) => [record.point.id, record]));
   const recordsByCountry = createCountryIndex(sortedRecords);
 

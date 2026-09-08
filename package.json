@@ -11,6 +11,7 @@
     "db:check": "node scripts/check-db.mjs",
     "catalog:sync": "node --conditions=react-server --import tsx scripts/radio-catalog.ts --once",
     "catalog:worker": "node --conditions=react-server --import tsx scripts/radio-catalog.ts",
+    "catalog:identities": "node --conditions=react-server --import tsx scripts/radio-identities.ts",
     "check:prod": "node scripts/check-production.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"

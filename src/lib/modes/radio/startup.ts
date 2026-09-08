@@ -9,6 +9,8 @@ import { createRadioLiveSource } from "./source";
 import { getRadioFixtureDataset, getRadioFixtureRecords } from "./catalog";
 import { logger } from "@/lib/server/logging";
 import type { RadioStationRecord } from "./types";
+import { canonicalizeRadioRecords } from "./stationIdentity";
+import { canonicalizeAvailableRecords } from "./identityStore";
 
 type StartupDatasetCache = {
   coverageAttemptedAt: number | null;
@@ -73,7 +75,7 @@ async function loadRadioStartupDataset({
   now = Date.now
 }: RadioStartupDatasetOptions = {}) {
   try {
-    const records = await loadRecords();
+    const records = await canonicalizeAvailableRecords(await loadRecords());
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable startup stations");
@@ -132,7 +134,7 @@ async function loadRadioStartupCoverageDataset({
   cached.coverageAttemptedAt = attemptedAt;
 
   try {
-    const records = await loadCoveredRecords(cached.records);
+    const records = await canonicalizeAvailableRecords(await loadCoveredRecords(cached.records));
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable country coverage stations");
@@ -174,7 +176,7 @@ function createStartupDataset(records: RadioStationRecord[]): TerraDataset {
   return {
     modeId: "radio",
     source: createRadioLiveSource(),
-    points: sortRadioRecords(Array.from(recordsById.values())).map((record) => record.point)
+    points: sortRadioRecords(canonicalizeRadioRecords(Array.from(recordsById.values())).records).map((record) => record.point)
   };
 }
 

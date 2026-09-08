@@ -6,6 +6,7 @@ import { useCallback, useEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { TerraPoint } from "@/lib/modes/types";
+import { createCameraTransition } from "./cameraTransition";
 import {
   CROSSHAIR_CENTER_TOLERANCE_PX,
   CROSSHAIR_IDLE_DELAY_MS,
@@ -23,10 +24,9 @@ import {
 } from "./globeMath";
 
 type CameraFocusTarget = {
-  distance: number | null;
+  transition: ReturnType<typeof createCameraTransition> | null;
   normal: THREE.Vector3;
   point: TerraPoint;
-  source: "external" | "crosshair";
 };
 
 type GlobeCameraControllerProps = {
@@ -68,7 +68,6 @@ export function GlobeCameraController({
   const onUserInteractionStartRef = useRef(onUserInteractionStart);
   const { height, width } = useThree((state) => state.size);
   const origin = useMemo(() => new THREE.Vector3(), []);
-  const targetPosition = useMemo(() => new THREE.Vector3(), []);
 
   useEffect(() => {
     onCrosshairPointRef.current = onCrosshairPoint;
@@ -94,7 +93,7 @@ export function GlobeCameraController({
     }
 
     lastFocusKey.current = focusKey;
-    focusTarget.current = createFocusTarget(focusPoint, "external");
+    focusTarget.current = createFocusTarget(focusPoint);
     markMotion();
   }, [focusKey, focusPoint, markMotion]);
 
@@ -158,24 +157,17 @@ export function GlobeCameraController({
     const currentFocus = focusTarget.current;
 
     if (currentFocus) {
-      currentFocus.distance ??= camera.position.length();
-      targetPosition.copy(currentFocus.normal).multiplyScalar(currentFocus.distance);
-
-      if (motionEnabled) {
-        const alpha = 1 - Math.pow(0.025, delta);
-        camera.position.lerp(targetPosition, alpha).setLength(currentFocus.distance);
-      } else {
-        camera.position.copy(targetPosition);
-      }
+      currentFocus.transition ??= createCameraTransition(camera.position, currentFocus.normal);
+      const complete = currentFocus.transition.advance(camera.position, delta, motionEnabled);
 
       camera.lookAt(origin);
       markMotion();
 
-      if (!motionEnabled || camera.position.distanceTo(targetPosition) < 0.025) {
+      if (complete) {
         focusTarget.current = null;
         lastMotionAt.current = performance.now();
 
-        if (currentFocus.source === "crosshair") {
+        if (crosshairEnabled) {
           lastEvaluatedPosition.current = camera.position.clone();
           onCrosshairPointRef.current(currentFocus.point);
         }
@@ -209,7 +201,7 @@ export function GlobeCameraController({
       return;
     }
 
-    focusTarget.current = createFocusTarget(candidate.point, "crosshair");
+    focusTarget.current = createFocusTarget(candidate.point);
     markMotion();
   });
 
@@ -239,12 +231,11 @@ export function GlobeCameraController({
   );
 }
 
-function createFocusTarget(point: TerraPoint, source: CameraFocusTarget["source"]): CameraFocusTarget {
+function createFocusTarget(point: TerraPoint): CameraFocusTarget {
   return {
-    distance: null,
+    transition: null,
     normal: latLonToVector3(point.latitude, point.longitude, 1).normalize(),
-    point,
-    source
+    point
   };
 }
 

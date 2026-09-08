@@ -1,10 +1,12 @@
 import { normalizeSearchText } from "@/lib/search/text";
 import type { TerraPoint } from "../types";
 import type { RadioStationRecord } from "./types";
+import { canonicalizeRadioRecords } from "./stationIdentity";
+export { streamIdentity } from "./stationIdentity";
 
 export type RadioPreferenceSignal = { point: TerraPoint; saved: boolean; playedAt: string[] };
 type Features = { tags: string[]; languages: string[]; country: string };
-type Candidate = { record: RadioStationRecord; streamKey: string; features: Features; score: number; exploration: number; familiar: boolean };
+type Candidate = { record: RadioStationRecord; features: Features; score: number; exploration: number; familiar: boolean };
 
 function features(point: TerraPoint): Features {
   const values = (key: string) => [...new Set(String(point.metrics?.[key] ?? "").split(",")
@@ -21,6 +23,17 @@ export function signalWeight(signal: RadioPreferenceSignal, now: number) {
 }
 
 export function rankRadioRecommendations(records: RadioStationRecord[], signals: RadioPreferenceSignal[], now = Date.now(), limit = 500) {
+  const canonical = canonicalizeRadioRecords(records);
+  records = canonical.records;
+  const aliases = new Map(canonical.aliases.map((alias) => [alias.stationId, alias.canonicalId]));
+  const canonicalSignals = new Map<string, RadioPreferenceSignal>();
+  for (const signal of signals) {
+    const id = aliases.get(signal.point.id) ?? signal.point.id;
+    const previous = canonicalSignals.get(id);
+    canonicalSignals.set(id, { point: { ...signal.point, id }, saved: signal.saved || Boolean(previous?.saved),
+      playedAt: [...new Set([...(previous?.playedAt ?? []), ...signal.playedAt])] });
+  }
+  signals = [...canonicalSignals.values()];
   const tags = new Map<string, number>();
   const languages = new Map<string, number>();
   const countries = new Map<string, number>();
@@ -52,7 +65,7 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
     const quality = popularity(record) / maxPopularity;
     const preference = 0.6 * affinity(tags, value.tags) + 0.25 * affinity(languages, value.languages)
       + 0.15 * (countries.get(value.country) ?? 0);
-    return { record, streamKey: streamIdentity(record.streamUrl), features: value, familiar: known.has(record.point.id),
+    return { record, features: value, familiar: known.has(record.point.id),
       score: personalized ? 0.9 * preference + 0.1 * quality : 0.5 * quality + 0.5 * seededValue(day + record.point.id),
       exploration: 0.2 * quality + 0.8 * seededValue(day + record.point.id) };
   });
@@ -62,7 +75,6 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
   const explore = candidates.filter((item) => !item.familiar)
     .sort((a, b) => b.exploration - a.exploration || byScore(a, b)).slice(0, 3000);
   const used = new Set<string>();
-  const streams = new Set<string>();
   const countryCounts = new Map<string, number>();
   const tagCounts = new Map<string, number>();
   const result: TerraPoint[] = [];
@@ -72,7 +84,7 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
     let inspected = 0;
     for (let index = 0; index < pool.length && inspected < 100; index++) {
       const item = pool[index];
-      if (used.has(item.record.point.id) || streams.has(item.streamKey)) continue;
+      if (used.has(item.record.point.id)) continue;
       inspected++;
       const repetition = 0.04 * (countryCounts.get(item.features.country) ?? 0)
         + 0.02 * item.features.tags.reduce((max, tag) => Math.max(max, tagCounts.get(tag) ?? 0), 0);
@@ -81,7 +93,7 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
     }
     if (best < 0) return false;
     const [item] = pool.splice(best, 1);
-    used.add(item.record.point.id); streams.add(item.streamKey);
+    used.add(item.record.point.id);
     countryCounts.set(item.features.country, (countryCounts.get(item.features.country) ?? 0) + 1);
     for (const tag of item.features.tags) tagCounts.set(tag, (tagCounts.get(tag) ?? 0) + 1);
     result.push(item.record.point);
@@ -94,12 +106,6 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
     if (!pick(pool, pool === explore) && !pick(discovery, false) && !pick(familiar, false) && !pick(explore, true)) break;
   }
   return { points: result, personalized };
-}
-
-export function streamIdentity(value: string) {
-  const url = new URL(value);
-  url.hash = "";
-  return url.toString();
 }
 
 function seededValue(value: string) {

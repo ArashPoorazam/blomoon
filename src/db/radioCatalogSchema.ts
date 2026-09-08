@@ -5,6 +5,15 @@ import type { DataSourceInfo, TerraPoint } from "@/lib/modes/types";
 import { users } from "./schema";
 
 // Directory generations never reference account-owned media rows.
+export const radioStationAliases = pgTable("radio_station_aliases", {
+  stationId: uuid("station_id").primaryKey(),
+  canonicalId: uuid("canonical_id").notNull(),
+  identityKey: text("identity_key").notNull(),
+  streamKey: text("stream_key").notNull(),
+  record: jsonb("record").$type<RadioStationRecord>().notNull(),
+}, (table) => [index("radio_alias_canonical_idx").on(table.canonicalId),
+  index("radio_alias_identity_idx").on(table.identityKey), index("radio_alias_stream_idx").on(table.streamKey)]);
+
 export const radioCatalogGenerations = pgTable("radio_catalog_generations", {
   id: uuid("id").primaryKey().defaultRandom(),
   active: boolean("active").notNull().default(false),

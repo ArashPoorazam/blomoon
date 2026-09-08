@@ -160,7 +160,9 @@ export async function deleteFavouriteFolder(userId: string, folderId: string): P
 
 export async function addFavouriteFolderItem(userId: string, folderId: string, ref: FavouriteRef): Promise<FavouriteFolderMembershipDto | null> {
   const adapter = getModePersistenceAdapter(ref.modeId);
-  if (!adapter || !await adapter.upsertPoint(ref.pointId)) return null;
+  const point = await adapter?.upsertPoint(ref.pointId);
+  if (!point) return null;
+  ref = { ...ref, pointId: point.id };
 
   return getDb().transaction(async (tx) => {
     const [folder] = await tx.select({ id: schema.userFavouriteFolders.id }).from(schema.userFavouriteFolders)
@@ -178,6 +180,9 @@ export async function addFavouriteFolderItem(userId: string, folderId: string, r
 }
 
 export async function removeFavouriteFolderItem(userId: string, folderId: string, ref: FavouriteRef) {
+  const [point] = await getModePersistenceAdapter(ref.modeId)?.hydratePoints([ref.pointId]) ?? [];
+  if (!point) return false;
+  ref = { ...ref, pointId: point.id };
   return getDb().transaction(async (tx) => {
     const [deleted] = await tx.delete(schema.userFavouriteFolderItems).where(and(
       eq(schema.userFavouriteFolderItems.folderId, folderId),

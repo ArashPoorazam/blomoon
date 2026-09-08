@@ -4,18 +4,17 @@
     bottom: var(--mobile-player-height, 0px);
     left: 0;
     width: 100vw;
-    height: var(--mobile-sheet-max-height, calc(100svh - 150px - var(--mobile-player-height, 0px)));
+    height: var(--mobile-sheet-visible-height, 40svh);
     max-height: none;
     border-top: 1px solid var(--panel-border);
     border-left: 0;
     box-shadow: 0 -18px 52px var(--shadow-panel);
-    transform: translateY(calc(var(--mobile-sheet-max-height, 40svh) - var(--mobile-sheet-visible-height, 40svh)));
-    transition: transform 240ms cubic-bezier(0.22, 0.8, 0.24, 1);
-    will-change: transform;
+    transform: none;
+    transition: height 240ms cubic-bezier(0.22, 0.8, 0.24, 1);
   }
 
   .drawer.collapsed {
-    transform: translateY(calc(var(--mobile-sheet-max-height, 40svh) - var(--mobile-sheet-visible-height, 40svh)));
+    transform: none;
   }
 
   .blomoon-shell[data-mobile-drawer-dragging="true"] .drawer,
@@ -174,7 +173,6 @@
 
   .point-list-more {
     min-height: 44px;
-    display: none;
   }
 
   .has-mini-player .point-list,

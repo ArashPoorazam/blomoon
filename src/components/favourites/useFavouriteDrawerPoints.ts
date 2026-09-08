@@ -13,7 +13,7 @@ export function useFavouriteDrawerPoints({ activeFolder, entry, points }: {
   return useMemo(
     () => entry.kind === "favourite-folder" && activeFolder?.id === entry.folderId
       ? activeFolder.items.map((item) => item.point)
-      : points,
+      : entry.kind === "favourite-folder" ? [] : points,
     [activeFolder, entry, points]
   );
 }

@@ -6,7 +6,7 @@
 .favourite-modal-backdrop {
   position: fixed;
   inset: 0;
-  z-index: 60;
+  z-index: 70;
   display: grid;
   place-items: center;
   padding: 18px;
@@ -48,7 +48,17 @@
 
 .favourite-picker-list {
   display: grid;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  align-content: start;
   gap: 7px;
+}
+
+.favourite-modal.favourite-picker {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  overflow: hidden;
+  max-height: min(680px, calc(100dvh - 36px));
 }
 
 .favourite-picker-option {

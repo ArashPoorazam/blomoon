@@ -16,13 +16,10 @@ type DisplayedGlobePointsParams = {
   activeMode: TerraMode;
   activePlaybackPoint: TerraPoint | null;
   activeTheme: TerraTheme;
-  drawerListsPoints: boolean;
   listedPoints: TerraPoint[];
   globeProfile: GlobeProfile;
   modeGlobePoints: TerraPoint[];
-  modeSelectedId: string | null;
   modeSelectedPoint: TerraPoint | null;
-  modeVisiblePoints: TerraPoint[];
   showListedOnGlobe: boolean;
 };
 
@@ -30,23 +27,19 @@ export function useDisplayedGlobePoints({
   activeMode,
   activePlaybackPoint,
   activeTheme,
-  drawerListsPoints,
   listedPoints,
   globeProfile,
   modeGlobePoints,
-  modeSelectedId,
   modeSelectedPoint,
-  modeVisiblePoints,
   showListedOnGlobe
 }: DisplayedGlobePointsParams) {
   const defaultMarkerColor = resolveMarkerColor(activeTheme, activeMode.markerColorToken)
     ?? activeTheme.globe.markers.defaultSingle;
-  const activeDrawerPoints = drawerListsPoints && !modeSelectedId ? listedPoints : modeVisiblePoints;
+  const activeDrawerPoints = useMemo(() => uniquePoints(listedPoints), [listedPoints]);
   const defaultGlobePoints = useMemo(
     () => uniquePoints([...modeGlobePoints, ...activeDrawerPoints]),
     [activeDrawerPoints, modeGlobePoints]
   );
-  const rawGlobePoints = showListedOnGlobe ? activeDrawerPoints : defaultGlobePoints;
   const visiblePointIds = useMemo(
     () => new Set(activeDrawerPoints.map(getPointKey)),
     [activeDrawerPoints]
@@ -54,20 +47,19 @@ export function useDisplayedGlobePoints({
   const selectedPoint = !showListedOnGlobe || (modeSelectedPoint && visiblePointIds.has(getPointKey(modeSelectedPoint)))
     ? modeSelectedPoint
     : null;
-  const points = useMemo(() => limitGlobePoints({
-    activePlaybackPoint,
+  const points = useMemo(() => showListedOnGlobe ? activeDrawerPoints : limitGlobePoints({
+    activePlaybackPoint: null,
     budget: globeProfile.markerBudget,
     countryPointGuarantee: globeProfile.countryPointGuarantee,
-    points: rawGlobePoints,
+    points: defaultGlobePoints,
     requiredPoints: activeDrawerPoints,
-    selectedPoint
+    selectedPoint: null
   }), [
+    showListedOnGlobe,
     activeDrawerPoints,
-    activePlaybackPoint,
     globeProfile.countryPointGuarantee,
     globeProfile.markerBudget,
-    rawGlobePoints,
-    selectedPoint
+    defaultGlobePoints
   ]);
   const markerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
   const markerColorMode = showListedOnGlobe ? "single" : activeMode.markerColorMode;
@@ -76,6 +68,8 @@ export function useDisplayedGlobePoints({
     : defaultMarkerColor;
 
   return {
+    activePlaybackPoint: !showListedOnGlobe || (activePlaybackPoint && visiblePointIds.has(getPointKey(activePlaybackPoint)))
+      ? activePlaybackPoint : null,
     markerColor,
     markerColorMode,
     points,

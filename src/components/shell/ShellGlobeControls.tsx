@@ -4,6 +4,7 @@ import { Earth, MapPin } from "lucide-react";
 import type { MouseEvent } from "react";
 
 type ShellGlobeControlsProps = {
+  listedPointsDisabled: boolean;
   earthSpinDisabled: boolean;
   earthSpinEnabled: boolean;
   showListedOnGlobe: boolean;
@@ -12,6 +13,7 @@ type ShellGlobeControlsProps = {
 };
 
 export function ShellGlobeControls({
+  listedPointsDisabled,
   earthSpinDisabled,
   earthSpinEnabled,
   onToggleEarthSpin,
@@ -21,6 +23,7 @@ export function ShellGlobeControls({
   return (
     <nav className="shell-globe-controls" aria-label="Globe display controls">
       <button
+        disabled={listedPointsDisabled}
         aria-label={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
         aria-pressed={showListedOnGlobe}
         className={`shell-square-control ${showListedOnGlobe ? "active" : ""}`}

@@ -47,7 +47,7 @@ export async function recordPlaybackStart({ modeId, pointId, timezoneOffsetMinut
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`${userId}:${modeId}`}, 0))`);
     const [upserted] = await tx.insert(schema.userPlaybackHistory).values({
       lastPlayedAt: now,
-      mediaItemId: pointId,
+      mediaItemId: point.id,
       playedOn,
       userId
     }).onConflictDoUpdate({

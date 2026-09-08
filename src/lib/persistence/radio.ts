@@ -9,6 +9,7 @@ import type { TerraPoint } from "@/lib/modes/types";
 import { logger } from "@/lib/server/logging";
 import type { ModePersistenceAdapter } from "./types";
 import { ProviderPointLookupError } from "./points";
+import { canonicalizePointIds } from "@/lib/modes/radio/identityStore";
 
 type BlomoonTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 
@@ -54,6 +55,8 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
     if (pointIds.length === 0) {
       return [];
     }
+    const canonicalIds = await canonicalizePointIds(pointIds);
+    pointIds = pointIds.map((id) => canonicalIds.get(id) ?? id);
 
     const rows = await logger.measure("persistence.radio.points.hydrate", {
       count: pointIds.length

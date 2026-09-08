@@ -62,17 +62,9 @@ export function PointMarkers({
     () => getHighlightedMarkers(selectedPoint, activePlaybackPoint),
     [activePlaybackPoint, selectedPoint]
   );
-  const highlightedPointKeys = useMemo(
-    () => new Set(highlightedMarkers.map((marker) => marker.key)),
-    [highlightedMarkers]
-  );
-  const instancedPoints = useMemo(
-    () => points.filter((point) => !highlightedPointKeys.has(getPointKey(point))),
-    [highlightedPointKeys, points]
-  );
   const visualBatches = useMemo(
-    () => getMarkerBatches(instancedPoints, markerColorMode, markerColor ?? theme.markers.defaultSingle, theme),
-    [instancedPoints, markerColor, markerColorMode, theme]
+    () => getMarkerBatches(points, markerColorMode, markerColor ?? theme.markers.defaultSingle, theme),
+    [points, markerColor, markerColorMode, theme]
   );
 
   return (
@@ -86,7 +78,7 @@ export function PointMarkers({
       ))}
       <MarkerHitInstances
         hoverEnabled={hoverEnabled}
-        points={instancedPoints}
+        points={points}
         onHover={onHover}
         onSelect={onSelect}
       />

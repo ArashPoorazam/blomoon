@@ -151,7 +151,7 @@ function station(id: string, votes: number, countryCode = "840"): RadioStationRe
     },
     point,
     searchText: point.name.toLowerCase(),
-    streamUrl: "https://example.com/radio.mp3",
+    streamUrl: `https://example.com/${id}.mp3`,
     votes
   };
 }

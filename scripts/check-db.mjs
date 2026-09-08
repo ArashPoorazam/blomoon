@@ -11,6 +11,7 @@ const requiredTables = [
   "radio_catalog_generations",
   "radio_catalog_entries",
   "radio_catalog_terms",
+  "radio_station_aliases",
   "radio_recommendation_snapshots",
   "sessions",
   "user_favourite_folder_items",
@@ -88,7 +89,20 @@ try {
     process.exit(1);
   }
 
-  console.log(`Database schema is ready: ${requiredTables.length} required tables found; every user has one protected Favourites folder.`);
+  const [invalidAliases] = await sql`
+    select count(*)::integer as violations from radio_station_aliases a
+    left join radio_station_aliases canonical on canonical.station_id = a.canonical_id
+    where canonical.station_id is null or canonical.canonical_id <> canonical.station_id
+  `;
+  const [duplicateMedia] = await sql`
+    select count(*)::integer as violations from media_items m
+    join radio_station_aliases a on a.station_id = m.id
+    where a.station_id <> a.canonical_id
+  `;
+  if (invalidAliases.violations || duplicateMedia.violations) {
+    throw new Error("Radio station identity invariants failed; inspect the consolidation report.");
+  }
+  console.log(`Database schema is ready: ${requiredTables.length} required tables found; protected folders and canonical station identities are valid.`);
 } finally {
   await sql.end();
 }

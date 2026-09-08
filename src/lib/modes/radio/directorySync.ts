@@ -8,6 +8,7 @@ import { logger } from "@/lib/server/logging";
 import { normalizeStation } from "./normalize";
 import { fetchRadioBrowserHostJson, getRadioBrowserHosts } from "./provider";
 import type { RadioStationRecord } from "./types";
+import { publishStationIdentities } from "./identityStore";
 
 export const CATALOG_REFRESH_MS = 6 * 60 * 60 * 1000;
 const PAGE_SIZE = 5000;
@@ -72,6 +73,8 @@ export async function syncRadioDirectory() {
       }
     }
     if (!records) throw new Error("Directory synchronization failed on all hosts");
+    records = await publishStationIdentities(tx, records);
+    await tx.execute(sql`select consolidate_radio_accounts()`);
     const [generation] = await tx.insert(schema.radioCatalogGenerations).values({}).returning();
     const vocabulary = new Set<string>();
     for (let offset = 0; offset < records.length; offset += 250) {

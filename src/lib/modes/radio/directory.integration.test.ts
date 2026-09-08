@@ -59,6 +59,9 @@ describe.skipIf(!enabled)("radio directory PostgreSQL integration (rolled back)"
         expect((await search("كيان"))?.points[0].name).toBe("رادیو کیان");
         expect((await search("paradise", "276"))?.points).toHaveLength(0);
         expect((await search("zzzxqvnotastation"))?.total).toBe(0);
+        // Search uses nested savepoints in this rollback harness. Its SET LOCAL
+        // timeout otherwise leaks into the subsequent full-catalog publication.
+        await tx.execute(sql`set local statement_timeout = '0'`);
         const first = await getRadioRecommendations(owner, 50, 0);
         expect(first.points).toHaveLength(50);
         expect(first.total).toBe(500);
