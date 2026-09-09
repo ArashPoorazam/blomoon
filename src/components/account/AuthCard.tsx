@@ -20,6 +20,7 @@ type FormNotice = {
 };
 
 type AuthCardProps = {
+  callbackURL?: string;
   googleAuthEnabled: boolean;
   modeLabel: string;
   onAuthenticated: () => void | Promise<void>;
@@ -29,6 +30,7 @@ type AuthCardProps = {
 };
 
 export function AuthCard({
+  callbackURL = "/",
   googleAuthEnabled,
   modeLabel,
   onAuthenticated,
@@ -96,7 +98,7 @@ export function AuthCard({
   async function submitLogin() {
     const normalizedEmail = normalizeEmail(email);
     const result = await authClient.signIn.email({
-      callbackURL: "/?auth=verified",
+      callbackURL,
       email: normalizedEmail,
       password,
       rememberMe
@@ -203,7 +205,7 @@ export function AuthCard({
     }
 
     const signInResult = await authClient.signIn.email({
-      callbackURL: "/?auth=verified",
+      callbackURL,
       email: normalizedEmail,
       password,
       rememberMe: true
@@ -271,7 +273,7 @@ export function AuthCard({
     try {
       const result = await authClient.signIn.social({
         provider: "google",
-        callbackURL: "/"
+        callbackURL
       });
 
       if (result?.error) {

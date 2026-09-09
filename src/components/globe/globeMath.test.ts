@@ -22,4 +22,5 @@ describe("globe interaction math", () => {
     expect(getKeyboardOrbitIntentFromKeys(["KeyD", "KeyW"])).toEqual({ azimuth: 1, polar: -1 });
     expect(getKeyboardOrbitIntentFromKeys(["KeyD", "ArrowRight"])).toEqual({ azimuth: 1, polar: 0 });
   });
+
 });

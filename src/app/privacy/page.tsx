@@ -39,6 +39,10 @@ export default function PrivacyPage() {
               your saved stations and theme preferences available.
             </p>
             <p>
+              When playback successfully starts, Blomoon stores the station, the most recent playback time, and the listener’s local calendar date. History
+              is limited to the 50 most recent station-day entries for each media mode.
+            </p>
+            <p>
               If you sign in with Google, Blomoon receives basic Google account profile information used for authentication, such as your email address,
               name, profile image, and Google account identifier.
             </p>
@@ -48,7 +52,8 @@ export default function PrivacyPage() {
             <h2>How We Use Information</h2>
             <ul>
               <li>Authenticate your account and keep you signed in.</li>
-              <li>Store favorites, account preferences, and listening-related product settings.</li>
+              <li>Store favorites, account preferences, and recent playback history.</li>
+              <li>Suggest radio stations using your saved stations and recent playback history. Temporary suggestion lists are kept for browsing and expire after one hour.</li>
               <li>Send account verification and security-related emails.</li>
               <li>Diagnose service reliability issues and protect the app from abuse.</li>
             </ul>
@@ -78,6 +83,9 @@ export default function PrivacyPage() {
             <p>
               Blomoon keeps account information while your account is active. You can request account or data deletion by contacting support from the email
               address associated with your account.
+            </p>
+            <p>
+              Deleting your account also deletes its saved stations, preferences, and recent playback history.
             </p>
           </section>
 

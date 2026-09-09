@@ -1,4 +1,5 @@
-import { COUNTRY_PAGE_LIMIT, COUNTRY_PAGE_MAX_LIMIT, getRadioPointPage } from "@/lib/modes/radio";
+import { COUNTRY_PAGE_LIMIT, COUNTRY_PAGE_MAX_LIMIT } from "@/lib/modes/radio";
+import { searchRadioStations } from "@/lib/modes/radio/search";
 import {
   normalizeRadioCountryCode,
   parseIntegerParam,
@@ -34,7 +35,7 @@ export const GET = withApiLogging("api.modes.radio.search", async (request: Requ
     return Response.json({ error: limit.error ?? offset.error ?? query.error ?? sort.error }, { status: 400 });
   }
 
-  const page = await getRadioPointPage({
+  const page = await searchRadioStations({
     countryCode,
     limit: limit.value,
     offset: offset.value,
@@ -44,7 +45,7 @@ export const GET = withApiLogging("api.modes.radio.search", async (request: Requ
 
   return Response.json(page, {
     headers: {
-      "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600"
+      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"
     }
   });
 });

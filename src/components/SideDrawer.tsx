@@ -1,152 +1,286 @@
 "use client";
 
-import { CheckCircle2, ChevronLeft, ChevronRight, ExternalLink, LoaderCircle, X } from "lucide-react";
-import { useEffect, useState } from "react";
-import { formatDateTime, type CountryInfo } from "@/lib/geo";
+import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
+import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import type { ContactLink } from "@/lib/app-config/types";
+import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
-import type { FavouriteGroupDto } from "@/lib/persistence/types";
-import { FavouritesDrawer } from "./favourites/FavouritesDrawer";
+import type { FavouriteFolderDto, FavouriteFolderSummaryDto } from "@/lib/persistence/types";
+import type { PlaybackHistoryModeState } from "./history/usePlaybackHistory";
+import type { TerraThemeId } from "@/lib/theme/themes";
+import type { ViewerDto } from "@/lib/users/dto";
+import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
+import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
+import { FavouriteFolderDetail } from "./favourites/FavouriteFolderDetail";
+import { FavouriteFolderIndex } from "./favourites/FavouriteFolderIndex";
+import { PlaybackHistoryDrawer } from "./history/PlaybackHistoryDrawer";
+import { AccountDrawer } from "./shell/AccountDrawer";
+import type { DrawerMobilePosition, ShellDrawerEntry, ShellDrawerView } from "./shell/drawerState";
+import { ModeSwitcherDrawer } from "./shell/ModeSwitcherDrawer";
 import { SideDrawerList } from "./SideDrawerList";
 
 type SideDrawerProps = {
   activeMode: TerraMode;
+  activeModeId: TerraModeId;
   activePlaybackPointKey: string | null;
+  accountContactLinks: ContactLink[];
+  accountLoading: boolean;
+  canGoBack: boolean;
   collapsed: boolean;
   detail: TerraPointDetail | null;
-  detailAccessory?: React.ReactNode;
+  detailAccessory?: ReactNode;
   favouritePointIds: Set<string>;
-  favouriteGroups: FavouriteGroupDto[];
+  activeFavouriteFolder: FavouriteFolderDto | null;
+  favouriteFolders: FavouriteFolderSummaryDto[];
   favouritesLoading: boolean;
+  favouriteFolderLoading: boolean;
   hasMoreRemotePoints?: boolean;
+  history: PlaybackHistoryModeState;
   isLoadingDrawerTask: boolean;
   loading: boolean;
   loadingTaskLabel: string;
   loadingMoreRemotePoints?: boolean;
+  mobilePosition: DrawerMobilePosition;
+  modes: TerraMode[];
   points: TerraPoint[];
   providerError: string | null;
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  showListedOnGlobe: boolean;
+  selectedThemeId: TerraThemeId;
+  shellRef: RefObject<HTMLElement | null>;
   sortId: string;
+  suggestionTitle?: string;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
-  view: "list" | "favourites";
+  user: ViewerDto | null;
+  view: ShellDrawerView;
+  entry: ShellDrawerEntry;
+  onAccountUpdated: () => void | Promise<void>;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
-  onClearSelection: () => void;
-  onCloseFavourites: () => void;
-  onFavouriteSelect: (modeId: TerraModeId, point: TerraPoint) => void;
+  onCreateFavouriteFolder: (name: string, description: string | null, modeId: string) => Promise<FavouriteFolderSummaryDto | null>;
+  onDeleteFavouriteFolder: (folderId: string) => Promise<boolean>;
+  onOpenFavouriteFolder: (folderId: string) => void;
+  onFavouritePointInspect: (point: TerraPoint) => void;
+  onFavouritePointPlay: (point: TerraPoint) => void;
+  onHistoryPointPlay: (point: TerraPoint) => void;
+  onHistoryRetry: () => void;
+  onLoginOpen: () => void;
+  onLogoutRequest: () => void;
   onLoadMoreRemotePoints?: () => void;
-  onPointSelect: (point: TerraPoint) => void;
+  onModeSelect: (modeId: TerraModeId) => void;
+  onBack: () => void;
+  onOpenFavouritePicker: (point: TerraPoint) => void;
+  onPointInspect: (point: TerraPoint) => void;
+  onPointPlay: (point: TerraPoint) => void;
+  onPointShare: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
+  onRemoveFavouriteFromFolder: (folderId: string, point: TerraPoint) => Promise<void>;
+  onShareFavouriteFolder: (folderId: string, rotate?: boolean) => Promise<string | null>;
+  onUpdateFavouriteFolder: (folderId: string, name: string, description: string | null) => Promise<boolean>;
+  onSetAccountView: (view: Extract<ShellDrawerView, "account-info" | "themes" | "contact">) => void;
+  onSetMobilePosition: (position: DrawerMobilePosition) => void;
   onSortChange: (sortId: string) => void;
-  onToggleFavourite: (point: TerraPoint) => void;
+  onThemeChange: (themeId: TerraThemeId) => void;
   onToggleCollapsed: () => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawer({
   activeMode,
+  activeModeId,
   activePlaybackPointKey,
+  activeFavouriteFolder,
+  accountContactLinks,
+  accountLoading,
+  canGoBack,
   collapsed,
   detail,
   detailAccessory,
   favouritePointIds,
-  favouriteGroups,
+  favouriteFolders,
+  favouriteFolderLoading,
   favouritesLoading,
   hasMoreRemotePoints,
+  history,
   isLoadingDrawerTask,
   loading,
   loadingTaskLabel,
   loadingMoreRemotePoints,
+  mobilePosition,
+  modes,
   points,
   providerError,
   query,
   selectedCountry,
   selectedId,
-  showListedOnGlobe,
+  selectedThemeId,
+  shellRef,
   sortId,
+  suggestionTitle,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
+  user,
   view,
+  entry,
+  onAccountUpdated,
   onCountryFilterChange,
   onClearCountrySelection,
-  onClearSelection,
-  onCloseFavourites,
-  onFavouriteSelect,
+  onCreateFavouriteFolder,
+  onDeleteFavouriteFolder,
+  onOpenFavouriteFolder,
+  onFavouritePointInspect,
+  onFavouritePointPlay,
+  onHistoryPointPlay,
+  onHistoryRetry,
+  onLoginOpen,
+  onLogoutRequest,
   onLoadMoreRemotePoints,
-  onPointSelect,
+  onModeSelect,
+  onBack,
+  onOpenFavouritePicker,
+  onPointInspect,
+  onPointPlay,
+  onPointShare,
   onQueryChange,
+  onRemoveFavouriteFromFolder,
+  onShareFavouriteFolder,
+  onUpdateFavouriteFolder,
+  onSetAccountView,
+  onSetMobilePosition,
   onSortChange,
-  onToggleFavourite,
-  onToggleCollapsed,
-  onToggleShowListedOnGlobe
+  onThemeChange,
+  onToggleCollapsed
 }: SideDrawerProps) {
-  const isDetail = Boolean(selectedId);
-  const isFavourites = !isDetail && view === "favourites";
-
+  const isDetail = Boolean(selectedId) && view === "point-detail";
+  const isAccountView = view === "account" || view === "account-info" || view === "themes" || view === "contact";
   return (
-    <aside className={`drawer ${collapsed ? "collapsed" : ""}`} aria-label={`${activeMode.label} data`}>
+    <>
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
-
-      <button
-        aria-label={collapsed ? "Open drawer" : "Close drawer"}
-        className="drawer-toggle"
-        type="button"
-        onClick={onToggleCollapsed}
+      <aside
+        className={`drawer ${collapsed ? "collapsed" : ""}`}
+        aria-label={`${activeMode.label} data`}
+        data-mobile-position={mobilePosition}
       >
-        {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
-      </button>
+        <button
+          aria-label={collapsed ? "Open drawer" : "Close drawer"}
+          className="drawer-toggle"
+          type="button"
+          onClick={onToggleCollapsed}
+        >
+          {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
+        </button>
 
-      <div className="drawer-inner">
-        {isDetail ? (
-          <DetailView
-            activeMode={activeMode}
-            detail={detail}
-            detailAccessory={detailAccessory}
-            onClearSelection={onClearSelection}
-          />
-        ) : isFavourites ? (
-          <FavouritesDrawer
-            activePlaybackPointKey={activePlaybackPointKey}
-            groups={favouriteGroups}
-            loading={favouritesLoading}
-            showOnGlobe={showListedOnGlobe}
-            onBackToList={onCloseFavourites}
-            onFavouriteSelect={onFavouriteSelect}
-            onToggleFavourite={onToggleFavourite}
-            onToggleShowOnGlobe={onToggleShowListedOnGlobe}
-          />
-        ) : (
-          <SideDrawerList
-            activeMode={activeMode}
-            activePlaybackPointKey={activePlaybackPointKey}
-            favouritePointIds={favouritePointIds}
-            hasMoreRemotePoints={hasMoreRemotePoints}
-            loading={loading}
-            loadingMoreRemotePoints={loadingMoreRemotePoints}
-            points={points}
-            providerError={providerError}
-            query={query}
-            selectedCountry={selectedCountry}
-            selectedId={selectedId}
-            showListedOnGlobe={showListedOnGlobe}
-            sortId={sortId}
-            totalPoints={totalPoints}
-            totalPointsKind={totalPointsKind}
-            onCountryFilterChange={onCountryFilterChange}
-            onClearCountrySelection={onClearCountrySelection}
-            onLoadMoreRemotePoints={onLoadMoreRemotePoints}
-            onPointSelect={onPointSelect}
-            onQueryChange={onQueryChange}
-            onSortChange={onSortChange}
-            onToggleFavourite={onToggleFavourite}
-            onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
-          />
-        )}
-      </div>
-    </aside>
+        <MobileDrawerHandle
+          mobilePosition={mobilePosition}
+          shellRef={shellRef}
+          onMobilePositionChange={onSetMobilePosition}
+        />
+
+        <div className="drawer-inner">
+          {isDetail ? (
+            <PointDetailDrawer
+              activeMode={activeMode}
+              detail={detail}
+              detailAccessory={detailAccessory}
+              onBack={onBack}
+              onShare={onPointShare}
+            />
+          ) : view === "mode-switcher" ? (
+            <ModeSwitcherDrawer
+              activeModeId={activeModeId}
+              canGoBack={canGoBack}
+              modes={modes}
+              onBack={onBack}
+              onModeSelect={onModeSelect}
+            />
+          ) : view === "favourites" ? (
+            <FavouriteFolderIndex
+              modeId={activeModeId}
+              canGoBack={canGoBack}
+              folders={favouriteFolders}
+              loading={favouritesLoading}
+              onBack={onBack}
+              onCreate={onCreateFavouriteFolder}
+              onOpen={onOpenFavouriteFolder}
+            />
+          ) : view === "history" ? (
+            <PlaybackHistoryDrawer
+              activeMode={activeMode}
+              activePlaybackPointKey={activePlaybackPointKey}
+              favouritePointIds={favouritePointIds}
+              history={history}
+              selectedId={selectedId}
+              onBack={onBack}
+              onInspect={onPointInspect}
+              onPlay={onHistoryPointPlay}
+              onRetry={onHistoryRetry}
+              onShare={onPointShare}
+              onToggleFavourite={onOpenFavouritePicker}
+            />
+          ) : view === "favourite-folder" && entry.kind === "favourite-folder" ? (
+            <FavouriteFolderDetail
+              activePlaybackPointKey={activePlaybackPointKey}
+              folder={activeFavouriteFolder?.id === entry.folderId ? activeFavouriteFolder : null}
+              loading={favouriteFolderLoading}
+              onBack={onBack}
+              onDelete={onDeleteFavouriteFolder}
+              onInspect={onFavouritePointInspect}
+              onPlay={onFavouritePointPlay}
+              onRemove={onRemoveFavouriteFromFolder}
+              onShare={onShareFavouriteFolder}
+              onSharePoint={onPointShare}
+              onUpdate={onUpdateFavouriteFolder}
+            />
+          ) : isAccountView ? (
+            <AccountDrawer
+              canGoBack={canGoBack}
+              contactLinks={accountContactLinks}
+              loading={accountLoading}
+              selectedThemeId={selectedThemeId}
+              user={user}
+              view={view}
+              onAccountUpdated={onAccountUpdated}
+              onAuthOpen={onLoginOpen}
+              onBack={onBack}
+              onLogoutRequest={onLogoutRequest}
+              onThemeChange={onThemeChange}
+              onViewChange={onSetAccountView}
+            />
+          ) : (
+            <SideDrawerList
+              activeMode={activeMode}
+              activePlaybackPointKey={activePlaybackPointKey}
+              favouritePointIds={favouritePointIds}
+              hasMoreRemotePoints={hasMoreRemotePoints}
+              loading={loading}
+              loadingMoreRemotePoints={loadingMoreRemotePoints}
+              points={points}
+              providerError={providerError}
+              query={query}
+              selectedCountry={selectedCountry}
+              selectedId={selectedId}
+              sortId={sortId}
+              suggestionTitle={suggestionTitle}
+              catalogTotal={catalogTotal}
+              totalPoints={totalPoints}
+              totalPointsKind={totalPointsKind}
+              onCountryFilterChange={onCountryFilterChange}
+              onClearCountrySelection={onClearCountrySelection}
+              onLoadMoreRemotePoints={onLoadMoreRemotePoints}
+              onPointInspect={onPointInspect}
+              onPointPlay={onPointPlay}
+              onPointShare={onPointShare}
+              onQueryChange={onQueryChange}
+              onSortChange={onSortChange}
+              onToggleFavourite={onOpenFavouritePicker}
+            />
+          )}
+        </div>
+      </aside>
+    </>
   );
 }
 
@@ -185,143 +319,4 @@ function DrawerLoadingStatus({ active, label }: { active: boolean; label: string
       <span>{status === "loading" ? label : "Loaded"}</span>
     </div>
   );
-}
-
-function DetailView({
-  activeMode,
-  detail,
-  detailAccessory,
-  onClearSelection
-}: {
-  activeMode: TerraMode;
-  detail: TerraPointDetail | null;
-  detailAccessory?: React.ReactNode;
-  onClearSelection: () => void;
-}) {
-  return (
-    <>
-      <div className="drawer-header">
-        <div>
-          <div className="drawer-kicker">Blomoon · {activeMode.label}</div>
-          <h1 className="drawer-title">{detail?.name ?? "Loading"}</h1>
-          <p className="drawer-subtitle">{detail?.summary ?? ""}</p>
-        </div>
-        <button className="icon-button" type="button" aria-label="Back to list" onClick={onClearSelection}>
-          <X size={17} aria-hidden="true" />
-        </button>
-      </div>
-
-      <div className="detail-body">
-        {detailAccessory ? <div className="detail-accessory">{detailAccessory}</div> : null}
-
-        <div className="detail-sections">
-          {getDetailSections(detail, activeMode).map((section) => (
-            <div className="detail-section" key={section.title}>
-              <div className="detail-section-title">{section.title}</div>
-              <div className="detail-grid">
-                {section.fields.map((field) => (
-                  <div className="detail-stat" key={field.label}>
-                    <div className="detail-label">{field.label}</div>
-                    <div className="detail-value">{field.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          ))}
-        </div>
-
-        {detail?.sourceUrl ? (
-          <a className="detail-link" href={detail.sourceUrl} target="_blank" rel="noreferrer">
-            Source record
-            <ExternalLink size={14} aria-hidden="true" />
-          </a>
-        ) : null}
-      </div>
-    </>
-  );
-}
-
-type DetailField = {
-  label: string;
-  value: string;
-};
-
-type DetailSection = {
-  fields: DetailField[];
-  title: string;
-};
-
-function getDetailSections(detail: TerraPointDetail | null, activeMode: TerraMode): DetailSection[] {
-  if (!detail) {
-    return [
-      {
-        title: "Station",
-        fields: [
-          { label: activeMode.markerMetricLabel, value: "Loading" },
-          { label: "Time", value: "Loading" }
-        ]
-      }
-    ];
-  }
-
-  const fieldValue = getDetailFieldValue(detail);
-
-  return [
-    {
-      title: "Station",
-      fields: [
-        { label: "Country", value: fieldValue("Country") },
-        { label: "Language", value: fieldValue("Language") },
-        { label: "Tags", value: fieldValue("Tags") }
-      ]
-    },
-    {
-      title: "Stream",
-      fields: [
-        { label: "Codec", value: fieldValue("Codec") },
-        { label: "Bitrate", value: fieldValue("Bitrate") }
-      ]
-    },
-    {
-      title: "Activity",
-      fields: [
-        { label: activeMode.markerMetricLabel, value: getMetricValue(detail, activeMode.markerMetricLabel, "Unknown") },
-        { label: "Votes", value: fieldValue("Votes") },
-        { label: "Last checked", value: formatCheckedDateTime(detail.timestamp) }
-      ]
-    },
-    {
-      title: "Location",
-      fields: [
-        { label: "Latitude", value: detail.latitude.toFixed(3) },
-        { label: "Longitude", value: detail.longitude.toFixed(3) }
-      ]
-    }
-  ].map((section) => ({
-    ...section,
-    fields: section.fields.filter((field) => field.value !== "Unknown" && field.value !== "Untagged")
-  })).filter((section) => section.fields.length > 0);
-}
-
-function getDetailFieldValue(detail: TerraPointDetail) {
-  const fields = new Map(detail.fields.map((field) => [field.label, field.value]));
-
-  return (label: string) => fields.get(label) ?? getMetricValue(detail, label, "Unknown");
-}
-
-function getMetricValue(point: TerraPoint, label: string, fallback = "?") {
-  const value = point.metrics?.[label];
-  return value === undefined || value === null ? fallback : String(value);
-}
-
-function formatCheckedDateTime(value?: string) {
-  if (!value) {
-    return "Unknown";
-  }
-
-  const date = new Date(value);
-  return [
-    new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date),
-    new Intl.DateTimeFormat("en", { timeStyle: "short" }).format(date)
-  ].join("\n");
 }

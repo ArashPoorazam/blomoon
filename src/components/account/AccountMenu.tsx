@@ -124,7 +124,7 @@ export function AccountMenu({
 
       {modalView === "logout" ? (
         <AccountModalShell
-          description="This clears your active session on this device. Your saved stations and theme preference stay on your account."
+          description="This clears your active session on this device. Your saved items and theme preference stay on your account."
           kicker="Session"
           title="Log out?"
           onClose={closeModal}

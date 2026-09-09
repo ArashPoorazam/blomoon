@@ -12,8 +12,11 @@ const requiredTables = [
   "pending_registrations",
   "radio_stations",
   "sessions",
-  "user_favourites",
+  "user_favourite_folder_items",
+  "user_favourite_folders",
+  "user_saved_media_items",
   "user_media_clicks",
+  "user_playback_history",
   "users",
   "verifications"
 ] as const;

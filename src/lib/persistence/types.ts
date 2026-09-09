@@ -5,22 +5,52 @@ export type FavouriteRef = {
   pointId: string;
 };
 
-export type FavouriteDto = FavouriteRef & {
+export type FavouriteFolderMembershipDto = FavouriteRef & {
   createdAt: string;
+  folderId: string;
+};
+
+export type FavouriteFolderItemDto = FavouriteFolderMembershipDto & {
   point: TerraPoint;
 };
 
-export type FavouriteGroupDto = {
-  label: string;
+export type FavouriteFolderSummaryDto = {
   modeId: TerraModeId;
-  favourites: FavouriteDto[];
+  createdAt: string;
+  description: string | null;
+  id: string;
+  importedAt: string | null;
+  isDefault: boolean;
+  isImported: boolean;
+  isShared: boolean;
+  itemCount: number;
+  name: string;
+  sharedAt: string | null;
+  updatedAt: string;
+};
+
+export type FavouriteFolderDto = FavouriteFolderSummaryDto & {
+  items: FavouriteFolderItemDto[];
+};
+
+export type SharedFolderPreviewDto = {
+  description: string | null;
+  itemCount: number;
+  name: string;
+  sampleStationNames: string[];
 };
 
 export type ModePersistenceAdapter = {
+  hydratePoints: (pointIds: string[]) => Promise<TerraPoint[]>;
+  isPointId: (pointId: string) => boolean;
   label: string;
   modeId: TerraModeId;
-  addFavourite: (userId: string, pointId: string) => Promise<FavouriteDto | null>;
-  listFavourites: (userId: string) => Promise<FavouriteDto[]>;
-  removeFavourite: (userId: string, pointId: string) => Promise<boolean>;
   recordClick: (userId: string, pointId: string) => Promise<{ clickCount: number } | null>;
+  upsertPoint: (pointId: string) => Promise<TerraPoint | null>;
+};
+
+export type PlaybackHistoryItemDto = {
+  playedAt: string;
+  playedOn: string;
+  point: TerraPoint;
 };

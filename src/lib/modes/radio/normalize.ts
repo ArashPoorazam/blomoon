@@ -45,6 +45,7 @@ export function normalizeStation(station?: RadioBrowserStation): RadioStationRec
   const clickCount = parseNumber(station.clickcount) ?? 0;
   const name = normalizeText(station.name) || "Unnamed station";
   const summary = formatStationSummary(country, station.state, language, tags);
+  const artworkUrl = normalizeExternalUrl(station.favicon);
   const point = {
     id: station.stationuuid,
     modeId: "radio",
@@ -53,6 +54,7 @@ export function normalizeStation(station?: RadioBrowserStation): RadioStationRec
     longitude,
     locationPrecision,
     countryCode,
+    artworkUrl,
     prominence: normalizePopularity(clickCount, votes),
     timestamp: station.lastcheckoktime_iso8601 || station.lastchecktime_iso8601 || undefined,
     summary,

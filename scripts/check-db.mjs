@@ -8,9 +8,17 @@ const requiredTables = [
   "media_providers",
   "pending_registrations",
   "radio_stations",
+  "radio_catalog_generations",
+  "radio_catalog_entries",
+  "radio_catalog_terms",
+  "radio_station_aliases",
+  "radio_recommendation_snapshots",
   "sessions",
-  "user_favourites",
+  "user_favourite_folder_items",
+  "user_favourite_folders",
   "user_media_clicks",
+  "user_playback_history",
+  "user_saved_media_items",
   "users",
   "verifications"
 ];
@@ -60,7 +68,41 @@ try {
     process.exit(1);
   }
 
-  console.log(`Database schema is ready: ${requiredTables.length} required tables found.`);
+  const [defaultFolderInvariant] = await sql`
+    select count(*)::integer as violations
+    from (
+      select u.id
+      from users u
+      left join user_favourite_folders f on f.user_id = u.id and f.is_default = true
+      group by u.id
+      having count(f.id) <> 1
+    ) invalid_users
+  `;
+  const [invalidDefaultNames] = await sql`
+    select count(*)::integer as violations
+    from user_favourite_folders
+    where is_default = true and name <> 'Favourites'
+  `;
+
+  if (defaultFolderInvariant.violations > 0 || invalidDefaultNames.violations > 0) {
+    console.error("Database schema violates the protected default favourite-folder invariant.");
+    process.exit(1);
+  }
+
+  const [invalidAliases] = await sql`
+    select count(*)::integer as violations from radio_station_aliases a
+    left join radio_station_aliases canonical on canonical.station_id = a.canonical_id
+    where canonical.station_id is null or canonical.canonical_id <> canonical.station_id
+  `;
+  const [duplicateMedia] = await sql`
+    select count(*)::integer as violations from media_items m
+    join radio_station_aliases a on a.station_id = m.id
+    where a.station_id <> a.canonical_id
+  `;
+  if (invalidAliases.violations || duplicateMedia.violations) {
+    throw new Error("Radio station identity invariants failed; inspect the consolidation report.");
+  }
+  console.log(`Database schema is ready: ${requiredTables.length} required tables found; protected folders and canonical station identities are valid.`);
 } finally {
   await sql.end();
 }

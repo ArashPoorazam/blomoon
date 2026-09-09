@@ -12,6 +12,7 @@
   --accent-strong: #7dcfff;
   --danger: #f7768e;
   --warning: #e0af68;
+  --folder-mode-icon: #e0af68;
   --control: rgba(122, 162, 247, 0.08);
   --control-hover: rgba(122, 162, 247, 0.16);
   --surface-soft: rgba(255, 255, 255, 0.04);
@@ -24,6 +25,7 @@
   --info-border: rgba(125, 207, 255, 0.24);
   --info-surface: rgba(125, 207, 255, 0.07);
   --info-control: rgba(125, 207, 255, 0.14);
+  --clickable-text: var(--accent-strong);
   --tooltip-border: rgba(122, 162, 247, 0.28);
   --tooltip-bg: rgba(22, 22, 30, 0.94);
   --shadow-panel: rgba(0, 0, 0, 0.42);
@@ -31,6 +33,13 @@
   --scrollbar-thumb: rgba(122, 162, 247, 0.34);
   --scrollbar-thumb-hover: rgba(125, 207, 255, 0.52);
   --scrollbar-track: rgba(255, 255, 255, 0.035);
+  --radius-row: 14px;
+  --radius-artwork: 12px;
+  --radius-dialog: 24px;
+  --space-row: 10px;
+  --artwork-size: 40px;
+  --z-menu: 80;
+  --z-dialog: 90;
   --drawer-width: min(390px, 88vw);
   --panel-blur: 20px;
 }
@@ -169,4 +178,9 @@
   --scrollbar-thumb: rgba(203, 166, 247, 0.34);
   --scrollbar-thumb-hover: rgba(245, 194, 231, 0.52);
   --scrollbar-track: rgba(205, 214, 244, 0.035);
+}
+
+.blomoon-shell {
+  --row-active: color-mix(in srgb, var(--accent) 14%, transparent);
+  --row-hover: color-mix(in srgb, var(--accent) 8%, transparent);
 }

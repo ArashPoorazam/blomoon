@@ -1,4 +1,5 @@
 import {
+  FALLBACK_CACHE_TTL_MS,
   RADIO_BROWSER_DIRECTORY_URL,
   RADIO_BROWSER_FALLBACK_HOSTS,
   RADIO_BROWSER_USER_AGENT,
@@ -14,9 +15,11 @@ type RadioBrowserJsonOptions = {
 };
 
 let serverCache: {
-  fetchedAt: number;
   hosts: string[];
+  refreshAfter: number;
 } | null = null;
+let serverRefresh: Promise<string[]> | null = null;
+let lastHealthyHost: string | null = null;
 
 export async function fetchRadioBrowserJson<T>(path: string, params?: Record<string, string>): Promise<T> {
   return fetchRadioBrowserJsonWithOptions(path, params);
@@ -69,19 +72,22 @@ export async function fetchRadioBrowserHostJson<T>(
     url.searchParams.set(key, value);
   }
 
-  return fetchJsonWithTimeout<T>(url, {
+  const result = await fetchJsonWithTimeout<T>(url, {
     cache: options.cache,
     headers: {
       accept: "application/json",
       "user-agent": RADIO_BROWSER_USER_AGENT
     }
   }, options.timeoutMs);
+
+  lastHealthyHost = host;
+  return result;
 }
 
 export async function getRadioBrowserHosts() {
   const now = Date.now();
 
-  if (serverCache && now - serverCache.fetchedAt < STATION_CACHE_TTL_MS) {
+  if (serverCache && now < serverCache.refreshAfter) {
     logger.debug("provider.radio.hosts.cache_hit", {
       context: {
         hostCount: serverCache.hosts.length
@@ -91,6 +97,29 @@ export async function getRadioBrowserHosts() {
     return serverCache.hosts;
   }
 
+  if (serverRefresh) {
+    return serverRefresh;
+  }
+
+  serverRefresh = refreshRadioBrowserHosts(now)
+    .finally(() => {
+      serverRefresh = null;
+    });
+
+  return serverRefresh;
+}
+
+export function getLastHealthyRadioBrowserHost() {
+  return lastHealthyHost;
+}
+
+export function clearRadioBrowserHostCacheForTest() {
+  serverCache = null;
+  serverRefresh = null;
+  lastHealthyHost = null;
+}
+
+async function refreshRadioBrowserHosts(now: number) {
   try {
     const servers = await fetchJsonWithTimeout<RadioBrowserServer[]>(new URL(RADIO_BROWSER_DIRECTORY_URL), {
       headers: {
@@ -107,8 +136,8 @@ export async function getRadioBrowserHosts() {
 
     if (hosts.length > 0) {
       serverCache = {
-        fetchedAt: now,
-        hosts
+        hosts,
+        refreshAfter: now + STATION_CACHE_TTL_MS
       };
       logger.info("provider.radio.hosts.loaded", {
         context: {
@@ -118,18 +147,26 @@ export async function getRadioBrowserHosts() {
       });
       return hosts;
     }
+
+    throw new Error("Radio Browser host directory returned no usable hosts");
   } catch (error) {
+    const usedStaleHosts = Boolean(serverCache);
+    const hosts = serverCache?.hosts ?? [...RADIO_BROWSER_FALLBACK_HOSTS];
+
+    serverCache = {
+      hosts,
+      refreshAfter: now + FALLBACK_CACHE_TTL_MS
+    };
     logger.warn("provider.radio.hosts.fallback", {
       context: {
-        fallbackHostCount: RADIO_BROWSER_FALLBACK_HOSTS.length
+        fallbackHostCount: hosts.length,
+        usedStaleHosts
       },
       error,
-      message: "Radio Browser host directory failed; using fallback hosts"
+      message: "Radio Browser host directory failed; using stale or static fallback hosts"
     });
-    // Fall through to stable public mirrors.
+    return hosts;
   }
-
-  return [...RADIO_BROWSER_FALLBACK_HOSTS];
 }
 
 async function fetchJsonWithTimeout<T>(

@@ -1,10 +1,11 @@
 "use client";
 
-import { formatDateTime, type CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
+import { useProgressiveRows } from "./drawer/useProgressiveRows";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
-import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
+import { PointListRow } from "./drawer/PointListRow";
 
 type SideDrawerListProps = {
   activeMode: TerraMode;
@@ -18,18 +19,20 @@ type SideDrawerListProps = {
   query: string;
   selectedCountry: CountryInfo | null;
   selectedId: string | null;
-  showListedOnGlobe: boolean;
   sortId: string;
+  suggestionTitle?: string;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
   onLoadMoreRemotePoints?: () => void;
-  onPointSelect: (point: TerraPoint) => void;
+  onPointInspect: (point: TerraPoint) => void;
+  onPointPlay: (point: TerraPoint) => void;
+  onPointShare: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
   onToggleFavourite: (point: TerraPoint) => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function SideDrawerList({
@@ -44,20 +47,22 @@ export function SideDrawerList({
   query,
   selectedCountry,
   selectedId,
-  showListedOnGlobe,
   sortId,
+  suggestionTitle,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMoreRemotePoints,
-  onPointSelect,
+  onPointInspect,
+  onPointPlay,
+  onPointShare,
   onQueryChange,
   onSortChange,
-  onToggleFavourite,
-  onToggleShowListedOnGlobe
+  onToggleFavourite
 }: SideDrawerListProps) {
-  const listedPoints = points;
+  const { rows: listedPoints, pending } = useProgressiveRows(points);
   const hasMorePoints = Boolean(hasMoreRemotePoints);
   const isLoadingMorePoints = Boolean(loadingMoreRemotePoints);
 
@@ -67,13 +72,14 @@ export function SideDrawerList({
         activeMode={activeMode}
         hasMorePoints={hasMorePoints}
         isLoadingMorePoints={isLoadingMorePoints}
-        listedCount={listedPoints.length}
+        listedCount={points.length}
         loading={loading}
         providerError={providerError}
         query={query}
         selectedCountry={selectedCountry}
-        showListedOnGlobe={showListedOnGlobe}
         sortId={sortId}
+        suggestionTitle={suggestionTitle}
+        catalogTotal={catalogTotal}
         totalPoints={totalPoints}
         totalPointsKind={totalPointsKind}
         onCountryFilterChange={onCountryFilterChange}
@@ -81,33 +87,25 @@ export function SideDrawerList({
         onLoadMorePoints={onLoadMoreRemotePoints}
         onQueryChange={onQueryChange}
         onSortChange={onSortChange}
-        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
       />
 
-      <div className="point-list">
+      <div className="point-list" aria-busy={loading || pending}>
+        {pending && listedPoints.length === 0 ? <div className="empty-state" role="status">Loading stations</div> : null}
         {points.length === 0 ? (
-          <div className="empty-state">{loading ? activeMode.loadingLabel : activeMode.emptyLabel}</div>
+          <div className="empty-state">{loading ? activeMode.copy.loadingLabel : activeMode.copy.emptyLabel}</div>
         ) : (
-          listedPoints.map((point) => (
-            <div
-              className={`point-row ${selectedId === point.id ? "selected" : ""} ${activePlaybackPointKey === getPointKey(point) ? "playback-active" : ""}`}
-              key={point.id}
-            >
-              <button className="point-row-main" type="button" onClick={() => onPointSelect(point)}>
-                <span className="point-copy">
-                  <span className="point-name">{point.name}</span>
-                  <span className="point-meta">
-                    {point.summary} · {activeMode.formatPointMetric(point)} · {formatDateTime(point.timestamp)}
-                  </span>
-                </span>
-              </button>
-              <FavouriteStarButton
-                favourited={favouritePointIds.has(`${point.modeId}:${point.id}`)}
-                point={point}
-                onToggle={onToggleFavourite}
-              />
-            </div>
-          ))
+          listedPoints.map((point) => <PointListRow
+            activeMode={activeMode}
+            activePlaybackPointKey={activePlaybackPointKey}
+            favouritePointIds={favouritePointIds}
+            key={point.id}
+            point={point}
+            selected={selectedId === point.id}
+            onInspect={onPointInspect}
+            onPlay={onPointPlay}
+            onShare={onPointShare}
+            onToggleFavourite={onToggleFavourite}
+          />)
         )}
         {hasMorePoints ? (
           <LoadMoreButton
@@ -119,8 +117,4 @@ export function SideDrawerList({
       </div>
     </>
   );
-}
-
-function getPointKey(point: TerraPoint) {
-  return `${point.modeId}:${point.id}`;
 }

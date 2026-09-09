@@ -1,33 +1,28 @@
 "use client";
 
-import { LoaderCircle } from "lucide-react";
-
 type LoadMoreButtonProps = {
   className: string;
+  disabled?: boolean;
   isLoading: boolean;
   onLoadMore?: () => void;
 };
 
-export function LoadMoreButton({ className, isLoading, onLoadMore }: LoadMoreButtonProps) {
+export function LoadMoreButton({ className, disabled = false, isLoading, onLoadMore }: LoadMoreButtonProps) {
+  const isDisabled = disabled || isLoading || !onLoadMore;
+
   return (
     <button
       className={className}
-      disabled={isLoading}
+      aria-busy={isLoading}
+      disabled={isDisabled}
       type="button"
       onClick={() => {
-        if (onLoadMore) {
+        if (!isDisabled && onLoadMore) {
           onLoadMore();
         }
       }}
     >
-      {isLoading ? (
-        <>
-          <LoaderCircle className="loading-status-icon spinning" size={14} aria-hidden="true" />
-          Loading
-        </>
-      ) : (
-        "Show 50 more"
-      )}
+      Show 50 more
     </button>
   );
 }

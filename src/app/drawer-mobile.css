@@ -1,0 +1,202 @@
+@media (max-width: 760px) {
+  .drawer {
+    top: auto;
+    bottom: var(--mobile-player-height, 0px);
+    left: 0;
+    width: 100vw;
+    height: var(--mobile-sheet-visible-height, 40svh);
+    max-height: none;
+    border-top: 1px solid var(--panel-border);
+    border-left: 0;
+    box-shadow: 0 -18px 52px var(--shadow-panel);
+    transform: none;
+    transition: height 240ms cubic-bezier(0.22, 0.8, 0.24, 1);
+  }
+
+  .drawer.collapsed {
+    transform: none;
+  }
+
+  .blomoon-shell[data-mobile-drawer-dragging="true"] .drawer,
+  .blomoon-shell[data-mobile-drawer-dragging="true"] .globe-stage {
+    transition: none;
+  }
+
+  .drawer-toggle {
+    display: none;
+  }
+
+  .drawer-loading-panel {
+    position: fixed;
+    top: calc(max(10px, env(safe-area-inset-top, 0px)) + 56px);
+    left: max(10px, env(safe-area-inset-left, 0px));
+    z-index: 48;
+    width: min(220px, calc(100vw - 20px));
+    min-height: 38px;
+    padding: 8px 10px;
+    border-radius: 8px;
+    box-shadow: 0 12px 34px var(--shadow-tooltip);
+    opacity: 1;
+    transform: translateX(0);
+    transition: opacity 180ms ease, transform 220ms ease;
+    animation: drawer-loading-slide-in 220ms ease both;
+  }
+
+  .drawer-loading-panel span {
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drawer-loading-panel.complete {
+    opacity: 0.84;
+    transform: translateX(-10px);
+  }
+
+  .drawer-sheet-handle {
+    position: relative;
+    flex: 0 0 24px;
+    top: 0;
+    left: 50%;
+    z-index: 3;
+    display: grid;
+    width: 100%;
+    height: 24px;
+    place-items: center;
+    padding: 0;
+    border: 0;
+    border-radius: 0;
+    background: transparent;
+    color: var(--muted-strong);
+    cursor: grab;
+    touch-action: none;
+    transform: translateX(-50%);
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .drawer-sheet-handle:active {
+    cursor: grabbing;
+  }
+
+  .drawer-sheet-handle:focus-visible {
+    outline: 2px solid var(--focus-ring);
+    outline-offset: 2px;
+  }
+
+  .drawer-sheet-handle span {
+    width: 28px;
+    height: 3px;
+    border-radius: 999px;
+    background: var(--muted);
+    opacity: 0.82;
+  }
+
+  .drawer-inner {
+    height: calc(100% - 24px);
+    overflow: hidden;
+  }
+
+  .drawer-header {
+    width: 100%;
+    height: 92px;
+    min-height: 92px;
+    align-items: center;
+    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .drawer-header-copy {
+    align-self: center;
+  }
+
+  .drawer-title,
+  .favourites-header .drawer-title,
+  .drawer-directory-header .drawer-title {
+    display: block;
+    overflow: hidden;
+    margin: 0;
+    color: var(--accent);
+    font-size: 21px;
+    font-weight: 850;
+    line-height: 1.15;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drawer-header .drawer-subtitle {
+    display: block;
+    overflow: hidden;
+    margin-top: 7px;
+    font-size: 12px;
+    line-height: 1.25;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .drawer-list-toolbar {
+    gap: 0;
+    padding: 0;
+  }
+
+  .drawer-list-toolbar > .drawer-heading-copy {
+    display: none;
+  }
+
+  .drawer-list-toolbar > .drawer-directory-header {
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+    border-bottom: 1px solid var(--line);
+  }
+
+  .drawer-search-controls {
+    margin: 10px max(14px, env(safe-area-inset-right, 0px)) 10px max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .drawer-list-toolbar .provider-notice,
+  .drawer-list-toolbar > div:not(.drawer-header, .drawer-search-controls) {
+    margin-right: max(14px, env(safe-area-inset-right, 0px));
+    margin-bottom: 10px;
+    margin-left: max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .point-row-main {
+    min-height: 44px;
+  }
+
+  .favourite-star,
+  .favourite-remove,
+  .icon-button,
+  .search-clear {
+    width: 44px;
+    height: 44px;
+  }
+
+  .point-list-more {
+    min-height: 44px;
+  }
+
+  .has-mini-player .point-list,
+  .has-mini-player .favourites-body {
+    padding-bottom: 22px;
+  }
+
+  .favourite-remove {
+    min-height: 44px;
+  }
+}
+
+@keyframes drawer-loading-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(-18px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@media (max-width: 760px) {
+  .drawer-directory-header .drawer-subtitle { white-space: normal; overflow: visible; }
+}

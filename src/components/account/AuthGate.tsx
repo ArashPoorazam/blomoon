@@ -1,5 +1,7 @@
 "use client";
 
+import { InstallButton } from "../install/InstallButton";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -9,14 +11,15 @@ import { AuthCard } from "./AuthCard";
 
 type AuthGateProps = {
   googleAuthEnabled: boolean;
+  nextPath: string;
   serviceError?: string | null;
 };
 
-export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
+export function AuthGate({ googleAuthEnabled, nextPath, serviceError }: AuthGateProps) {
   const router = useRouter();
 
   async function finishAuthenticatedFlow() {
-    router.replace("/");
+    router.replace(nextPath);
     router.refresh();
   }
 
@@ -47,8 +50,9 @@ export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
             </h1>
           </div>
           <div className="auth-brand-message">
-            <p>Follow live stations across cities, countries, and quiet corners of the globe.</p>
+            <p>Follow live entertainment across cities, countries, and quiet corners of the globe.</p>
           </div>
+          <InstallButton />
           <nav className="auth-policy-links" aria-label="Legal">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
@@ -56,7 +60,8 @@ export function AuthGate({ googleAuthEnabled, serviceError }: AuthGateProps) {
         </section>
 
         <AuthCard
-          googleAuthEnabled={googleAuthEnabled}
+        googleAuthEnabled={googleAuthEnabled}
+        callbackURL={nextPath}
           modeLabel="Account access"
           serviceError={serviceError}
           titleSuffix="Sign in to open the live globe."

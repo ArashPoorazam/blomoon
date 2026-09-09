@@ -1,13 +1,15 @@
 import "server-only";
 
-import { and, desc, eq, sql } from "drizzle-orm";
+import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema, type BlomoonDb } from "@/db";
 import { getRadioStationPersistenceSnapshot } from "@/lib/modes/radio";
 import { isRadioStationId } from "@/lib/modes/radio/api";
 import type { RadioStationPersistenceSnapshot } from "@/lib/modes/radio/types";
 import type { TerraPoint } from "@/lib/modes/types";
 import { logger } from "@/lib/server/logging";
-import type { FavouriteDto, ModePersistenceAdapter } from "./types";
+import type { ModePersistenceAdapter } from "./types";
+import { ProviderPointLookupError } from "./points";
+import { canonicalizePointIds } from "@/lib/modes/radio/identityStore";
 
 type BlomoonTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 
@@ -18,18 +20,23 @@ const RADIO_BROWSER_PROVIDER_URL = "https://www.radio-browser.info";
 const RADIO_BROWSER_ATTRIBUTION = "Radio Browser community database";
 
 export const radioPersistenceAdapter: ModePersistenceAdapter = {
+  isPointId: isRadioStationId,
   label: "Radio",
   modeId: RADIO_MODE_ID,
-  async addFavourite(userId, pointId) {
-    return logger.measure("persistence.radio.favourite.add", {
-      pointId,
-      userId
+  async upsertPoint(pointId) {
+    return logger.measure("persistence.radio.point.upsert", {
+      pointId
     }, async () => {
       if (!isRadioStationId(pointId)) {
         return null;
       }
 
-      const snapshot = await getRadioStationPersistenceSnapshot(pointId);
+      let snapshot: RadioStationPersistenceSnapshot | null;
+      try {
+        snapshot = await getRadioStationPersistenceSnapshot(pointId);
+      } catch (error) {
+        throw new ProviderPointLookupError(RADIO_MODE_ID, { cause: error });
+      }
 
       if (!snapshot) {
         return null;
@@ -40,47 +47,25 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
       return db.transaction(async (tx) => {
         await upsertStation(tx, snapshot);
 
-        const [inserted] = await tx
-          .insert(schema.userFavourites)
-          .values({
-            userId,
-            mediaItemId: snapshot.id,
-            updatedAt: new Date()
-          })
-          .onConflictDoNothing()
-          .returning({
-            createdAt: schema.userFavourites.createdAt
-          });
-
-        if (inserted) {
-          await tx
-            .update(schema.mediaItems)
-            .set({
-              starCount: sql`${schema.mediaItems.starCount} + 1`,
-              updatedAt: new Date()
-            })
-            .where(eq(schema.mediaItems.id, snapshot.id));
-        }
-
-        return {
-          modeId: RADIO_MODE_ID,
-          pointId: snapshot.id,
-          createdAt: (inserted?.createdAt ?? new Date()).toISOString(),
-          point: stationSnapshotToPoint(snapshot)
-        };
+        return stationSnapshotToPoint(snapshot);
       });
     });
   },
-  async listFavourites(userId) {
-    const rows = await logger.measure("persistence.radio.favourites.list", {
-      userId
+  async hydratePoints(pointIds) {
+    if (pointIds.length === 0) {
+      return [];
+    }
+    const canonicalIds = await canonicalizePointIds(pointIds);
+    pointIds = pointIds.map((id) => canonicalIds.get(id) ?? id);
+
+    const rows = await logger.measure("persistence.radio.points.hydrate", {
+      count: pointIds.length
     }, () => getDb()
         .select({
           bitrate: schema.radioStations.bitrate,
           codec: schema.radioStations.codec,
           country: schema.mediaItems.country,
           countryCode: schema.mediaItems.countryCode,
-          createdAt: schema.userFavourites.createdAt,
           id: schema.mediaItems.id,
           language: schema.radioStations.language,
           latitude: schema.mediaItems.latitude,
@@ -95,57 +80,19 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
           summary: schema.mediaItems.summary,
           tags: schema.radioStations.tags
         })
-        .from(schema.userFavourites)
-        .innerJoin(schema.mediaItems, eq(schema.userFavourites.mediaItemId, schema.mediaItems.id))
+        .from(schema.mediaItems)
         .innerJoin(schema.radioStations, eq(schema.radioStations.mediaItemId, schema.mediaItems.id))
         .where(and(
-          eq(schema.userFavourites.userId, userId),
+          inArray(schema.mediaItems.id, pointIds),
           eq(schema.mediaItems.modeId, RADIO_MODE_ID)
-        ))
-        .orderBy(desc(schema.userFavourites.updatedAt)));
+        )));
 
-    return rows.map((row) => ({
-      modeId: RADIO_MODE_ID,
-      pointId: row.id,
-      createdAt: row.createdAt.toISOString(),
-      point: stationRowToPoint(row)
-    }));
-  },
-  async removeFavourite(userId, pointId) {
-    return logger.measure("persistence.radio.favourite.remove", {
-      pointId,
-      userId
-    }, async () => {
-      if (!isRadioStationId(pointId)) {
-        return false;
-      }
+    const rowById = new Map(rows.map((row) => [row.id, row]));
 
-      const db = getDb();
-
-      return db.transaction(async (tx) => {
-        const [deleted] = await tx
-          .delete(schema.userFavourites)
-          .where(and(
-            eq(schema.userFavourites.userId, userId),
-            eq(schema.userFavourites.mediaItemId, pointId)
-          ))
-          .returning({ mediaItemId: schema.userFavourites.mediaItemId });
-
-        if (!deleted) {
-          return false;
-        }
-
-        await tx
-          .update(schema.mediaItems)
-          .set({
-            starCount: sql`greatest(${schema.mediaItems.starCount} - 1, 0)`,
-            updatedAt: new Date()
-          })
-          .where(eq(schema.mediaItems.id, deleted.mediaItemId));
-
-        return true;
-      });
-    });
+    return pointIds
+      .map((pointId) => rowById.get(pointId))
+      .filter((row) => row !== undefined)
+      .map(stationRowToPoint);
   },
   async recordClick(userId, pointId) {
     return logger.measure("persistence.radio.click.record", {
@@ -235,7 +182,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
       longitude: snapshot.longitude,
       locationPrecision: snapshot.locationPrecision,
       sourceUrl: snapshot.sourceUrl,
-      providerMetadata: snapshot.metrics,
+      providerMetadata: stationProviderMetadata(snapshot),
       providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
       updatedAt: new Date()
     })
@@ -253,7 +200,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
         longitude: snapshot.longitude,
         locationPrecision: snapshot.locationPrecision,
         sourceUrl: snapshot.sourceUrl,
-        providerMetadata: snapshot.metrics,
+        providerMetadata: stationProviderMetadata(snapshot),
         providerUpdatedAt: snapshot.timestamp ? new Date(snapshot.timestamp) : null,
         updatedAt: new Date()
       }
@@ -296,10 +243,18 @@ function stationSnapshotToPoint(snapshot: RadioStationPersistenceSnapshot): Terr
     longitude: snapshot.longitude,
     locationPrecision: snapshot.locationPrecision,
     countryCode: snapshot.countryCode,
+    artworkUrl: snapshot.artworkUrl ?? undefined,
     prominence: normalizeProminence(snapshot.clickCount, snapshot.votes),
     timestamp: snapshot.timestamp ?? undefined,
     summary: snapshot.summary,
     metrics: snapshot.metrics
+  };
+}
+
+function stationProviderMetadata(snapshot: RadioStationPersistenceSnapshot) {
+  return {
+    ...snapshot.metrics,
+    Artwork: snapshot.artworkUrl
   };
 }
 
@@ -330,6 +285,7 @@ function stationRowToPoint(row: {
     longitude: row.longitude,
     locationPrecision: row.locationPrecision,
     countryCode: row.countryCode,
+    artworkUrl: typeof row.providerMetadata.Artwork === "string" ? row.providerMetadata.Artwork : undefined,
     prominence: normalizeProminence(row.providerClicks, row.providerVotes),
     timestamp: row.providerUpdatedAt?.toISOString(),
     summary: row.summary,

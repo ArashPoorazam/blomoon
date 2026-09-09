@@ -11,7 +11,7 @@ import {
   compareRadioRecords,
   getLiveCountryMarkerRecords,
   getLiveCountryRecordPage,
-  getLiveWorldRecords,
+  getLiveTopVotedWorldRecords,
   sortRadioRecords
 } from "./livePages";
 import { createRadioFallbackSource, createRadioLiveSource } from "./source";
@@ -22,6 +22,8 @@ import { fetchRadioBrowserJson } from "./provider";
 import { getLiveRandomRadioRecord } from "./random";
 import { getRandomCatalogRecord } from "./randomSelection";
 import { logger } from "@/lib/server/logging";
+import { canonicalizeAvailableRecords, lookupCanonicalRecord, registerRadioRecord } from "./identityStore";
+import { canonicalizeRadioRecords } from "./stationIdentity";
 import type {
   PlayableCacheEntry,
   RadioBrowserStation,
@@ -56,7 +58,7 @@ export async function getRadioDataset(force = false): Promise<TerraDataset> {
 }
 
 export function getRadioFixtureDataset(): TerraDataset {
-  const catalog = createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, Date.now(), true);
+  const catalog = createRadioCatalog(getRadioFixtureRecords(), RADIO_FIXTURE_SOURCE, Date.now(), true);
 
   return {
     modeId: "radio",
@@ -65,9 +67,39 @@ export function getRadioFixtureDataset(): TerraDataset {
   };
 }
 
+export function getRadioFixtureRecords(): RadioStationRecord[] {
+  return RADIO_FIXTURE_RECORDS
+    .filter((record): record is typeof record & { point: typeof record.point & { countryCode: string } } => (
+      Boolean(record.point.countryCode)
+    ))
+    .map((record) => {
+      const votes = getNumericMetric(record.point, "Votes");
+      const clickCount = getNumericMetric(record.point, "Clicks");
+      const point = {
+        ...record.point,
+        locationPrecision: "station" as const,
+        countryCode: record.point.countryCode
+      };
+      const detail = {
+        ...record.detail,
+        ...point
+      };
+
+      return {
+        clickCount,
+        detail,
+        point,
+        searchText: `${point.name} ${point.summary} ${Object.values(point.metrics ?? {}).join(" ")}`.toLowerCase(),
+        streamUrl: record.streamUrl,
+        votes
+      };
+    });
+}
+
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
   try {
-    const records = await getLiveCountryMarkerRecords(countryCode);
+    const records = (await canonicalizeAvailableRecords(await getLiveCountryMarkerRecords(countryCode)))
+      .filter((record) => record.point.countryCode === countryCode);
 
     return {
       modeId: "radio",
@@ -207,7 +239,7 @@ export async function getRandomRadioPoint({
   excludePointId?: string | null;
 } = {}): Promise<TerraRandomPoint | null> {
   try {
-    const record = await getLiveRandomRadioRecord({ excludePointId });
+    const record = await registerRadioRecord(await getLiveRandomRadioRecord({ excludePointId }));
 
     if (catalogCache) {
       addRecordToCatalog(catalogCache, record);
@@ -337,7 +369,7 @@ async function getRadioCatalog(force = false): Promise<RadioCatalog> {
 
 async function refreshRadioCatalog(fetchedAt: number) {
   try {
-    const records = await getLiveWorldRecords();
+    const records = await getLiveTopVotedWorldRecords();
 
     if (records.length === 0) {
       throw new Error("Radio Browser returned no usable stations");
@@ -358,18 +390,20 @@ async function refreshRadioCatalog(fetchedAt: number) {
     });
     catalogCache = catalogCache && !catalogCache.isFallback
       ? catalogCache
-      : createRadioCatalog(createFixtureRecords(), RADIO_FIXTURE_SOURCE, fetchedAt, true);
+      : createRadioCatalog(getRadioFixtureRecords(), RADIO_FIXTURE_SOURCE, fetchedAt, true);
   }
 
   return catalogCache;
 }
 
 async function getRadioStationRecord(id: string) {
+  const canonical = await lookupCanonicalRecord(id);
+  if (canonical) return canonical;
   const catalog = await getRadioCatalog();
   const cachedRecord = catalog.recordsById.get(id);
 
   if (cachedRecord) {
-    return cachedRecord;
+    return registerRadioRecord(cachedRecord);
   }
 
   try {
@@ -378,7 +412,7 @@ async function getRadioStationRecord(id: string) {
 
     if (record && catalogCache) {
       addRecordToCatalog(catalogCache, record);
-      return record;
+      return registerRadioRecord(record);
     }
   } catch (error) {
     logger.warn("radio.catalog.detail_fetch_failed", {
@@ -398,7 +432,7 @@ function createRadioCatalog(
   fetchedAt: number,
   isFallback: boolean
 ): RadioCatalog {
-  const sortedRecords = sortRadioRecords(records);
+  const sortedRecords = sortRadioRecords(canonicalizeRadioRecords(records).records);
   const recordsById = new Map(sortedRecords.map((record) => [record.point.id, record]));
   const recordsByCountry = createCountryIndex(sortedRecords);
 
@@ -553,35 +587,6 @@ function sortFallbackRecords(records: RadioStationRecord[], sort: RadioSortOptio
   });
 }
 
-function createFixtureRecords(): RadioStationRecord[] {
-  return RADIO_FIXTURE_RECORDS
-    .filter((record): record is typeof record & { point: typeof record.point & { countryCode: string } } => (
-      Boolean(record.point.countryCode)
-    ))
-    .map((record) => {
-      const votes = getNumericMetric(record.point, "Votes");
-      const clickCount = getNumericMetric(record.point, "Clicks");
-      const point = {
-        ...record.point,
-        locationPrecision: "station" as const,
-        countryCode: record.point.countryCode
-      };
-      const detail = {
-        ...record.detail,
-        ...point
-      };
-
-      return {
-        clickCount,
-        detail,
-        point,
-        searchText: `${point.name} ${point.summary} ${Object.values(point.metrics ?? {}).join(" ")}`.toLowerCase(),
-        streamUrl: record.streamUrl,
-        votes
-      };
-    });
-}
-
 function getNumericMetric(record: { metrics?: Record<string, string | number | null> }, key: string) {
   const value = record.metrics?.[key];
   return typeof value === "number" ? value : 0;
@@ -607,6 +612,7 @@ function toPersistenceSnapshot(record: RadioStationRecord): RadioStationPersiste
   const tags = getTextMetric(record.point, "Tags")?.split(",").map((tag) => tag.trim()).filter(Boolean) ?? [];
 
   return {
+    artworkUrl: record.point.artworkUrl ?? null,
     bitrate: getBitrate(record),
     clickCount: record.clickCount,
     codec: getTextMetric(record.point, "Codec"),

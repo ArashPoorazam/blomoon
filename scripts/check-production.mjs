@@ -26,6 +26,39 @@ await runCheck("health", true, async () => {
   return `status=${response.status}`;
 });
 
+await runCheck("database readiness", true, async () => {
+  const response = await request("/api/ready", { expectJson: true });
+  assert(response.status === 200 && response.json?.status === "ok", "database is not ready");
+  assert(headerIncludes(response.headers, "cache-control", "no-store"), "readiness must not be cached");
+  return "ready";
+});
+
+await runCheck("Home Screen installation", true, async () => {
+  const response = await request("/manifest.webmanifest", { expectJson: true });
+  const manifest = response.json;
+  assert(response.status === 200 && manifest?.name === "Blomoon", "manifest unavailable");
+  assert(headerIncludes(response.headers, "content-type", "manifest+json"), "expected manifest content type");
+  for (const key of ["id", "scope", "start_url"]) assert(manifest[key] === "/", `expected manifest ${key}=/`);
+  assert(manifest.display === "standalone", "expected standalone display");
+  for (const [path, size] of [["/icons/icon-192.png", 192], ["/icon.png", 512], ["/icons/maskable-512.png", 512], ["/apple-icon.png", 180]]) {
+    const icon = await fetch(new URL(path, origin), { signal: AbortSignal.timeout(timeoutMs) });
+    assert(icon.ok && headerIncludes(icon.headers, "content-type", "image/png"), `invalid icon ${path}`);
+    const bytes = Buffer.from(await icon.arrayBuffer());
+    assert(bytes.length >= 24 && bytes.subarray(0, 8).equals(Buffer.from([137,80,78,71,13,10,26,10])), `invalid PNG ${path}`);
+    assert(bytes.readUInt32BE(16) === size && bytes.readUInt32BE(20) === size, `incorrect dimensions ${path}`);
+  }
+  assert(manifest.icons?.some((icon) => icon.purpose === "maskable" && icon.sizes === "512x512"), "missing maskable icon");
+  const login = await request("/login", { expectText: true });
+  assert(login.text.includes('rel="apple-touch-icon"'), "missing Apple touch metadata");
+  assert(login.text.includes('name="theme-color"') && login.text.includes("viewport-fit=cover"), "missing installed viewport metadata");
+  const worker = await request("/sw.js", { expectText: true });
+  assert(worker.status === 200 && headerIncludes(worker.headers, "content-type", "javascript"), "worker unavailable");
+  assert(headerIncludes(worker.headers, "cache-control", "no-cache"), "worker must revalidate");
+  const offline = await request("/offline.html", { expectText: true });
+  assert(offline.status === 200 && offline.text.includes("You’re offline"), "offline screen unavailable");
+  return "manifest, icons, metadata and offline assets available";
+});
+
 await runCheck("http to https redirect", origin.startsWith("https://"), async () => {
   if (!origin.startsWith("https://")) {
     return warn("skipped for non-HTTPS origin");
@@ -102,8 +135,10 @@ const radioPoints = await runCheck("radio points", true, async () => {
   assert(response.status === 200, `expected 200, got ${response.status}`);
   validateDataset(response.json, { requirePoints: true });
 
+  if (response.json.source?.isFallback) return warn("catalog uses fixture fallback; live provider not verified");
+
   return {
-    detail: `points=${response.json.points.length}${response.json.source?.isFallback ? " source=fallback" : ""}`,
+    detail: `points=${response.json.points.length}`,
     value: response.json
   };
 });

@@ -9,6 +9,9 @@
     "typecheck": "tsc --noEmit",
     "test": "vitest run",
     "db:check": "node scripts/check-db.mjs",
+    "catalog:sync": "node --conditions=react-server --import tsx scripts/radio-catalog.ts --once",
+    "catalog:worker": "node --conditions=react-server --import tsx scripts/radio-catalog.ts",
+    "catalog:identities": "node --conditions=react-server --import tsx scripts/radio-identities.ts",
     "check:prod": "node scripts/check-production.mjs",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate"
@@ -26,6 +29,7 @@
     "react": "latest",
     "react-dom": "latest",
     "resend": "^6.24.0",
+    "server-only": "^0.0.1",
     "three": "^0.185.1",
     "topojson-client": "latest",
     "world-atlas": "latest",
@@ -39,6 +43,7 @@
     "@types/three": "latest",
     "@types/topojson-client": "latest",
     "drizzle-kit": "^0.31.10",
+    "tsx": "^4.23.13",
     "typescript": "latest",
     "vitest": "^4.1.11"
   }

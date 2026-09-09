@@ -1,9 +1,11 @@
 "use client";
 
-import { ChevronDown, Globe2, Search, X } from "lucide-react";
-import { useId, useMemo, useState } from "react";
-import { getKnownCountries, type CountryInfo } from "@/lib/geo";
+import { Search, SlidersHorizontal, X } from "lucide-react";
+import { useId, useState } from "react";
+import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode } from "@/lib/modes/types";
+import { DrawerFilterPanel } from "./DrawerFilterPanel";
+import { DrawerHeader } from "./DrawerHeader";
 import { LoadMoreButton } from "./LoadMoreButton";
 
 type DrawerListToolbarProps = {
@@ -15,8 +17,9 @@ type DrawerListToolbarProps = {
   providerError: string | null;
   query: string;
   selectedCountry: CountryInfo | null;
-  showListedOnGlobe: boolean;
   sortId: string;
+  suggestionTitle?: string;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
@@ -24,7 +27,6 @@ type DrawerListToolbarProps = {
   onLoadMorePoints?: () => void;
   onQueryChange: (value: string) => void;
   onSortChange: (sortId: string) => void;
-  onToggleShowListedOnGlobe: () => void;
 };
 
 export function DrawerListToolbar({
@@ -36,270 +38,98 @@ export function DrawerListToolbar({
   providerError,
   query,
   selectedCountry,
-  showListedOnGlobe,
   sortId,
+  suggestionTitle,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
   onCountryFilterChange,
   onClearCountrySelection,
   onLoadMorePoints,
   onQueryChange,
-  onSortChange,
-  onToggleShowListedOnGlobe
+  onSortChange
 }: DrawerListToolbarProps) {
-  const countries = useMemo(getKnownCountries, []);
+  const [filtersOpen, setFiltersOpen] = useState(false);
+  const filterPanelId = useId();
+  const hasActiveSearch = query.trim().length > 0;
+  const defaultSort = hasActiveSearch ? activeMode.searchSortId ?? activeMode.defaultSortId
+    : activeMode.recommendations?.sortId ?? activeMode.defaultSortId;
+  const hasActiveFilters = Boolean(selectedCountry) || sortId !== defaultSort;
 
   return (
     <div className="drawer-list-toolbar">
-      <div className="drawer-compact-header">
-        <div className="drawer-heading-copy">
-          <h1 className="drawer-brand-title">Blomoon</h1>
-          <p className="drawer-subtitle">{activeMode.label} stations by geography</p>
-        </div>
-        <div className="drawer-count-line" aria-live="polite">
-          <span>{loading ? "Loading" : "Directory"}</span>
-          <strong>
-            {loading
-              ? activeMode.loadingLabel
-              : formatVisibleCount({
-                listedCount,
-                loadingMore: isLoadingMorePoints,
-                totalCount: totalPoints,
-                totalKind: totalPointsKind
-              })}
-          </strong>
-        </div>
+      <div className="drawer-heading-copy">
+        <h1 className="drawer-brand-title">Blomoon</h1>
+        <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
       </div>
-
-      <div className="search-row">
-        <Search className="search-icon" size={16} aria-hidden="true" />
-        <input
-          className="search-input"
-          placeholder={activeMode.searchPlaceholder}
-          type="search"
-          value={query}
-          onChange={(event) => onQueryChange(event.target.value)}
-        />
-        {query ? (
-          <button className="search-clear" type="button" aria-label="Clear search" onClick={() => onQueryChange("")}>
-            <X size={14} aria-hidden="true" />
-          </button>
-        ) : null}
-      </div>
-
-      <ProviderNotice message={providerError} />
-      <FilterControls
-        activeMode={activeMode}
-        countries={countries}
-        hasMorePoints={hasMorePoints}
-        isLoadingMorePoints={isLoadingMorePoints}
-        selectedCountry={selectedCountry}
-        showListedOnGlobe={showListedOnGlobe}
-        sortId={sortId}
-        onCountryFilterChange={onCountryFilterChange}
-        onClearCountrySelection={onClearCountrySelection}
-        onLoadMorePoints={onLoadMorePoints}
-        onSortChange={onSortChange}
-        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
-      />
-    </div>
-  );
-}
-
-function FilterControls({
-  activeMode,
-  countries,
-  hasMorePoints,
-  isLoadingMorePoints,
-  selectedCountry,
-  showListedOnGlobe,
-  sortId,
-  onCountryFilterChange,
-  onClearCountrySelection,
-  onLoadMorePoints,
-  onSortChange,
-  onToggleShowListedOnGlobe
-}: {
-  activeMode: TerraMode;
-  countries: CountryInfo[];
-  hasMorePoints: boolean;
-  isLoadingMorePoints: boolean;
-  selectedCountry: CountryInfo | null;
-  showListedOnGlobe: boolean;
-  sortId: string;
-  onCountryFilterChange: (country: CountryInfo | null) => void;
-  onClearCountrySelection: () => void;
-  onLoadMorePoints?: () => void;
-  onSortChange: (sortId: string) => void;
-  onToggleShowListedOnGlobe: () => void;
-}) {
-  const [countryMenuOpen, setCountryMenuOpen] = useState(false);
-  const [sortMenuOpen, setSortMenuOpen] = useState(false);
-  const [countryQuery, setCountryQuery] = useState("");
-  const countryMenuId = useId();
-  const sortMenuId = useId();
-  const selectedSort = activeMode.sortOptions.find((option) => option.id === sortId) ?? activeMode.sortOptions[0];
-  const filteredCountries = useMemo(() => {
-    const terms = countryQuery.trim().toLowerCase().split(/\s+/).filter(Boolean);
-
-    if (terms.length === 0) {
-      return countries;
-    }
-
-    return countries.filter((country) => {
-      const searchValue = `${country.name} ${country.code}`.toLowerCase();
-      return terms.every((term) => searchValue.includes(term));
-    });
-  }, [countries, countryQuery]);
-
-  function selectCountry(country: CountryInfo | null) {
-    onCountryFilterChange(country);
-    setCountryMenuOpen(false);
-  }
-
-  function selectSort(nextSortId: string) {
-    onSortChange(nextSortId);
-    setSortMenuOpen(false);
-  }
-
-  return (
-    <div className="filter-panel" aria-label="Station filters">
-      <div className="filter-panel-header">
-        <span>Refine</span>
-        <strong>{selectedCountry?.name ?? "Worldwide"}</strong>
-      </div>
-      <div className="filter-grid">
-        <div
-          className="filter-menu-field"
-          onBlur={(event) => {
-            const nextTarget = event.relatedTarget;
-
-            if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
-              setCountryMenuOpen(false);
-            }
-          }}
-        >
-          <span className="filter-label">Country</span>
-          <button
-            aria-controls={countryMenuId}
-            aria-expanded={countryMenuOpen}
-            className="filter-menu-trigger"
-            type="button"
-            onClick={() => setCountryMenuOpen((open) => !open)}
-          >
-            <span>{selectedCountry?.name ?? "All countries"}</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </button>
-          {countryMenuOpen ? (
-            <div className="filter-menu country-menu" id={countryMenuId}>
-              <div className="filter-menu-search">
-                <Search size={14} aria-hidden="true" />
-                <input
-                  autoFocus
-                  placeholder="Search countries"
-                  type="search"
-                  value={countryQuery}
-                  onChange={(event) => setCountryQuery(event.target.value)}
-                  onKeyDown={(event) => {
-                    if (event.key === "Escape") {
-                      setCountryMenuOpen(false);
-                    }
-                  }}
-                />
-              </div>
-              <div className="filter-menu-options">
-                <button
-                  className={!selectedCountry ? "selected" : ""}
-                  type="button"
-                  onMouseDown={(event) => event.preventDefault()}
-                  onClick={() => selectCountry(null)}
-                >
-                  All countries
-                </button>
-                {filteredCountries.map((country) => (
-                  <button
-                    className={selectedCountry?.code === country.code ? "selected" : ""}
-                    key={country.code}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => selectCountry(country)}
-                  >
-                    {country.name}
-                  </button>
-                ))}
-                {filteredCountries.length === 0 ? (
-                  <div className="filter-menu-empty">No countries found</div>
-                ) : null}
-              </div>
-            </div>
-          ) : null}
-        </div>
-
-        <div
-          className="filter-menu-field"
-          onBlur={(event) => {
-            const nextTarget = event.relatedTarget;
-
-            if (!(nextTarget instanceof Node) || !event.currentTarget.contains(nextTarget)) {
-              setSortMenuOpen(false);
-            }
-          }}
-        >
-          <span className="filter-label">Sort</span>
-          <button
-            aria-controls={sortMenuId}
-            aria-expanded={sortMenuOpen}
-            className="filter-menu-trigger"
-            type="button"
-            onClick={() => setSortMenuOpen((open) => !open)}
-          >
-            <span>{selectedSort?.label ?? "Sort"}</span>
-            <ChevronDown size={14} aria-hidden="true" />
-          </button>
-          {sortMenuOpen ? (
-            <div className="filter-menu sort-menu" id={sortMenuId}>
-              <div className="filter-menu-options">
-                {activeMode.sortOptions.map((option) => (
-                  <button
-                    className={option.id === sortId ? "selected" : ""}
-                    key={option.id}
-                    type="button"
-                    onMouseDown={(event) => event.preventDefault()}
-                    onClick={() => selectSort(option.id)}
-                  >
-                    {option.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-          ) : null}
-        </div>
-      </div>
-
-      <div className="filter-actions">
-        {selectedCountry ? (
-          <button className="filter-chip" type="button" onClick={onClearCountrySelection}>
-            {selectedCountry.name}
-            <X size={14} aria-hidden="true" />
-          </button>
-        ) : null}
-        <button
-          aria-pressed={showListedOnGlobe}
-          className={`listed-globe-toggle ${showListedOnGlobe ? "active" : ""}`}
-          type="button"
-          onClick={onToggleShowListedOnGlobe}
-        >
-          <Globe2 size={15} aria-hidden="true" />
-          Display on globe
-        </button>
-        {hasMorePoints ? (
+      <DrawerHeader
+        className="drawer-directory-header"
+        title={suggestionTitle ?? "Directory"}
+        subtitle={loading
+          ? activeMode.copy.loadingLabel
+          : suggestionTitle
+            ? `${numberFormatter.format(listedCount)} listed · ${catalogTotal === undefined ? "Catalog total unavailable" : `${numberFormatter.format(catalogTotal)} stations available`}`
+            : formatVisibleCount({
+            listedCount,
+            totalCount: totalPoints,
+            totalKind: totalPointsKind
+          })}
+        actions={(
           <LoadMoreButton
-            className="filter-load-more"
+            className="directory-load-more"
+            disabled={loading || !hasMorePoints}
             isLoading={isLoadingMorePoints}
             onLoadMore={onLoadMorePoints}
           />
-        ) : null}
+        )}
+      />
+
+      <div className="drawer-search-controls">
+        <div className={`search-row ${hasActiveSearch ? "active" : ""}`}>
+          <Search className="search-icon" size={16} aria-hidden="true" />
+          <input
+            className="search-input"
+            aria-label={activeMode.copy.searchPlaceholder}
+            maxLength={120}
+            placeholder={activeMode.copy.searchPlaceholder}
+            type="search"
+            value={query}
+            onChange={(event) => onQueryChange(event.target.value)}
+          />
+          {query ? (
+            <button className="search-clear" type="button" aria-label="Clear search" onClick={() => onQueryChange("")}>
+              <X size={14} aria-hidden="true" />
+            </button>
+          ) : null}
+        </div>
+        <button
+          aria-controls={filterPanelId}
+          aria-expanded={filtersOpen}
+          aria-label={filtersOpen ? "Hide filters" : "Show filters"}
+          className={`filter-toggle ${hasActiveFilters ? "active" : ""}`}
+          title={filtersOpen ? "Hide filters" : "Show filters"}
+          type="button"
+          onClick={() => setFiltersOpen((open) => !open)}
+        >
+          <SlidersHorizontal size={17} aria-hidden="true" />
+        </button>
       </div>
+
+      <ProviderNotice message={providerError} />
+
+      {filtersOpen ? (
+        <div id={filterPanelId}>
+          <DrawerFilterPanel
+            activeMode={activeMode}
+            query={query}
+            selectedCountry={selectedCountry}
+            sortId={sortId}
+            onCountryFilterChange={onCountryFilterChange}
+            onClearCountrySelection={onClearCountrySelection}
+            onSortChange={onSortChange}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }
@@ -314,12 +144,10 @@ function ProviderNotice({ message }: { message: string | null }) {
 
 function formatVisibleCount({
   listedCount,
-  loadingMore,
   totalCount,
   totalKind
 }: {
   listedCount: number;
-  loadingMore: boolean;
   totalCount: number;
   totalKind: "exact" | "lowerBound";
 }) {
@@ -331,9 +159,7 @@ function formatVisibleCount({
   const totalLabel = numberFormatter.format(totalCount);
 
   if (totalKind === "lowerBound") {
-    return loadingMore
-      ? `${listedLabel} listed, loading more`
-      : `${listedLabel} listed, ${totalLabel}+ available`;
+    return `${listedLabel} listed, ${totalLabel}+ available`;
   }
 
   return `${listedLabel} listed, ${totalLabel} available`;

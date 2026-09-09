@@ -12,3 +12,12 @@ yarn-debug.log*
 yarn-error.log*
 pnpm-debug.log*
 tsconfig.tsbuildinfo
+
+# Keep secrets and deployment state out of source and image contexts.
+.env.*
+!.env.example
+!.env.production.example
+releases/
+current-release.json
+previous-release.json
+.deploy.lock

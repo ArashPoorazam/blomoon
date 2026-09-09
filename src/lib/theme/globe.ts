@@ -17,6 +17,8 @@ export type GlobeTheme = {
   markers: {
     defaultSingle: string;
     listed: string;
+    playback: string;
+    playbackRing: string;
     selected: string;
     selectedRing: string;
     prominence: readonly string[];
@@ -37,6 +39,8 @@ export const defaultGlobeTheme = {
   markers: {
     defaultSingle: "#ffffff",
     listed: "#4ade80",
+    playback: "#9ece6a",
+    playbackRing: "#9ece6a",
     selected: "#ff9e64",
     selectedRing: "#ffffff",
     tokens: {

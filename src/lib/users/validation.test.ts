@@ -1,8 +1,21 @@
 import { describe, expect, it } from "vitest";
 import { terraThemeIds } from "@/lib/theme/ids";
-import { favouriteInputSchema, themeInputSchema } from "./validation";
+import { favouriteFolderCreateSchema, favouriteFolderShareInputSchema, favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
 
 describe("user API validation", () => {
+  it("accepts only explicit boolean share rotation options", () => {
+    expect(favouriteFolderShareInputSchema.safeParse({}).success).toBe(true);
+    expect(favouriteFolderShareInputSchema.safeParse({ rotate: true }).success).toBe(true);
+    for (const input of [null, [], { rotate: "true" }, { rotate: true, userId: "another-owner" }]) {
+      expect(favouriteFolderShareInputSchema.safeParse(input).success).toBe(false);
+    }
+  });
+  it("requires a mode when creating and prohibits changing it through edit", () => {
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning", modeId: "radio" }).success).toBe(true);
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning" }).success).toBe(false);
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning", modeId: "" }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning", modeId: "tv" }).success).toBe(false);
+  });
   it("accepts known theme ids", () => {
     for (const themeId of terraThemeIds) {
       expect(themeInputSchema.safeParse({ themeId }).success).toBe(true);
@@ -14,8 +27,21 @@ describe("user API validation", () => {
   });
 
   it("requires bounded favourite refs", () => {
-    expect(favouriteInputSchema.safeParse({ modeId: "radio", pointId: "abc" }).success).toBe(true);
-    expect(favouriteInputSchema.safeParse({ modeId: "", pointId: "abc" }).success).toBe(false);
-    expect(favouriteInputSchema.safeParse({ modeId: "radio", pointId: "" }).success).toBe(false);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "radio", pointId: "abc" }).success).toBe(true);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "", pointId: "abc" }).success).toBe(false);
+    expect(favouriteFolderItemInputSchema.safeParse({ modeId: "radio", pointId: "" }).success).toBe(false);
+  });
+
+  it("requires bounded favourite folder fields", () => {
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning stations", description: "Drive-time picks" }).success).toBe(true);
+    expect(favouriteFolderInputSchema.safeParse({ name: " " }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "a".repeat(81) }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning", description: "a".repeat(241) }).success).toBe(false);
+  });
+
+  it("accepts only bounded URL-safe share tokens", () => {
+    expect(favouriteShareTokenSchema.safeParse("a".repeat(32)).success).toBe(true);
+    expect(favouriteShareTokenSchema.safeParse("short").success).toBe(false);
+    expect(favouriteShareTokenSchema.safeParse("a".repeat(31) + "/").success).toBe(false);
   });
 });

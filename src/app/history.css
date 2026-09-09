@@ -1,0 +1,79 @@
+.history-view {
+  display: flex;
+  min-height: 0;
+  flex: 1;
+  flex-direction: column;
+}
+
+.history-header {
+  flex: 0 0 auto;
+}
+
+.history-list {
+  padding-top: 6px;
+}
+
+.history-group + .history-group {
+  margin-top: 8px;
+}
+
+.history-date-heading {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 10px 5px;
+}
+
+.history-date-heading h2 {
+  flex: 0 0 auto;
+  margin: 0;
+  color: var(--muted-strong);
+  font-size: 11px;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.history-date-heading span {
+  height: 1px;
+  flex: 1;
+  background: var(--line);
+}
+
+.history-notice {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin: 10px 12px 4px;
+  padding: 9px 10px;
+  border: 1px solid var(--info-border);
+  border-radius: 8px;
+  background: var(--info-surface);
+  color: var(--muted-strong);
+  font-size: 12px;
+}
+
+.history-notice button {
+  display: inline-flex;
+  min-height: 32px;
+  align-items: center;
+  gap: 5px;
+  padding: 0 9px;
+  border: 1px solid var(--panel-border);
+  border-radius: 7px;
+  background: var(--control);
+  color: var(--text);
+  cursor: pointer;
+}
+
+@media (max-width: 760px) {
+  .history-header {
+    padding-right: max(14px, env(safe-area-inset-right, 0px));
+    padding-left: max(14px, env(safe-area-inset-left, 0px));
+  }
+
+  .has-mini-player .history-list {
+    padding-bottom: 22px;
+  }
+}

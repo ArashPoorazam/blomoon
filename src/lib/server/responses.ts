@@ -1,6 +1,7 @@
-import { DatabaseNotConfiguredError, DatabaseSchemaMissingError } from "@/db/readiness";
+import { DatabaseNotConfiguredError, DatabaseRlsDisabledError, DatabaseSchemaMissingError } from "@/db/readiness";
 import { AuthUnavailableError, UnauthorizedError } from "@/lib/auth/server";
 import { logger } from "@/lib/server/logging";
+import { ProviderPointLookupError } from "@/lib/persistence/points";
 
 type ApiErrorContext = {
   requestId?: string;
@@ -8,6 +9,16 @@ type ApiErrorContext = {
 };
 
 export function apiError(error: unknown, context: ApiErrorContext = {}) {
+  if (error instanceof ProviderPointLookupError) {
+    logger.warn("api.error", {
+      context: { route: context.route, status: 502 },
+      error,
+      message: "Media provider point lookup failed",
+      requestId: context.requestId
+    });
+    return Response.json({ error: "The media provider is unavailable right now." }, { status: 502 });
+  }
+
   if (error instanceof UnauthorizedError) {
     logger.warn("api.error", {
       context: {
@@ -62,6 +73,16 @@ export function apiError(error: unknown, context: ApiErrorContext = {}) {
       error: "Database schema is not initialized. Run npm run db:migrate.",
       missingTables: error.missingTables
     }, { status: 503 });
+  }
+
+  if (error instanceof DatabaseRlsDisabledError) {
+    logger.error("api.error", {
+      context: { route: context.route, status: 503, tableNames: error.tableNames },
+      error,
+      message: "Database row-level security is disabled",
+      requestId: context.requestId
+    });
+    return Response.json({ error: "Database security is not initialized. Run npm run db:migrate." }, { status: 503 });
   }
 
   logger.error("api.error", {

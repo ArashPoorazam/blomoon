@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   appendPlaybackHistory,
+  getPlaybackQueuePoints,
   getNextPlaybackPoint,
   takePreviousPlaybackPoint
 } from "./playbackNavigation";
@@ -41,6 +42,15 @@ describe("playback navigation", () => {
     const one = point("one");
 
     expect(appendPlaybackHistory([], one, one)).toEqual([]);
+  });
+
+  it("selects queues neutrally and deduplicates repeated history stations", () => {
+    const one = point("one");
+    const two = point("two");
+    const sources = { favourites: [two], history: [one, two, one], list: [one] };
+    expect(getPlaybackQueuePoints("list", sources).map(({ id }) => id)).toEqual(["one"]);
+    expect(getPlaybackQueuePoints("favourites", sources).map(({ id }) => id)).toEqual(["two"]);
+    expect(getPlaybackQueuePoints("history", sources).map(({ id }) => id)).toEqual(["one", "two"]);
   });
 });
 

@@ -11,6 +11,7 @@ export type TerraPoint = {
   locationPrecision?: "station" | "country";
   /** ISO 3166-1 numeric country code, or a documented atlas-only X-* code. */
   countryCode?: string;
+  artworkUrl?: string;
   prominence?: number;
   timestamp?: string;
   summary: string;
@@ -25,12 +26,23 @@ export type TerraPointDetail = TerraPoint & {
   sourceUrl?: string;
 };
 
+export type TerraDetailField = {
+  label: string;
+  value: string;
+};
+
+export type TerraDetailSection = {
+  fields: TerraDetailField[];
+  title: string;
+};
+
 export type DataSourceInfo = {
   name: string;
   url: string;
   attribution: string;
   lastUpdated: string;
   isFallback?: boolean;
+  notice?: string;
 };
 
 export type TerraDataset = {
@@ -40,6 +52,10 @@ export type TerraDataset = {
 };
 
 export type TerraPointPage = TerraDataset & {
+  /** Full published catalog size; independent of the paginated selection. */
+  catalogTotal?: number;
+  pageToken?: string;
+  recommendation?: { kind: "personalized" | "discovery" };
   limit: number;
   nextOffset: number | null;
   offset: number;
@@ -60,6 +76,20 @@ export type TerraPlaybackConfig = {
   randomPointEndpoint?: string;
 };
 
+export type TerraModeCopy = {
+  countryLoadingLabel: string;
+  emptyLabel: string;
+  fallbackNotice: string;
+  itemPlural: string;
+  itemSingular: string;
+  listSubtitle: string;
+  loadingLabel: string;
+  loadingMoreLabel: string;
+  randomPlaybackError: string;
+  searchPlaceholder: string;
+  searchingLabel: string;
+};
+
 export type TerraModeSortOption = {
   id: string;
   label: string;
@@ -71,6 +101,7 @@ export type TerraModeListParams = {
   offset: number;
   query: string;
   sortId: string;
+  pageToken?: string;
 };
 
 export type TerraPlayableAudio = {
@@ -84,8 +115,12 @@ export type TerraPlayableAudio = {
 export type TerraMode = {
   id: TerraModeId;
   label: string;
+  controlIcon: "radio" | "podcast" | "tv";
+  copy: TerraModeCopy;
   dataEndpoint: string;
   defaultSortId: string;
+  searchSortId?: string;
+  recommendations?: { sortId: string; label: string; endpoint: (params: { limit: number; offset: number; pageToken?: string }) => string };
   listEndpoint: (params: TerraModeListParams) => string;
   sortOptions: TerraModeSortOption[];
   countryCatalog?: {
@@ -95,13 +130,10 @@ export type TerraMode = {
   detailEndpoint: (id: string) => string;
   clickEndpoint?: (id: string) => string;
   playback?: TerraPlaybackConfig;
-  loadingLabel: string;
-  emptyLabel: string;
-  searchPlaceholder: string;
   markerMetricLabel: string;
   markerColorMode: MarkerColorMode;
   markerColorToken?: MarkerColorToken;
-  fallbackNotice: string;
+  formatDetailSections: (detail: TerraPointDetail | null) => TerraDetailSection[];
   formatPointMetric: (point: TerraPoint) => string;
   matchCountry: (point: TerraPoint, countryCode: string) => boolean;
   matchPoint: (point: TerraPoint, query: string) => boolean;
