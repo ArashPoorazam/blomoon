@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 
-const PUBLIC_PATHS = new Set(["/login", "/privacy", "/terms"]);
+const PUBLIC_PATHS = new Set(["/login", "/privacy", "/terms", "/manifest.webmanifest", "/offline.html"]);
 const SESSION_COOKIE_NAMES = [
   "better-auth.session_token",
   "__Secure-better-auth.session_token"

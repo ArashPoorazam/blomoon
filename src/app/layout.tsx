@@ -1,6 +1,9 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { BLOMOON_CANONICAL_ORIGIN } from "@/lib/app-config/public";
 import "./globals.css";
+import { InstallProvider } from "@/components/install/InstallProvider";
+
+export const viewport: Viewport = { themeColor: "#050509", viewportFit: "cover" };
 
 const description = "Discover and play live entertainment streams by geography on Blomoon's interactive globe.";
 
@@ -37,7 +40,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body><InstallProvider>{children}</InstallProvider></body>
     </html>
   );
 }

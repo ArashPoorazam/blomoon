@@ -1,5 +1,7 @@
 "use client";
 
+import { InstallButton } from "../install/InstallButton";
+
 import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
@@ -50,6 +52,7 @@ export function AuthGate({ googleAuthEnabled, nextPath, serviceError }: AuthGate
           <div className="auth-brand-message">
             <p>Follow live entertainment across cities, countries, and quiet corners of the globe.</p>
           </div>
+          <InstallButton />
           <nav className="auth-policy-links" aria-label="Legal">
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>

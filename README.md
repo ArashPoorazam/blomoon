@@ -1,96 +1,114 @@
 # Blomoon
-Explore live entertainment streams through an interactive 3D globe.
 
-## Phase 1
-
-Blomoon currently implements the first usable slice of the product:
-
-- a monochrome interactive 3D globe
-- simplified country border lines
-- a radio mode backed by Radio Browser
-- server-side stream URL validation before playback
-- a cached server-side provider adapter with fallback sample data
-- a right-side drawer for filtering stations, viewing details, and starting playback
-
-Future modes should stay inside the entertainment/media product: podcasts/live audio first, then TV/video when the playback contracts are ready.
+Discover and play live radio through an interactive globe. Blomoon includes mobile and desktop layouts, station discovery, accounts, favourites, sharing, and playback history. Radio Browser is synchronized by a separate catalog worker; provider fallback is visibly identified. Future modes remain removable media plugins.
 
 ## Development
 
-```bash
-npm install
+Use Node.js 24 and the committed package lock:
+
+```sh
+cp .env.example .env.local
+npm ci
+# Fill .env.local before running database commands.
 npm run db:migrate
 npm run db:check
 npm run dev
 ```
 
-Then open `http://localhost:3000`.
+Open http://localhost:3000. Password accounts require email verification. Configure Resend with a verified sender in production; `onboarding@resend.dev` is only for local testing. Google sign-in is optional and requires both Google settings.
 
-Create `.env.local` from `.env.example` before running the app. Account features require:
+Run `npm run typecheck`, `npm test`, and `npm run build` before a release. Database integration tests require their documented opt-in settings and a disposable database. Do not run migration or integration checks against production for routine local verification.
 
-- `DATABASE_URL`
-- `BETTER_AUTH_URL`, for example `http://localhost:3000`
-- `BETTER_AUTH_SECRET`, generated with `openssl rand -base64 32`
-- `RESEND_API_KEY`
-- `BLOMOON_AUTH_EMAIL_FROM`, for example `Blomoon <no-reply@example.com>`
+## Home Screen installation
 
-Password accounts require email verification before login. Use Resend's `onboarding@resend.dev` sender only for local testing; production senders should use a verified Resend domain.
+On Android, choose **Install Blomoon** on the login page or account menu. Supported browsers show their native installation prompt; otherwise the button explains browser-menu installation. On iPhone/iPad, the button explains Safari → Share → Add to Home Screen, with Open as Web App enabled where shown. Controls disappear in standalone mode; there are no automatic promotional popups.
 
-Google sign-in is optional and only appears when `GOOGLE_CLIENT_ID` and `GOOGLE_CLIENT_SECRET` are configured. Production Google OAuth should use `https://blomoon.ir` as `BETTER_AUTH_URL`, `blomoon.ir` as the authorized domain, `https://blomoon.ir` as the application home page, `https://blomoon.ir/privacy` as the privacy policy, `https://blomoon.ir/terms` as the terms of service, and `https://blomoon.ir/api/auth/callback/google` as the authorized redirect URI. Public support contact is `blomoon.support@gmail.com`.
+The manifest, icons, and offline document are public even when logged out. Installed launches use `/` and retain the usual authentication checks. Some browsers may require signing in again after installation.
 
-## VPS Deployment
+Production registers `/sw.js`. Only the self-contained `/offline.html` document is cached. Failed network navigations show a reconnect screen; server error responses remain intact. APIs, login responses, user data, Next.js assets and media streams are never put in Cache Storage. Discovery and playback require internet access. Installation does not guarantee uninterrupted background audio.
 
-Production runs through Docker Compose with Traefik, Postgres, the Next.js app image, and a one-shot migration image.
+When changing the offline document, bump `OFFLINE_CACHE` in `public/sw.js`. Updates wait for existing app windows to close and never force a reload during playback. To verify workers locally, build and run production mode on localhost; development does not register workers. Use a separate browser profile/port for production testing to avoid an old worker controlling development.
 
-First-time VPS setup:
+## Production architecture and prerequisites
 
-```bash
+Production uses Docker Compose: Traefik with automatic Let's Encrypt HTTPS, PostgreSQL 17 with a persistent volume, a non-root Next.js standalone image, a migration/catalog image, and on-demand backups. The app is not publicly port-mapped; PostgreSQL remains bound to server loopback. Traefik negotiates its Docker API version; the obsolete forced `1.40` override was removed.
+
+The VPS needs Docker Engine, Docker Compose v2.20+ (or v5), **Node.js 24 on the host**, `flock` (util-linux), `tar`, and SSH. Node runs deployment validation and HTTP checks; no host `npm install` is needed. The deployment user needs Docker access and write access to `/opt/blomoon` (or the configured absolute directory). Current CI images target Linux amd64.
+
+Point `blomoon.ir` A records at the VPS. Publish AAAA only if IPv6 works. Allow inbound 80/443 for HTTP redirect and certificate issuance. Keep the canonical origin and `BETTER_AUTH_URL` at `https://blomoon.ir`. A different domain also requires updating the application canonical origin. `www` is not configured by default.
+
+```sh
 sudo mkdir -p /opt/blomoon
 sudo chown "$USER":"$USER" /opt/blomoon
-git clone <repo-url> /opt/blomoon
-cd /opt/blomoon
-cp .env.production.example .env.production
+# Copy the repository's .env.production.example to this location:
+cp .env.production.example /opt/blomoon/.env.production
+chmod 600 /opt/blomoon/.env.production
 ```
 
-Fill `.env.production` with production secrets, then point `BLOMOON_DOMAIN` DNS at the VPS. `GHCR_USERNAME` and `GHCR_TOKEN` are only needed when the GitHub Container Registry package is private.
+Fill every required value. Generate `BETTER_AUTH_SECRET` with `openssl rand -base64 32`. Use a strong independent database password. Values use Node's literal dotenv syntax: quote values containing `#`, spaces or newlines. Do not use shell substitutions or `${VARIABLE}` expansion. Deployment encodes database credentials into `DATABASE_URL`; do not construct this URL manually or pre-encode the password. Database name/user must be simple SQL identifiers. Changing credentials in the file does not rotate credentials in an existing PostgreSQL volume.
 
-GitHub Actions deploys automatically from `main`. Configure these repository secrets:
+Set the verified Resend sender and key. For Google OAuth, use `https://blomoon.ir/api/auth/callback/google` as the authorized redirect URI, `blomoon.ir` as the authorized domain, and `/privacy` and `/terms` on that origin as policy URLs. `GHCR_USERNAME` and a read-packages `GHCR_TOKEN` are required only for private registry packages.
 
-- `VPS_HOST`
-- `VPS_USER`
-- `VPS_SSH_PRIVATE_KEY`
-- `VPS_PORT` if SSH is not on `22`
-- `VPS_APP_DIR` if the app is not in `/opt/blomoon`
+## Release and deployment
 
-Manual deploy fallback:
+GitHub Actions tests/builds `main`, publishes app and migration images, then deploys an exact commit SHA. Configure repository secrets:
 
-```bash
-cd /opt/blomoon
-BLOMOON_REGISTRY_IMAGE=ghcr.io/<owner>/<repo> ./deploy.sh <git-sha-or-main>
+- `VPS_HOST`, `VPS_USER`, `VPS_SSH_PRIVATE_KEY`.
+- `VPS_SSH_KNOWN_HOSTS`: verified OpenSSH known-hosts entries for the server; for a nonstandard port use `[host]:port`. Obtain and verify the fingerprint through your server console or a trusted channel before setting this secret.
+- Optional `VPS_PORT` (default 22) and `VPS_APP_DIR` (default `/opt/blomoon`; use an absolute path without spaces).
+
+Each release uploads its own deployment files into `/opt/blomoon/releases/<commit-sha>`. Secrets, backups, the deployment lock, and current/previous release records stay in `/opt/blomoon`; Docker volumes keep the stable `blomoon` project name. Uploads never overwrite the secret file. Keep old release directories and registry images available for rollback.
+
+Deployment takes a lock, validates settings and Compose, pulls images, starts dependencies, makes a database backup, runs migrations and `db:check`, then starts the app/catalog worker. It waits for readiness and runs the production HTTP checks before recording success. A failed command stops the sequence. Failures after replacement can leave the new containers running: inspect logs and explicitly roll back if appropriate. No automatic database downgrade occurs.
+
+For a manual deployment, place the matching commit's `deploy.sh`, `compose.prod.yml`, and `scripts/` in its release directory, then run:
+
+```sh
+BLOMOON_DEPLOY_DIR=/opt/blomoon \
+BLOMOON_REGISTRY_IMAGE=ghcr.io/owner/repository \
+sh /opt/blomoon/releases/<40-character-sha>/deploy.sh <40-character-sha>
 ```
 
-Run a database backup from the VPS with:
+Mutable tags such as `main` are rejected by the deployment script. `/api/health` reports process liveness; `/api/ready` tests database connectivity and returns 503 on failure. External catalog availability is checked separately and does not trigger app restart loops.
 
-```bash
-docker compose --env-file .env.production -f compose.prod.yml --profile backup run --rm backup
+```sh
+BLOMOON_ORIGIN=https://blomoon.ir npm run check:prod
 ```
 
-Run an operator check from your laptop or the VPS with:
+Checks cover HTTPS redirect, auth guards, database readiness, manifest/icons/worker/offline assets, and catalog/search/detail/playable responses. Fixture catalogs produce a warning. Stream resolution failures are warnings unless `BLOMOON_STRICT_PLAYBACK=1`; successful resolution alone does not prove audible playback. Review warnings before accepting a release. Container logs rotate at 10 MB × 3 files per service.
 
-```bash
-npm run check:prod
+## Backups and recovery
+
+Every deployment makes a PostgreSQL custom-format `.dump` backup, verifies its archive list, and atomically publishes it under `/opt/blomoon/backups`. Failed dumps never publish a completed file. Completed backups are retained for 14 days. Existing legacy `.sql.gz` backups are left intact.
+
+Run a backup using the current release's script:
+
+```sh
+BLOMOON_DEPLOY_DIR=/opt/blomoon sh /opt/blomoon/releases/<current-sha>/deploy.sh --backup
 ```
 
-The check uses `https://blomoon.ir` by default. To check another deployment, set `BLOMOON_ORIGIN`:
+Schedule this daily using cron or a systemd timer under the deployment user. Resolve the script path from `current-release.json` so the schedule follows releases; for example, save this as an operator-owned script and schedule it at 03:00 daily:
 
-```bash
-BLOMOON_ORIGIN=http://localhost:3000 npm run check:prod
+```sh
+#!/bin/sh
+set -eu
+export BLOMOON_DEPLOY_DIR=/opt/blomoon
+release_dir=$(node -p 'JSON.parse(require("node:fs").readFileSync("/opt/blomoon/current-release.json","utf8")).releaseDir')
+exec sh "$release_dir/deploy.sh" --backup
 ```
 
-It verifies public health, HTTPS redirect behavior, auth guards, radio catalog/search/detail responses, and attempts radio playback resolution. Live stream playback resolution is reported as a warning by default because external radio streams can be flaky; set `BLOMOON_STRICT_PLAYBACK=1` to make it fail the command.
+Monitor nonzero exits (including deployment-lock contention) and retry missed backups. Configure an encrypted off-server destination separately; local backups do not protect against VPS loss. No remote backup destination is configured by this repository.
 
-The default Traefik rule only requests a certificate for `BLOMOON_DOMAIN`. Add a `www` router after the `www` DNS record is pointed at the VPS.
+Before launch, restore a completed dump into a **separate disposable PostgreSQL 17 database** with `pg_restore --exit-on-error --no-owner --dbname=<disposable-url> <backup.dump>`, then run `db:check` against it. Archive-list validation is not a restore rehearsal. For actual recovery, stop writers first, preserve the existing database, and restore into an empty replacement database; never blindly restore over live data.
 
-## Data Sources
+For application rollback, inspect `previous-release.json`, confirm its code is compatible with the current schema, and invoke that release's `deploy.sh` using its recorded registry and SHA. Migration history remains forward-only. If a release introduced an incompatible schema change, use a reviewed forward fix or an explicit database recovery procedure instead.
 
-- Radio: Radio Browser
-- Country borders: `world-atlas` simplified country geometry, derived from Natural Earth
+## Release acceptance
+
+Before the first deployment, verify both Docker targets and rehearse fresh/repeated migrations, backup/restore, and database-outage readiness on disposable infrastructure. CI builds both targets but does not exercise the VPS or physical devices.
+
+On Android Chrome and iPhone Safari, install and relaunch; check icons, standalone layout, keyboard/focus and safe areas, login/logout, sharing links, globe/country/point interaction, and playback start/pause/stop/error. After an online visit, go offline and navigate: the reconnect screen must appear; reconnect and retry. Confirm Cache Storage contains only the offline document. Verify a release update does not interrupt playing audio by forcing a reload. Real-device installation and live-provider playback must be reported separately from simulated browser checks.
+
+## Data sources
+
+Radio: Radio Browser. Country borders: `world-atlas` simplified country geometry, derived from Natural Earth. Public support: `blomoon.support@gmail.com`.

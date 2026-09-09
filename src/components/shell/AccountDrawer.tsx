@@ -1,5 +1,7 @@
 "use client";
 
+import { InstallButton } from "../install/InstallButton";
+
 import { ChevronLeft, ChevronRight, LogOut, Mail, Palette, Shield } from "lucide-react";
 import type { ReactNode } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
@@ -75,6 +77,7 @@ export function AccountDrawer({
         ) : null}
       />
       <div className="account-drawer-actions">
+        <InstallButton />
         {!user && !loading ? (
           <button type="button" onClick={onAuthOpen}>
             <Shield size={16} aria-hidden="true" />

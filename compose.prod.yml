@@ -16,12 +16,15 @@ services:
       - --certificatesresolvers.letsencrypt.acme.httpchallenge.entrypoint=web
       - --accesslog=true
       - --log.level=${TRAEFIK_LOG_LEVEL:-INFO}
-    environment:
-      DOCKER_API_VERSION: "1.40"
     ports:
       - "80:80"
       - "443:443"
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - traefik_letsencrypt:/letsencrypt
       - /var/run/docker.sock:/var/run/docker.sock:ro
@@ -40,10 +43,16 @@ services:
       timeout: 5s
       retries: 10
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
   app:
+    stop_grace_period: 30s
     image: ${BLOMOON_IMAGE:?Set BLOMOON_IMAGE before running docker compose}
     depends_on:
       postgres:
@@ -53,7 +62,7 @@ services:
       BETTER_AUTH_URL: ${BETTER_AUTH_URL}
       BLOMOON_AUTH_EMAIL_FROM: ${BLOMOON_AUTH_EMAIL_FROM}
       BLOMOON_LOG_LEVEL: ${BLOMOON_LOG_LEVEL:-info}
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL:?Use deploy.sh to construct the encoded database URL}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
       HOSTNAME: 0.0.0.0
@@ -61,7 +70,7 @@ services:
       PORT: 3000
       RESEND_API_KEY: ${RESEND_API_KEY}
     healthcheck:
-      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/health').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
+      test: ["CMD", "node", "-e", "fetch('http://127.0.0.1:3000/api/ready').then((r)=>process.exit(r.ok?0:1)).catch(()=>process.exit(1))"]
       interval: 30s
       timeout: 10s
       retries: 3
@@ -73,6 +82,11 @@ services:
       - traefik.http.routers.blomoon.tls.certresolver=letsencrypt
       - traefik.http.services.blomoon.loadbalancer.server.port=3000
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   migrate:
     image: ${BLOMOON_MIGRATE_IMAGE:?Set BLOMOON_MIGRATE_IMAGE before running migrations}
@@ -82,7 +96,7 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL:?Use deploy.sh to construct the encoded database URL}
       NODE_ENV: production
 
   catalog:
@@ -92,10 +106,15 @@ services:
       postgres:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}
+      DATABASE_URL: ${DATABASE_URL:?Use deploy.sh to construct the encoded database URL}
       NODE_ENV: production
       BLOMOON_LOG_LEVEL: ${BLOMOON_LOG_LEVEL:-info}
     restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
 
   backup:
     image: postgres:17-alpine
@@ -109,12 +128,10 @@ services:
       PGHOST: postgres
       PGPASSWORD: ${POSTGRES_PASSWORD}
       PGUSER: ${POSTGRES_USER}
-    command: >
-      sh -c 'mkdir -p /backups
-      && pg_dump | gzip > /backups/blomoon-$$(date +%Y%m%d%H%M%S).sql.gz
-      && find /backups -type f -name "blomoon-*.sql.gz" -mtime +14 -delete'
+    command: ["sh", "/scripts/backup.sh"]
     volumes:
-      - ./backups:/backups
+      - ${BLOMOON_DEPLOY_DIR:-/opt/blomoon}/backups:/backups
+      - ${BLOMOON_RELEASE_DIR:?Set release directory}/scripts/backup.sh:/scripts/backup.sh:ro
 
 volumes:
   postgres_data:

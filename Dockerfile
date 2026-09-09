@@ -13,7 +13,6 @@ ENV NODE_ENV=production
 COPY --from=deps /app/node_modules ./node_modules
 COPY . .
 RUN npm run build
-RUN mkdir -p public
 
 FROM base AS app
 ENV NODE_ENV=production

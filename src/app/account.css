@@ -903,3 +903,9 @@
   display: flex;
   flex-wrap: wrap;
 }
+
+.install-button { display: inline-flex; align-items: center; gap: var(--space-row); padding: var(--space-row); color: var(--text); background: var(--control); border: 1px solid var(--panel-border); border-radius: var(--radius-row); cursor: pointer; font: inherit; }
+.install-button:hover { background: var(--control-hover); }
+.install-button:focus-visible { outline: 2px solid var(--focus-ring); outline-offset: 3px; }
+.install-help { color: var(--text); line-height: 1.6; }
+.install-help li + li { margin-top: var(--space-row); }

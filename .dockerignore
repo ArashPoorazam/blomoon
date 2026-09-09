@@ -13,3 +13,12 @@ tsconfig.tsbuildinfo
 .env.*.local
 .env.production
 backups
+
+# Keep secrets and deployment state out of source and image contexts.
+.env.*
+!.env.example
+!.env.production.example
+releases/
+current-release.json
+previous-release.json
+.deploy.lock
