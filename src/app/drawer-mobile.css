@@ -8,6 +8,7 @@
     max-height: none;
     border-top: 1px solid var(--panel-border);
     border-left: 0;
+    overflow: hidden;
     box-shadow: 0 -18px 52px var(--shadow-panel);
     transform: none;
     transition: height 240ms cubic-bezier(0.22, 0.8, 0.24, 1);
@@ -99,10 +100,10 @@
 
   .drawer-header {
     width: 100%;
-    height: 92px;
-    min-height: 92px;
+    min-height: 64px;
+    flex-shrink: 0;
     align-items: center;
-    padding: 12px max(14px, env(safe-area-inset-right, 0px)) 12px max(14px, env(safe-area-inset-left, 0px));
+    padding: 8px max(14px, env(safe-area-inset-right, 0px)) 8px max(14px, env(safe-area-inset-left, 0px));
   }
 
   .drawer-header-copy {
@@ -125,12 +126,11 @@
 
   .drawer-header .drawer-subtitle {
     display: block;
-    overflow: hidden;
-    margin-top: 7px;
+    overflow-wrap: anywhere;
+    margin-top: 4px;
     font-size: 12px;
     line-height: 1.25;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .drawer-list-toolbar {
@@ -195,8 +195,4 @@
     opacity: 1;
     transform: translateX(0);
   }
-}
-
-@media (max-width: 760px) {
-  .drawer-directory-header .drawer-subtitle { white-space: normal; overflow: visible; }
 }

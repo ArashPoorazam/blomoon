@@ -93,23 +93,33 @@ export function MobileDrawerHandle({
     const resizeObserver = typeof ResizeObserver === "undefined"
       ? null
       : new ResizeObserver(syncSettledLayout);
-    const player = document.querySelector(".media-mini-player");
-    const nav = document.querySelector(".shell-mobile-nav");
-
-    if (player instanceof HTMLElement) {
-      resizeObserver?.observe(player);
-    }
-    if (nav instanceof HTMLElement) {
-      resizeObserver?.observe(nav);
-    }
+    let observedElements: Element[] = [];
+    const observeLayout = () => {
+      const elements = [
+        document.querySelector(".media-mini-player"),
+        document.querySelector(".shell-mobile-nav"),
+        shellRef.current?.querySelector(".drawer-header"),
+        shellRef.current?.querySelector(".drawer-sheet-handle")
+      ].filter((element): element is Element => element instanceof Element);
+      if (elements.length === observedElements.length && elements.every((element, index) => element === observedElements[index])) return;
+      resizeObserver?.disconnect();
+      elements.forEach((element) => resizeObserver?.observe(element));
+      observedElements = elements;
+      syncSettledLayout();
+    };
+    observeLayout();
+    // Drawer navigation can replace the header without resizing its parent.
+    const mutationObserver = new MutationObserver(observeLayout);
+    if (shellRef.current) mutationObserver.observe(shellRef.current, { childList: true, subtree: true });
 
     window.addEventListener("resize", syncSettledLayout);
     return () => {
       resizeObserver?.disconnect();
+      mutationObserver.disconnect();
       window.removeEventListener("resize", syncSettledLayout);
       stopAnimation();
     };
-  }, [stopAnimation, syncSettledLayout]);
+  }, [shellRef, stopAnimation, syncSettledLayout]);
 
   const startMobileDrag = useCallback((event: ReactPointerEvent<HTMLButtonElement>) => {
     const metrics = getMobileSheetMetrics();

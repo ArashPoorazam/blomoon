@@ -86,7 +86,7 @@
   align-items: flex-start;
   justify-content: space-between;
   gap: 14px;
-  padding: 22px 22px 16px;
+  padding: 12px 22px;
   border-bottom: 1px solid var(--line);
 }
 
@@ -104,12 +104,11 @@
 
 .drawer-list-toolbar {
   display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  flex-shrink: 0;
   gap: 10px;
   padding: 14px 14px 10px;
   border-bottom: 1px solid var(--line);
-  background:
-    linear-gradient(180deg, var(--surface-soft), transparent 68%),
-    var(--panel);
 }
 
 .drawer-heading-copy {
