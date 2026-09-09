@@ -2,13 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { useModeList } from "./useModeList";
-import type { DataSourceInfo, TerraDataset, TerraMode, TerraPoint, TerraPointDetail, TerraPointPage } from "./types";
+import type { DataSourceInfo, TerraDataset, TerraMode, TerraPoint, TerraPointPage } from "./types";
 
 export type ModeDatasetState = {
   recommendation: TerraPointPage["recommendation"];
   suggested: boolean;
   catalogTotal?: number;
-  detail: TerraPointDetail | null;
   globePoints: TerraPoint[];
   hasMoreVisiblePoints: boolean;
   isLoadingDrawerTask: boolean;
@@ -49,7 +48,6 @@ export function useModeDataset(
   const [points, setPoints] = useState<TerraPoint[]>(() => initialModeDataset?.points ?? []);
   const [source, setSource] = useState<DataSourceInfo | null>(() => initialModeDataset?.source ?? null);
   const [selectedPoint, setSelectedPoint] = useState<TerraPoint | null>(null);
-  const [detail, setDetail] = useState<TerraPointDetail | null>(null);
   const [loading, setLoading] = useState(() => !initialModeDataset);
   const [refreshingLivePoints, setRefreshingLivePoints] = useState(false);
   const [requestError, setRequestError] = useState<string | null>(null);
@@ -66,7 +64,6 @@ export function useModeDataset(
       setLoading(!seededDataset);
       setRequestError(null);
       setSelectedPoint(null);
-      setDetail(null);
       setPoints(seededDataset?.points ?? []);
       setSource(seededDataset?.source ?? null);
       setRefreshingLivePoints(Boolean(seededDataset));
@@ -159,55 +156,6 @@ export function useModeDataset(
 
   const selectedId = selectedPoint?.id ?? null;
 
-  useEffect(() => {
-    let cancelled = false;
-    const controller = new AbortController();
-
-    async function loadDetail() {
-      if (!selectedId) {
-        setDetail(null);
-        return;
-      }
-
-      if (selectedPoint) {
-        setDetail({
-          ...selectedPoint,
-          fields: []
-        });
-      }
-
-      try {
-        const response = await fetch(mode.detailEndpoint(selectedId), {
-          signal: controller.signal
-        });
-
-        if (!response.ok) {
-          throw new Error(`Request failed with ${response.status}`);
-        }
-
-        const nextDetail = (await response.json()) as TerraPointDetail;
-
-        if (!cancelled) {
-          setDetail(nextDetail);
-        }
-      } catch (error) {
-        if (!cancelled && !isAbortError(error) && selectedPoint) {
-          setDetail({
-            ...selectedPoint,
-            fields: []
-          });
-        }
-      }
-    }
-
-    void loadDetail();
-
-    return () => {
-      cancelled = true;
-      controller.abort();
-    };
-  }, [mode, selectedId]);
-
   const globePoints = useMemo(
     () => selectedCountryCode && mode.countryCatalog
       ? mergePoints(points, countryMarkerPoints, visiblePage.points)
@@ -232,7 +180,6 @@ export function useModeDataset(
     recommendation: visiblePage.recommendation,
     suggested: list.suggested,
     catalogTotal: visiblePage.catalogTotal,
-    detail,
     globePoints,
     hasMoreVisiblePoints,
     isLoadingDrawerTask,

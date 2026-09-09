@@ -17,15 +17,14 @@ export function PointScreenAnchor({ point, target }: {
   const previous = useRef("");
   useFrame(({ camera, size }) => {
     const element = target.current;
-    if (!element) return;
+    if (!element || !position) return;
     const anchor = position ? projectPointAnchor(position, camera, size.width, size.height, projected) : null;
     const next = anchor ? `${anchor.x.toFixed(2)},${anchor.y.toFixed(2)}` : "hidden";
     if (previous.current === next && element.style.visibility) return;
     previous.current = next;
     element.style.visibility = anchor ? "visible" : "hidden";
     if (anchor) {
-      element.style.left = `${anchor.x}px`;
-      element.style.top = `${anchor.y - 10}px`;
+      element.style.transform = `translate3d(${anchor.x}px, ${anchor.y - 10}px, 0) translate(-50%, -100%)`;
     }
   });
   return null;

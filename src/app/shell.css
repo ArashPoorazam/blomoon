@@ -17,9 +17,10 @@
   display: grid;
   width: min(420px, 100%);
   max-height: min(680px, calc(100svh - 36px));
-  gap: 14px;
+  gap: 16px;
+  align-content: start;
   overflow: auto;
-  padding: 24px;
+  padding: 20px;
   border: 1px solid var(--panel-border);
   border-radius: var(--radius-dialog);
   background: var(--panel-solid);
@@ -29,7 +30,7 @@
 .favourite-modal h2 {
   color: var(--accent);
   overflow-wrap: anywhere;
-  margin: 5px 0 0;
+  margin: 0;
   font-size: 19px;
   line-height: 1.15;
 }
@@ -206,3 +207,29 @@
 }
 
 .drawer .icon-button, .favourite-modal .icon-button { border-radius: 999px; }
+
+.favourite-modal .modal-subtitle {
+  margin-top: 6px;
+  color: var(--text);
+  font-size: 12px;
+}
+
+.favourite-modal,
+.favourite-picker-list {
+  scrollbar-color: var(--scrollbar-thumb) var(--scrollbar-track);
+  scrollbar-width: thin;
+}
+
+.favourite-modal::-webkit-scrollbar,
+.favourite-picker-list::-webkit-scrollbar { width: 6px; }
+.favourite-modal::-webkit-scrollbar-track,
+.favourite-picker-list::-webkit-scrollbar-track { background: var(--scrollbar-track); }
+.favourite-modal::-webkit-scrollbar-thumb,
+.favourite-picker-list::-webkit-scrollbar-thumb {
+  border-radius: var(--radius-row);
+  background: var(--scrollbar-thumb);
+}
+.favourite-modal::-webkit-scrollbar-thumb:hover,
+.favourite-picker-list::-webkit-scrollbar-thumb:hover { background: var(--scrollbar-thumb-hover); }
+
+.favourite-modal:focus { outline: none; }

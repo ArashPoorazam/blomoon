@@ -5,13 +5,11 @@ import {
   GLOBE_COUNTRY_POINT_GUARANTEE,
   GLOBE_DISPLAY_BUDGET
 } from "@/lib/modes/displayBudget";
-import { MAX_CAMERA_DISTANCE, MOBILE_MAX_CAMERA_DISTANCE } from "./globeMath";
 
 export type GlobeProfile = {
   countryPointGuarantee: number;
   dpr: [number, number];
   hoverEnabled: boolean;
-  maxCameraDistance: number;
   markerBudget: number;
   motionEnabled: boolean;
   profile: "desktop" | "mobile";
@@ -21,7 +19,6 @@ const DESKTOP_PROFILE: GlobeProfile = {
   countryPointGuarantee: GLOBE_COUNTRY_POINT_GUARANTEE,
   dpr: [1, 2],
   hoverEnabled: true,
-  maxCameraDistance: MAX_CAMERA_DISTANCE,
   markerBudget: GLOBE_DISPLAY_BUDGET,
   motionEnabled: true,
   profile: "desktop"
@@ -44,7 +41,6 @@ export function useGlobeProfile(): GlobeProfile {
         countryPointGuarantee: GLOBE_COUNTRY_POINT_GUARANTEE,
         dpr: isMobile ? [1, 1.35] : [1, 2],
         hoverEnabled: !isCoarse,
-        maxCameraDistance: isMobile ? MOBILE_MAX_CAMERA_DISTANCE : MAX_CAMERA_DISTANCE,
         markerBudget: GLOBE_DISPLAY_BUDGET,
         motionEnabled: !reducedMotion,
         profile: isMobile ? "mobile" : "desktop"

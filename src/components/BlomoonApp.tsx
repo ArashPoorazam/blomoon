@@ -9,6 +9,7 @@ import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import { getNextPlaybackPoint, type PlaybackQueueSource } from "@/lib/modes/playbackNavigation";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
 import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
+import { usePointDetail } from "@/lib/modes/usePointDetail";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { usePrefetchedRandomPoint } from "@/lib/modes/usePrefetchedRandomPoint";
 import { authClient } from "@/lib/auth/client";
@@ -25,8 +26,8 @@ import { FavouriteOverlays } from "./favourites/FavouriteOverlays";
 import { useFavouriteDrawerPoints } from "./favourites/useFavouriteDrawerPoints";
 import { useFavouriteFolders } from "./favourites/useFavouriteFolders";
 import { usePlaybackHistory } from "./history/usePlaybackHistory";
-import { GlobeScene } from "./GlobeScene";
-import { MobileCrosshair } from "./globe/MobileCrosshair";
+import { GlobeViewport, type GlobeViewportHandle } from "./globe/GlobeViewport";
+import { useCrosshairPreference } from "./globe/useCrosshairPreference";
 import { useCameraFocusRequest } from "./globe/useCameraFocusRequest";
 import { useDisplayedGlobePoints } from "./globe/useDisplayedGlobePoints";
 import { useEarthSpinControls } from "./globe/useEarthSpinControls";
@@ -53,7 +54,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [stationSharePoint, setStationSharePoint] = useState<TerraPoint | null>(null);
   const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
   const shellRef = useRef<HTMLElement>(null);
-  const crosshairAnchorRef = useRef<HTMLElement>(null);
+  const globeRef = useRef<GlobeViewportHandle>(null);
+  const crosshair = useCrosshairPreference();
+  const clearCrosshairPoint = useCallback(() => globeRef.current?.clearPreview(), []);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -63,6 +66,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const viewer = useViewer();
   const modeState = useModeDataset(activeMode, selectedCountry?.code ?? null, initialDatasets?.[activeMode.id],
     viewer.loading ? "loading" : viewer.user?.id ?? "guest");
+  const pointDetail = usePointDetail(activeMode, drawer.view === "point-detail" ? modeState.selectedPoint : null);
   const playbackHistory = usePlaybackHistory(viewer.user?.id ?? null);
   const audioPlayback = useAudioPlayback(activeMode.playback ?? null, playbackHistory.record);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
@@ -86,12 +90,9 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     drawer.open({ kind: "point-detail", modeId: point.modeId, pointId: point.id });
   }, [drawer.open]);
   const {
-    clearCrosshairPoint,
-    crosshairPoint,
     inspect: inspectPoint,
     play: playPoint,
-    playInPlace: playPointInPlace,
-    preview: previewPoint
+    playInPlace: playPointInPlace
   } = usePointInteractions({
     activeModeId,
     focusPoint,
@@ -103,8 +104,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     setPlaybackQueueSource
   });
   const drawerOpen = !drawer.collapsed && drawer.mobilePosition !== "closed";
-  const crosshairVisible = globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
-  const crosshairTargetingEnabled = crosshairVisible && !crosshairPoint;
+  const crosshairVisible = crosshair.enabled && globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
   const hasMiniPlayer = Boolean(activeMode.playback);
   const favouritePoints = useFavouriteDrawerPoints({ activeFolder: favourites.activeFolder,
     entry: getListContextEntry(drawer.stack), points: favourites.points });
@@ -123,17 +123,15 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     ? getPointKey(audioPlayback.point)
     : null;
   const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;
+  const playFromList = useCallback((point: TerraPoint) => playPoint(point, "list"), [playPoint]);
+  const playFromFavourites = useCallback((point: TerraPoint) => playPoint(point, "favourites"), [playPoint]);
+  const playFromHistory = useCallback((point: TerraPoint) => playPoint(point, "history"), [playPoint]);
   const playFromCurrentDrawer = useCallback((point: TerraPoint) => {
     playPoint(point, drawerSource ?? "list");
   }, [drawerSource, playPoint]);
   const playInPlaceFromCurrentDrawer = useCallback((point: TerraPoint) => {
     playPointInPlace(point, drawerSource ?? "list");
   }, [drawerSource, playPointInPlace]);
-  const crosshairPlaybackStatus = crosshairPoint
-    && audioPlayback.point
-    && getPointKey(crosshairPoint) === getPointKey(audioPlayback.point)
-    ? audioPlayback.status
-    : "idle";
   const toggleEarthSpin = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
     clearCrosshairPoint();
     earthSpin.toggleEarthSpin(event);
@@ -154,13 +152,14 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       return;
     }
 
-    void favourites.loadPoints().then(() => setFavouritePickerPoint(point));
+    setFavouritePickerPoint(point);
+    void favourites.loadPoints();
   }, [favourites.loadPoints, viewer.user]);
   const detailAccessory =
-    activeMode.playback && modeState.detail ? (
+    activeMode.playback && pointDetail ? (
       <AudioPlaybackPanel
-        detail={modeState.detail}
-        favourited={favourites.favouriteIds.has(getPointKey(modeState.detail))}
+        detail={pointDetail}
+        favourited={favourites.favouriteIds.has(getPointKey(pointDetail))}
         itemSingularLabel={activeMode.copy.itemSingular}
         playback={audioPlayback}
         playbackLabel={activeMode.playback.label}
@@ -300,45 +299,37 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     >
       <ButtonPressFeedback rootRef={shellRef} />
 
-      <div className="globe-stage">
-        <GlobeScene
-          anchorPoint={crosshairVisible ? crosshairPoint : null}
-          anchorTarget={crosshairAnchorRef}
-          activePlaybackPoint={displayedGlobe.activePlaybackPoint}
-          crosshairEnabled={crosshairTargetingEnabled}
-          dpr={globeProfile.dpr}
-          earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
-          focusKey={cameraFocusRequest?.key ?? null}
-          focusPoint={cameraFocusRequest?.point ?? null}
-          hoverEnabled={globeProfile.hoverEnabled}
-          maxCameraDistance={globeProfile.maxCameraDistance}
-          markerColor={displayedGlobe.markerColor}
-          markerColorMode={displayedGlobe.markerColorMode}
-          motionEnabled={globeProfile.motionEnabled}
-          points={displayedGlobe.points}
-          selectedCountryCode={selectedCountry?.code ?? null}
-          selectedCountryOutlineColor={displayedGlobe.selectedCountryOutlineColor}
-          selectedPoint={displayedGlobe.selectedPoint}
-          theme={activeTheme.globe}
-          onCountrySelect={selectCountry}
-          onCrosshairPoint={previewPoint}
-          onGlobeInteractionStart={clearCrosshairPoint}
-          onPointHover={setHoveredPoint}
-          onPointSelect={playFromCurrentDrawer}
-        />
-        {crosshairVisible ? (
-          <MobileCrosshair
-            anchorRef={crosshairAnchorRef}
-            playbackStatus={crosshairPlaybackStatus}
-            point={crosshairPoint}
-            onInfo={inspectPoint}
-            onPause={audioPlayback.pause}
-            onPlay={playInPlaceFromCurrentDrawer}
-          />
-        ) : null}
-      </div>
+      <GlobeViewport
+        ref={globeRef}
+        playbackStatus={audioPlayback.status}
+        playbackPoint={audioPlayback.point}
+        onInspect={inspectPoint}
+        onPause={audioPlayback.pause}
+        onPlayInPlace={playInPlaceFromCurrentDrawer}
+        activePlaybackPoint={displayedGlobe.activePlaybackPoint}
+        crosshairEnabled={crosshairVisible}
+        fitViewport={globeProfile.profile === "mobile"}
+        dpr={globeProfile.dpr}
+        earthSpinEnabled={earthSpin.earthSpinEnabled && globeProfile.motionEnabled}
+        focusKey={cameraFocusRequest?.key ?? null}
+        focusPoint={cameraFocusRequest?.point ?? null}
+        hoverEnabled={globeProfile.hoverEnabled}
+        markerColor={displayedGlobe.markerColor}
+        markerColorMode={displayedGlobe.markerColorMode}
+        motionEnabled={globeProfile.motionEnabled}
+        points={displayedGlobe.points}
+        selectedCountryCode={selectedCountry?.code ?? null}
+        selectedCountryOutlineColor={displayedGlobe.selectedCountryOutlineColor}
+        selectedPoint={displayedGlobe.selectedPoint}
+        theme={activeTheme.globe}
+        onCountrySelect={selectCountry}
+        onPointHover={setHoveredPoint}
+        onPointSelect={playFromCurrentDrawer}
+      />
 
       <ShellChrome
+        crosshairEnabled={crosshair.enabled}
+        onToggleCrosshair={crosshair.toggle}
         listedPointsDisabled={!drawerListsPoints}
         activeMode={activeMode}
         activeModeId={activeModeId}
@@ -388,7 +379,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         accountLoading={viewer.loading}
         canGoBack={drawer.canGoBack}
         collapsed={drawer.collapsed}
-        detail={modeState.detail}
+        detail={pointDetail}
         detailAccessory={detailAccessory}
         favouritePointIds={favourites.favouriteIds}
         activeFavouriteFolder={favourites.activeFolder}
@@ -431,7 +422,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onBack={goBackDrawer}
         onOpenFavouritePicker={openFavouritePicker}
         onPointInspect={inspectPoint}
-        onPointPlay={(point) => playPoint(point, "list")}
+        onPointPlay={playFromList}
         onPointShare={setStationSharePoint}
         onQueryChange={updateQuery}
         onRemoveFavouriteFromFolder={favourites.removePointFromFolder}
@@ -443,8 +434,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onThemeChange={selectTheme}
         onToggleCollapsed={drawer.toggleCollapsed}
         onFavouritePointInspect={inspectPoint}
-        onFavouritePointPlay={(point) => playPoint(point, "favourites")}
-        onHistoryPointPlay={(point) => playPoint(point, "history")}
+        onFavouritePointPlay={playFromFavourites}
+        onHistoryPointPlay={playFromHistory}
         onHistoryRetry={() => void playbackHistory.load(activeModeId)}
       />
 

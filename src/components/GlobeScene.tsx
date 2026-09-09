@@ -8,18 +8,19 @@ import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
 import { GlobeCameraController } from "./globe/CameraControls";
 import { Earth } from "./globe/Earth";
 import { PointScreenAnchor } from "./globe/PointScreenAnchor";
+import { GLOBE_CAMERA_FOV } from "./globe/cameraFit";
 import { PointMarkers } from "./globe/PointMarkers";
 
 type GlobeSceneProps = {
   anchorPoint?: TerraPoint | null;
   anchorTarget?: RefObject<HTMLElement | null>;
   crosshairEnabled: boolean;
+  fitViewport: boolean;
   dpr: [number, number];
   earthSpinEnabled: boolean;
   focusKey: string | null;
   focusPoint: TerraPoint | null;
   hoverEnabled: boolean;
-  maxCameraDistance: number;
   motionEnabled: boolean;
   markerColor?: string;
   markerColorMode: MarkerColorMode;
@@ -38,6 +39,7 @@ type GlobeSceneProps = {
 
 export const GlobeScene = memo(function GlobeScene({
   crosshairEnabled,
+  fitViewport,
   anchorPoint,
   anchorTarget,
   dpr,
@@ -45,7 +47,6 @@ export const GlobeScene = memo(function GlobeScene({
   focusKey,
   focusPoint,
   hoverEnabled,
-  maxCameraDistance,
   motionEnabled,
   markerColor,
   markerColorMode,
@@ -62,7 +63,7 @@ export const GlobeScene = memo(function GlobeScene({
   onPointSelect
 }: GlobeSceneProps) {
   return (
-    <Canvas camera={{ position: [0, 0.35, 5.2], fov: 42 }} dpr={dpr}>
+    <Canvas camera={{ position: [0, 0.35, 5.2], fov: GLOBE_CAMERA_FOV }} dpr={dpr}>
       <color attach="background" args={[theme.ocean]} />
 
       <Earth
@@ -86,11 +87,11 @@ export const GlobeScene = memo(function GlobeScene({
       {anchorTarget ? <PointScreenAnchor point={anchorPoint ?? null} target={anchorTarget} /> : null}
 
       <GlobeCameraController
+        fitViewport={fitViewport}
         crosshairEnabled={crosshairEnabled}
         earthSpinEnabled={earthSpinEnabled}
         focusKey={focusKey}
         focusPoint={focusPoint}
-        maxDistance={maxCameraDistance}
         motionEnabled={motionEnabled}
         points={points}
         onCrosshairPoint={onCrosshairPoint}

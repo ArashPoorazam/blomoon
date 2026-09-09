@@ -2,6 +2,7 @@
 
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
+import { useProgressiveRows } from "./drawer/useProgressiveRows";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";
 import { LoadMoreButton } from "./drawer/LoadMoreButton";
 import { PointListRow } from "./drawer/PointListRow";
@@ -61,7 +62,7 @@ export function SideDrawerList({
   onSortChange,
   onToggleFavourite
 }: SideDrawerListProps) {
-  const listedPoints = points;
+  const { rows: listedPoints, pending } = useProgressiveRows(points);
   const hasMorePoints = Boolean(hasMoreRemotePoints);
   const isLoadingMorePoints = Boolean(loadingMoreRemotePoints);
 
@@ -71,7 +72,7 @@ export function SideDrawerList({
         activeMode={activeMode}
         hasMorePoints={hasMorePoints}
         isLoadingMorePoints={isLoadingMorePoints}
-        listedCount={listedPoints.length}
+        listedCount={points.length}
         loading={loading}
         providerError={providerError}
         query={query}
@@ -88,7 +89,8 @@ export function SideDrawerList({
         onSortChange={onSortChange}
       />
 
-      <div className="point-list">
+      <div className="point-list" aria-busy={loading || pending}>
+        {pending && listedPoints.length === 0 ? <div className="empty-state" role="status">Loading stations</div> : null}
         {points.length === 0 ? (
           <div className="empty-state">{loading ? activeMode.copy.loadingLabel : activeMode.copy.emptyLabel}</div>
         ) : (

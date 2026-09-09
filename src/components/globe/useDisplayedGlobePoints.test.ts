@@ -14,7 +14,7 @@ function displayed(listedPoints: TerraPoint[], showListedOnGlobe = true) {
       activePlaybackPoint: point("unrelated-playing"), modeSelectedPoint: point("unrelated-selected"),
       modeGlobePoints: [point("default")], listedPoints, showListedOnGlobe,
       globeProfile: { countryPointGuarantee: 0, markerBudget: 1, dpr: [1, 1], hoverEnabled: true,
-        maxCameraDistance: 5, motionEnabled: true, profile: "desktop" } });
+        motionEnabled: true, profile: "desktop" } });
     return null;
   }
   renderToStaticMarkup(createElement(Harness));

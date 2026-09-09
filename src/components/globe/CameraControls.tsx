@@ -2,10 +2,11 @@
 
 import { OrbitControls } from "@react-three/drei";
 import { useFrame, useThree } from "@react-three/fiber";
-import { useCallback, useEffect, useMemo, useRef } from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import type { TerraPoint } from "@/lib/modes/types";
+import { getViewportFitDistance } from "./cameraFit";
 import { createCameraTransition } from "./cameraTransition";
 import {
   CROSSHAIR_CENTER_TOLERANCE_PX,
@@ -17,6 +18,7 @@ import {
   GLOBE_AUTO_SPIN_SPEED,
   KEYBOARD_ORBIT_RADIANS_PER_SECOND,
   MIN_CAMERA_DISTANCE,
+  MAX_CAMERA_DISTANCE,
   getKeyboardOrbitIntent,
   getKeyboardOrbitIntentFromKeys,
   getRotateSpeed,
@@ -27,14 +29,15 @@ type CameraFocusTarget = {
   transition: ReturnType<typeof createCameraTransition> | null;
   normal: THREE.Vector3;
   point: TerraPoint;
+  automatic: boolean;
 };
 
 type GlobeCameraControllerProps = {
   crosshairEnabled: boolean;
+  fitViewport: boolean;
   earthSpinEnabled: boolean;
   focusKey: string | null;
   focusPoint: TerraPoint | null;
-  maxDistance: number;
   motionEnabled: boolean;
   points: TerraPoint[];
   onCrosshairPoint: (point: TerraPoint) => void;
@@ -48,10 +51,10 @@ const RIGHT_MOUSE_ORBIT_BUTTONS = {
 
 export function GlobeCameraController({
   crosshairEnabled,
+  fitViewport,
   earthSpinEnabled,
   focusKey,
   focusPoint,
-  maxDistance,
   motionEnabled,
   onCrosshairPoint,
   onUserInteractionStart,
@@ -67,7 +70,21 @@ export function GlobeCameraController({
   const onCrosshairPointRef = useRef(onCrosshairPoint);
   const onUserInteractionStartRef = useRef(onUserInteractionStart);
   const { height, width } = useThree((state) => state.size);
+  const camera = useThree((state) => state.camera);
+  const previousFitDistance = useRef<number | null>(null);
+  const fittedDistance = fitViewport ? getViewportFitDistance(width, height) : MAX_CAMERA_DISTANCE;
   const origin = useMemo(() => new THREE.Vector3(), []);
+
+  useLayoutEffect(() => {
+    if (!fitViewport) { previousFitDistance.current = null; return; }
+    const previous = previousFitDistance.current;
+    // Resize preserves a user's zoom unless they are at the overview limit.
+    if (previous === null || camera.position.length() >= previous - 0.05) {
+      camera.position.setLength(fittedDistance);
+      controlsRef.current?.update();
+    }
+    previousFitDistance.current = fittedDistance;
+  }, [camera, fitViewport, fittedDistance]);
 
   useEffect(() => {
     onCrosshairPointRef.current = onCrosshairPoint;
@@ -99,6 +116,7 @@ export function GlobeCameraController({
 
   useEffect(() => {
     lastEvaluatedPosition.current = null;
+    if (!crosshairEnabled && focusTarget.current?.automatic) focusTarget.current = null;
   }, [crosshairEnabled, points]);
 
   useEffect(() => {
@@ -157,7 +175,13 @@ export function GlobeCameraController({
     const currentFocus = focusTarget.current;
 
     if (currentFocus) {
-      currentFocus.transition ??= createCameraTransition(camera.position, currentFocus.normal);
+      if (!currentFocus.transition) {
+        // Drain residual orbit damping before capturing the start of scripted travel.
+        controls.enableDamping = false;
+        controls.update();
+        currentFocus.transition = createCameraTransition(camera.position, currentFocus.normal);
+      }
+      controls.autoRotate = false;
       const complete = currentFocus.transition.advance(camera.position, delta, motionEnabled);
 
       camera.lookAt(origin);
@@ -165,6 +189,8 @@ export function GlobeCameraController({
 
       if (complete) {
         focusTarget.current = null;
+        controls.enableDamping = motionEnabled;
+        controls.update();
         lastMotionAt.current = performance.now();
 
         if (crosshairEnabled) {
@@ -175,6 +201,9 @@ export function GlobeCameraController({
 
       return;
     }
+
+    controls.enableDamping = motionEnabled;
+    controls.autoRotate = earthSpinEnabled;
 
     if (earthSpinEnabled || userInteracting.current || pressedKeyCodes.current.size > 0) {
       markMotion();
@@ -201,7 +230,7 @@ export function GlobeCameraController({
       return;
     }
 
-    focusTarget.current = createFocusTarget(candidate.point);
+    focusTarget.current = createFocusTarget(candidate.point, true);
     markMotion();
   });
 
@@ -210,9 +239,9 @@ export function GlobeCameraController({
       ref={controlsRef}
       autoRotate={earthSpinEnabled}
       autoRotateSpeed={GLOBE_AUTO_SPIN_SPEED}
-      enableDamping
+      enableDamping={motionEnabled}
       enablePan={false}
-      maxDistance={maxDistance}
+      maxDistance={fittedDistance}
       minDistance={MIN_CAMERA_DISTANCE}
       mouseButtons={RIGHT_MOUSE_ORBIT_BUTTONS}
       rotateSpeed={DEFAULT_ROTATE_SPEED}
@@ -231,8 +260,9 @@ export function GlobeCameraController({
   );
 }
 
-function createFocusTarget(point: TerraPoint): CameraFocusTarget {
+function createFocusTarget(point: TerraPoint, automatic = false): CameraFocusTarget {
   return {
+    automatic,
     transition: null,
     normal: latLonToVector3(point.latitude, point.longitude, 1).normalize(),
     point

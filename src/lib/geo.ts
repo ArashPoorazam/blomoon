@@ -80,15 +80,14 @@ export function formatCoordinate(value: number, directionA: string, directionB: 
   return `${Math.abs(value).toFixed(2)} ${direction}`;
 }
 
+const dateTimeFormatter = new Intl.DateTimeFormat("en", { dateStyle: "medium", timeStyle: "short" });
+
 export function formatDateTime(value?: string) {
   if (!value) {
     return "Unknown";
   }
 
-  return new Intl.DateTimeFormat("en", {
-    dateStyle: "medium",
-    timeStyle: "short"
-  }).format(new Date(value));
+  return dateTimeFormatter.format(new Date(value));
 }
 
 export function isValidLatitude(value: number) {

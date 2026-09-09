@@ -12,6 +12,8 @@ import { ShellGlobeControls } from "./ShellGlobeControls";
 import { ShellMobileNav } from "./ShellMobileNav";
 
 type ShellChromeProps = {
+  crosshairEnabled: boolean;
+  onToggleCrosshair: () => void;
   listedPointsDisabled: boolean;
   activeMode: TerraMode;
   activeModeId: TerraModeId;
@@ -39,6 +41,8 @@ type ShellChromeProps = {
 };
 
 export function ShellChrome({
+  crosshairEnabled,
+  onToggleCrosshair,
   listedPointsDisabled,
   activeMode,
   activeModeId,
@@ -103,6 +107,8 @@ export function ShellChrome({
       />
 
       <ShellGlobeControls
+        crosshairEnabled={crosshairEnabled}
+        onToggleCrosshair={onToggleCrosshair}
         listedPointsDisabled={listedPointsDisabled}
         earthSpinEnabled={earthSpinEnabled}
         earthSpinDisabled={earthSpinDisabled}

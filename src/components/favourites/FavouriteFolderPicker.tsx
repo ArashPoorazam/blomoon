@@ -10,6 +10,9 @@ import { ModalShell } from "../ui/ModalShell";
 
 type FavouriteFolderPickerProps = {
   folders: FavouriteFolderSummaryDto[];
+  loading: boolean;
+  loadError: boolean;
+  onRetry: () => void;
   point: TerraPoint;
   selectedFolderIds: Set<string>;
   onAddToFolder: (folderId: string, point: TerraPoint) => Promise<void>;
@@ -20,6 +23,9 @@ type FavouriteFolderPickerProps = {
 
 export function FavouriteFolderPicker({
   folders,
+  loading,
+  loadError,
+  onRetry,
   onAddToFolder,
   onClose,
   onCreateFolder,
@@ -32,8 +38,10 @@ export function FavouriteFolderPicker({
   const [busyListId, setBusyListId] = useState<string | null>(null);
 
   return (
-    <ModalShell className="favourite-picker" kicker="Save station · Choose one or more folders" title={point.name} onClose={onClose}>
-        <div className="favourite-picker-list">
+    <ModalShell className="favourite-picker" subtitle="Save station · Choose one or more folders" title={point.name} onClose={onClose}>
+      <div className="favourite-picker-list" aria-busy={loading}>
+          {loading ? <p role="status">Loading folders…</p> : null}
+          {loadError ? <div role="alert"><p>Could not load your folders. Please try again.</p><button className="secondary-action compact-action" type="button" onClick={onRetry}>Retry</button></div> : null}
           {creating ? (
             <FavouriteFolderForm
               modeId={point.modeId}
@@ -48,14 +56,14 @@ export function FavouriteFolderPicker({
                 return true;
               }}
             />
-          ) : folders.filter((folder) => folder.modeId === point.modeId).map((folder) => {
+          ) : !loadError ? folders.filter((folder) => folder.modeId === point.modeId).map((folder) => {
             const selected = selectedFolderIds.has(folder.id);
 
             return (
               <button
                 aria-pressed={selected}
                 className={`favourite-picker-option ${selected ? "selected" : ""}`}
-                disabled={busyListId === folder.id}
+                disabled={loading || busyListId !== null}
                 key={folder.id}
                 type="button"
                 onClick={() => {
@@ -69,12 +77,12 @@ export function FavouriteFolderPicker({
                 <span className="folder-selection" aria-hidden="true">{selected ? <Check size={16} /> : null}</span>
               </button>
             );
-          })}
+          }) : null}
         </div>
 
         {error ? <p className="form-error" role="alert">{error}</p> : null}
         {!creating ? (
-          <button className="secondary-action compact-action" type="button" onClick={() => setCreating(true)}>
+          <button className="secondary-action compact-action" disabled={loading || loadError} type="button" onClick={() => setCreating(true)}>
             <Plus size={15} aria-hidden="true" />
             <span>Create new folder</span>
           </button>

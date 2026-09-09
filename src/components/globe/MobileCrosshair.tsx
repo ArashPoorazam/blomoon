@@ -1,7 +1,7 @@
 "use client";
 
 import { Info, LoaderCircle, Pause, Play } from "lucide-react";
-import type { RefObject } from "react";
+import { useState, type RefObject } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 
 export type CrosshairPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
@@ -15,14 +15,18 @@ type MobileCrosshairProps = {
   onPlay: (point: TerraPoint) => void;
 };
 
-export function MobileCrosshair({ anchorRef, onInfo, onPause, onPlay, playbackStatus, point }: MobileCrosshairProps) {
+export function MobileCrosshair({ anchorRef, onInfo, onPause, onPlay, playbackStatus, point: currentPoint }: MobileCrosshairProps) {
+  const [retainedPoint, setRetainedPoint] = useState(currentPoint);
+  if (currentPoint && currentPoint !== retainedPoint) setRetainedPoint(currentPoint);
+  const point = currentPoint ?? retainedPoint;
+  const closing = !currentPoint;
   const playbackLoading = playbackStatus === "loading";
   const playbackPlaying = playbackStatus === "playing";
 
   return (
     <div className="mobile-crosshair">
       {point ? (
-        <section ref={anchorRef} className="crosshair-point-card" aria-label={`Selected station: ${point.name}`}>
+        <section ref={anchorRef} className="crosshair-point-card" data-closing={closing} inert={closing} aria-hidden={closing} onTransitionEnd={() => { if (closing) setRetainedPoint(null); }} aria-label={`Selected station: ${point.name}`}>
           <div className="crosshair-point-copy">
             <strong>{point.name}</strong>
             <span>{point.summary}</span>
@@ -49,7 +53,7 @@ export function MobileCrosshair({ anchorRef, onInfo, onPause, onPlay, playbackSt
           </div>
         </section>
       ) : null}
-      {!point ? <span className="crosshair-dot" aria-hidden="true" /> : null}
+      {!currentPoint ? <span className="crosshair-dot" aria-hidden="true" /> : null}
     </div>
   );
 }

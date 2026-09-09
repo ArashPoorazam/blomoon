@@ -274,11 +274,12 @@ button.press-feedback-active::after {
   padding: 6px 8px;
   border: 1px solid var(--tooltip-border);
   border-radius: var(--radius-row);
-  background: var(--panel);
+  background: var(--panel-solid);
   box-shadow: 0 16px 42px var(--shadow-tooltip);
   pointer-events: auto;
   transform: translate(-50%, -100%);
-  backdrop-filter: blur(var(--panel-blur));
+  transition: opacity 120ms ease;
+  @starting-style { opacity: 0; }
 }
 
 .crosshair-point-card::after {
@@ -287,7 +288,7 @@ button.press-feedback-active::after {
   left: calc(50% - 10px);
   width: 20px;
   height: 10px;
-  background: var(--panel);
+  background: var(--panel-solid);
   clip-path: polygon(0 0, 100% 0, 50% 100%);
   content: "";
 }
@@ -489,4 +490,13 @@ button.press-feedback-active::after {
   .shell-globe-controls {
     transition-duration: 0ms;
   }
+}
+
+.crosshair-point-card[data-closing="true"] {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .crosshair-point-card { transition: none; }
 }

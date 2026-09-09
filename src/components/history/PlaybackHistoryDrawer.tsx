@@ -4,6 +4,7 @@ import { ChevronLeft, RefreshCw } from "lucide-react";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { groupPlaybackHistory } from "@/lib/playback-history/history";
 import type { PlaybackHistoryItemDto } from "@/lib/persistence/types";
+import { useProgressiveRows } from "../drawer/useProgressiveRows";
 import { DrawerHeader } from "../drawer/DrawerHeader";
 import { PointListRow } from "../drawer/PointListRow";
 import type { PlaybackHistoryModeState } from "./usePlaybackHistory";
@@ -21,7 +22,8 @@ export function PlaybackHistoryDrawer({ activeMode, activePlaybackPointKey, favo
   onShare: (point: TerraPoint) => void;
   onToggleFavourite: (point: TerraPoint) => void;
 }) {
-  const groups = groupPlaybackHistory(history.items);
+  const { rows, pending } = useProgressiveRows(history.items);
+  const groups = groupPlaybackHistory(rows);
   return (
     <div className="history-view" aria-label={`${activeMode.label} playback history`}>
       <DrawerHeader
@@ -36,8 +38,8 @@ export function PlaybackHistoryDrawer({ activeMode, activePlaybackPointKey, favo
           <button type="button" onClick={onRetry}><RefreshCw size={14} aria-hidden="true" /> Retry</button>
         </div>
       ) : null}
-      <div className="point-list history-list" aria-busy={history.status === "loading"}>
-        {history.status === "loading" && history.items.length === 0 ? <div className="empty-state">Loading playback history</div> : null}
+      <div className="point-list history-list" aria-busy={history.status === "loading" || pending}>
+        {(history.status === "loading" && history.items.length === 0) || (pending && rows.length === 0) ? <div className="empty-state">Loading playback history</div> : null}
         {history.status !== "loading" && history.items.length === 0 && history.status !== "error" ? <div className="empty-state">Play a {activeMode.copy.itemSingular.toLowerCase()} to start your history.</div> : null}
         {groups.map((group) => (
           <HistoryGroup

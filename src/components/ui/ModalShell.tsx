@@ -4,8 +4,9 @@ import { createPortal } from "react-dom";
 import { X } from "lucide-react";
 import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
-export function ModalShell({ children, className = "", kicker, onClose, title }: { children: ReactNode; className?: string; kicker?: string; onClose: () => void; title: string }) {
+export function ModalShell({ children, className = "", kicker, subtitle, onClose, title }: { children: ReactNode; className?: string; kicker?: string; subtitle?: string; onClose: () => void; title: string }) {
   const titleId = useId();
+  const subtitleId = useId();
   const [host, setHost] = useState<HTMLElement | null>(null);
   const returnFocus = useRef<HTMLElement | null>(null);
   useEffect(() => {
@@ -37,9 +38,9 @@ export function ModalShell({ children, className = "", kicker, onClose, title }:
   if (!host) return null;
   return createPortal(
     <div className="favourite-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
-      <section ref={ref} className={`favourite-modal ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
+      <section ref={ref} className={`favourite-modal ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId} aria-describedby={subtitle ? subtitleId : undefined} tabIndex={-1}>
         <div className="favourite-picker-header">
-          <div>{kicker ? <div className="drawer-kicker">{kicker}</div> : null}<h2 id={titleId}>{title}</h2></div>
+          <div>{kicker ? <div className="drawer-kicker">{kicker}</div> : null}<h2 id={titleId}>{title}</h2>{subtitle ? <p id={subtitleId} className="modal-subtitle">{subtitle}</p> : null}</div>
           <button className="icon-button" type="button" aria-label="Close" onClick={onClose}><X size={16} aria-hidden="true" /></button>
         </div>
         {children}

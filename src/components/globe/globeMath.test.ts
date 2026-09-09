@@ -1,9 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   getKeyboardOrbitIntent,
-  getKeyboardOrbitIntentFromKeys,
-  MAX_CAMERA_DISTANCE,
-  MOBILE_MAX_CAMERA_DISTANCE
+  getKeyboardOrbitIntentFromKeys
 } from "./globeMath";
 
 describe("globe interaction math", () => {
@@ -25,7 +23,4 @@ describe("globe interaction math", () => {
     expect(getKeyboardOrbitIntentFromKeys(["KeyD", "ArrowRight"])).toEqual({ azimuth: 1, polar: 0 });
   });
 
-  it("allows mobile profiles to zoom farther out than desktop", () => {
-    expect(MOBILE_MAX_CAMERA_DISTANCE).toBeGreaterThan(MAX_CAMERA_DISTANCE);
-  });
 });

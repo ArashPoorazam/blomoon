@@ -24,8 +24,6 @@ export async function activeRadioDirectory() {
 export function directorySource(publishedAt: Date) {
   return {
     ...createRadioLiveSource(), lastUpdated: publishedAt.toISOString(),
-    ...(Date.now() - publishedAt.getTime() > 12 * 60 * 60 * 1000
-      ? { notice: `Using the last complete radio catalog, updated ${publishedAt.toISOString().slice(0, 10)}.` } : {}),
   };
 }
 

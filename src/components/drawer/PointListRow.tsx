@@ -1,5 +1,6 @@
 "use client";
 
+import { memo } from "react";
 import { formatDateTime } from "@/lib/geo";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
@@ -7,7 +8,7 @@ import { FavouriteStarButton } from "../favourites/FavouriteStarButton";
 import { PointRow } from "./PointRow";
 import { PointActionMenu } from "./PointActionMenu";
 
-export function PointListRow({ activeMode, activePlaybackPointKey, favouritePointIds, point, selected, onInspect, onPlay, onShare, onToggleFavourite }: {
+export const PointListRow = memo(function PointListRow({ activeMode, activePlaybackPointKey, favouritePointIds, point, selected, onInspect, onPlay, onShare, onToggleFavourite }: {
   activeMode: TerraMode;
   activePlaybackPointKey: string | null;
   favouritePointIds: Set<string>;
@@ -29,4 +30,4 @@ export function PointListRow({ activeMode, activePlaybackPointKey, favouritePoin
       <PointActionMenu point={point} onInfo={onInspect} onShare={onShare} />
     </>}
   />;
-}
+});

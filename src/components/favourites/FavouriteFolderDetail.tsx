@@ -8,6 +8,7 @@ import { findTerraMode } from "@/lib/modes/registry";
 import { formatDateTime } from "@/lib/geo";
 import type { FavouriteFolderDto } from "@/lib/persistence/types";
 import { absoluteShareLink, folderSharePath } from "@/lib/sharing/links";
+import { useProgressiveRows } from "../drawer/useProgressiveRows";
 import { DrawerHeader } from "../drawer/DrawerHeader";
 import { PointActionMenu } from "../drawer/PointActionMenu";
 import { PointRow } from "../drawer/PointRow";
@@ -23,6 +24,7 @@ export function FavouriteFolderDetail({ activePlaybackPointKey, folder, loading,
   onShare: (folderId: string, rotate?: boolean) => Promise<string | null>; onSharePoint: (point: TerraPoint) => void;
   onUpdate: (folderId: string, name: string, description: string | null) => Promise<boolean>;
 }) {
+  const { rows, pending } = useProgressiveRows(folder?.items ?? EMPTY_FOLDER_ITEMS);
   const [overlay, setOverlay] = useState<{ kind: "edit" | "delete" } | { kind: "share"; link: string } | null>(null);
   const [sharing, setSharing] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -51,7 +53,7 @@ export function FavouriteFolderDetail({ activePlaybackPointKey, folder, loading,
           {error ? <p className="form-error" role="status">{error}</p> : null}
         </div>
 
-        {folder.items.length === 0 ? <div className="favourites-empty"><strong>This folder is empty</strong><span>Use a station’s star button to add it here.</span></div> : <div className="folder-station-list">{folder.items.map((item) => <PointRow
+        {folder.items.length === 0 ? <div className="favourites-empty"><strong>This folder is empty</strong><span>Use a station’s star button to add it here.</span></div> : <div className="folder-station-list" aria-busy={pending}>{pending && rows.length === 0 ? <div className="empty-state" role="status">Loading stations</div> : null}{rows.map((item) => <PointRow
           key={getPointRefKey(item)} point={item.point}
           playing={activePlaybackPointKey === getPointRefKey(item)}
           metadata={[item.point.summary, findTerraMode(item.modeId)?.formatPointMetric(item.point), formatDateTime(item.point.timestamp)].filter(Boolean).join(" · ")}
@@ -65,3 +67,5 @@ export function FavouriteFolderDetail({ activePlaybackPointKey, folder, loading,
     {overlay?.kind === "share" && folder ? <ShareDialog link={overlay.link} title={folder.name} onClose={() => setOverlay(null)} onChangeLink={() => share(true)} /> : null}
   </div>;
 }
+
+const EMPTY_FOLDER_ITEMS: FavouriteFolderDto["items"] = [];

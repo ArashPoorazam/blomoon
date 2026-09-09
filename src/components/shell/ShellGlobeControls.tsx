@@ -1,9 +1,11 @@
 "use client";
 
-import { Earth, MapPin } from "lucide-react";
+import { Crosshair, Earth, MapPin } from "lucide-react";
 import type { MouseEvent } from "react";
 
 type ShellGlobeControlsProps = {
+  crosshairEnabled: boolean;
+  onToggleCrosshair: () => void;
   listedPointsDisabled: boolean;
   earthSpinDisabled: boolean;
   earthSpinEnabled: boolean;
@@ -13,6 +15,8 @@ type ShellGlobeControlsProps = {
 };
 
 export function ShellGlobeControls({
+  crosshairEnabled,
+  onToggleCrosshair,
   listedPointsDisabled,
   earthSpinDisabled,
   earthSpinEnabled,
@@ -44,6 +48,11 @@ export function ShellGlobeControls({
         onClick={onToggleEarthSpin}
       >
         <Earth size={18} aria-hidden="true" />
+      </button>
+      <button className={`shell-square-control ${crosshairEnabled ? "active" : ""}`} type="button"
+        aria-label={crosshairEnabled ? "Turn crosshair off" : "Turn crosshair on"}
+        aria-pressed={crosshairEnabled} title="Crosshair" onClick={onToggleCrosshair}>
+        <Crosshair size={18} aria-hidden="true" />
       </button>
     </nav>
   );

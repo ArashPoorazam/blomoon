@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 import { getPointKey, getPointRefKey } from "@/lib/modes/pointKeys";
 import type {
@@ -17,46 +17,83 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
   const [memberships, setMemberships] = useState<FavouriteFolderMembershipDto[]>([]);
   const [loading, setLoading] = useState(false);
   const [folderLoading, setFolderLoading] = useState(false);
-  const [pointsLoaded, setPointsLoaded] = useState(false);
+  const [pointsStatus, setPointsStatus] = useState<"idle" | "loading" | "ready" | "error">("idle");
+  const [foldersError, setFoldersError] = useState(false);
+  const pointsLoaded = pointsStatus === "ready";
+  const userId = user?.id;
+  const pointsRequest = useRef<Promise<void> | null>(null);
+  const generation = useRef(0);
+  const folderRequest = useRef(0);
 
   const refreshFolders = useCallback(async (foreground = true) => {
-    if (!user) { setFolders([]); return; }
+    if (!userId) { setFolders([]); return; }
+    const requestGeneration = generation.current;
+    setFoldersError(false);
     if (foreground) setLoading(true);
     try {
       const response = await fetch("/api/users/me/favourite-folders", { cache: "no-store" });
       if (!response.ok) throw new Error();
       const { folders: next } = await response.json() as { folders: FavouriteFolderSummaryDto[] };
+      if (generation.current !== requestGeneration) return;
       setFolders(next);
       setActiveFolder((current) => {
         const summary = next.find((folder) => folder.id === current?.id);
         return current && summary ? { ...current, ...summary } : current;
       });
-    } finally { if (foreground) setLoading(false); }
-  }, [user]);
+    } catch { if (generation.current === requestGeneration) setFoldersError(true); }
+    finally { if (foreground && generation.current === requestGeneration) setLoading(false); }
+  }, [userId]);
 
-  const loadPoints = useCallback(async (force = false) => {
-    if (!user || (pointsLoaded && !force)) return;
-    const response = await fetch("/api/users/me/favourite-points", { cache: "no-store" });
-    if (!response.ok) return;
-    const payload = await response.json() as { memberships: FavouriteFolderMembershipDto[]; points: TerraPoint[] };
-    setPoints(payload.points); setMemberships(payload.memberships); setPointsLoaded(true);
-  }, [pointsLoaded, user]);
+  const loadPoints = useCallback((force = false): Promise<void> => {
+    if (!userId || (pointsLoaded && !force)) return Promise.resolve();
+    if (pointsRequest.current) return pointsRequest.current;
+    const requestGeneration = generation.current;
+    setPointsStatus("loading");
+    const request = (async () => {
+      try {
+        const response = await fetch("/api/users/me/favourite-points", { cache: "no-store" });
+        if (!response.ok) throw new Error("Could not load memberships");
+        const payload = await response.json() as { memberships: FavouriteFolderMembershipDto[]; points: TerraPoint[] };
+        if (generation.current !== requestGeneration) return;
+        setPoints(payload.points);
+        setMemberships(payload.memberships);
+        setPointsStatus("ready");
+      } catch {
+        if (generation.current === requestGeneration) setPointsStatus("error");
+      } finally {
+        if (generation.current === requestGeneration) pointsRequest.current = null;
+      }
+    })();
+    pointsRequest.current = request;
+    return request;
+  }, [pointsLoaded, userId]);
 
   const loadFolder = useCallback(async (folderId: string) => {
     if (!user) { onAuthRequired(); return null; }
+    const requestId = ++folderRequest.current;
     setFolderLoading(true);
     try {
       const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}`, { cache: "no-store" });
       if (!response.ok) return null;
       const folder = ((await response.json()) as { folder: FavouriteFolderDto }).folder;
+      if (requestId !== folderRequest.current) return null;
       setActiveFolder(folder); return folder;
-    } finally { setFolderLoading(false); }
+    } catch { return null; }
+    finally { if (requestId === folderRequest.current) setFolderLoading(false); }
   }, [onAuthRequired, user]);
 
-  useEffect(() => { setPoints([]); setMemberships([]); setPointsLoaded(false); setActiveFolder(null); void refreshFolders().catch(() => setFolders([])); }, [refreshFolders, user?.id]);
+  useEffect(() => {
+    generation.current += 1;
+    folderRequest.current += 1;
+    pointsRequest.current = null;
+    setPoints([]); setMemberships([]); setPointsStatus("idle"); setActiveFolder(null);
+    setFolderLoading(false);
+    void refreshFolders();
+    return () => { generation.current += 1; folderRequest.current += 1; };
+  }, [refreshFolders]);
 
   const refreshAfterMutation = useCallback(async (folderId?: string) => {
-    await Promise.all([refreshFolders(), pointsLoaded ? loadPoints(true) : Promise.resolve(), folderId ? loadFolder(folderId) : Promise.resolve()]);
+    await Promise.all([refreshFolders(false), pointsLoaded ? loadPoints(true) : Promise.resolve(), folderId ? loadFolder(folderId) : Promise.resolve()]);
   }, [loadFolder, loadPoints, pointsLoaded, refreshFolders]);
 
   const createFolder = useCallback(async (name: string, description: string | null, modeId: string) => {
@@ -114,7 +151,7 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
 
   return {
     activeFolder, addPointToFolder, createFolder, deleteFolder, folderLoading, folders,
-    getPointFolderIds, loadFolder, loadPoints, loading, memberships, points,
+    getPointFolderIds, loadFolder, loadPoints, loading, memberships, points, pointsStatus, foldersError, refreshFolders,
     favouriteIds: useMemo(() => new Set(points.map(getPointKey)), [points]),
     refreshAfterMutation, removePointFromFolder, shareFolder, updateFolder
   };
