@@ -55,7 +55,7 @@ For the existing Cloudflare deployment:
 - Enable **Always Use HTTPS**.
 - Keep proxied DNS records for both `blomoon.ir` and `www.blomoon.ir`.
 
-The VPS-side `www` redirect remains configured as a fallback.
+The VPS-side `www` redirect remains configured as a fallback. `/sw.js` sends explicit browser and Cloudflare no-store directives so a browser-cache TTL minimum cannot delay app updates. Do not add cache rules that override these directives; the production check verifies the public response.
 
 ## Release and deployment
 

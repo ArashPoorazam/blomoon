@@ -53,7 +53,7 @@ await runCheck("Home Screen installation", true, async () => {
   assert(login.text.includes('name="theme-color"') && login.text.includes("viewport-fit=cover"), "missing installed viewport metadata");
   const worker = await request("/sw.js", { expectText: true });
   assert(worker.status === 200 && headerIncludes(worker.headers, "content-type", "javascript"), "worker unavailable");
-  assert(headerIncludes(worker.headers, "cache-control", "no-cache"), "worker must revalidate");
+  assert(headerIncludes(worker.headers, "cache-control", "no-store") || headerIncludes(worker.headers, "cache-control", "no-cache"), "worker must not be reused without validation");
   const offline = await request("/offline.html", { expectText: true });
   assert(offline.status === 200 && offline.text.includes("You’re offline"), "offline screen unavailable");
   return "manifest, icons, metadata and offline assets available";
