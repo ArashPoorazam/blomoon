@@ -53,6 +53,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
   const [stationSharePoint, setStationSharePoint] = useState<TerraPoint | null>(null);
   const [mobileLogoutConfirmOpen, setMobileLogoutConfirmOpen] = useState(false);
   const shellRef = useRef<HTMLElement>(null);
+  const crosshairAnchorRef = useRef<HTMLElement>(null);
   const tooltipRef = useRef<HTMLDivElement>(null);
   const activeMode = getTerraMode(activeModeId);
   const activeTheme = getTerraTheme(themeId);
@@ -301,6 +302,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
 
       <div className="globe-stage">
         <GlobeScene
+          anchorPoint={crosshairVisible ? crosshairPoint : null}
+          anchorTarget={crosshairAnchorRef}
           activePlaybackPoint={displayedGlobe.activePlaybackPoint}
           crosshairEnabled={crosshairTargetingEnabled}
           dpr={globeProfile.dpr}
@@ -325,9 +328,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         />
         {crosshairVisible ? (
           <MobileCrosshair
-            metric={crosshairPoint
-              ? activeMode.formatPointMetric(crosshairPoint)
-              : null}
+            anchorRef={crosshairAnchorRef}
             playbackStatus={crosshairPlaybackStatus}
             point={crosshairPoint}
             onInfo={inspectPoint}
@@ -411,7 +412,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         shellRef={shellRef}
         sortId={modeState.sortId}
         suggestionTitle={modeState.suggested ? (modeState.recommendation?.kind === "personalized" ? activeMode.recommendations?.label : "Discover stations") : undefined}
-        onRefreshSuggestions={modeState.suggested ? modeState.refreshList : undefined}
+        catalogTotal={modeState.catalogTotal}
         totalPoints={modeState.totalVisiblePoints}
         totalPointsKind={modeState.totalVisiblePointsKind}
         user={viewer.user}
@@ -434,7 +435,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onPointShare={setStationSharePoint}
         onQueryChange={updateQuery}
         onRemoveFavouriteFromFolder={favourites.removePointFromFolder}
-        onRevokeFavouriteFolderShare={favourites.revokeShare}
         onShareFavouriteFolder={favourites.shareFolder}
         onUpdateFavouriteFolder={favourites.updateFolder}
         onSetAccountView={(view) => drawer.open({ kind: view })}

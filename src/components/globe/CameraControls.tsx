@@ -103,7 +103,7 @@ export function GlobeCameraController({
 
   useEffect(() => {
     function handleKeyDown(event: KeyboardEvent) {
-      if (shouldIgnoreKeyboardOrbitEvent(event) || !getKeyboardOrbitIntent(event.code)) {
+      if (event.defaultPrevented || shouldIgnoreKeyboardOrbitEvent(event) || !getKeyboardOrbitIntent(event.code)) {
         return;
       }
 

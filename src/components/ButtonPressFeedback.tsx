@@ -17,7 +17,6 @@ const PRESS_FEEDBACK_BUTTON_SELECTOR = [
   ".point-row-main",
   ".point-list-more",
   ".favourite-star",
-  ".favourite-row-main",
   ".favourite-remove",
   ".search-clear",
   ".filter-toggle",

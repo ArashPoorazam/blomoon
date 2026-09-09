@@ -84,15 +84,13 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
     if (response.ok) await refreshAfterMutation(activeFolder?.id === folderId ? folderId : undefined);
   }, [activeFolder?.id, refreshAfterMutation]);
 
-  const shareFolder = useCallback(async (folderId: string) => {
-    const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}/share`, { method: "POST" });
+  const shareFolder = useCallback(async (folderId: string, rotate = false) => {
+    const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}/share`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ rotate }) });
     if (!response.ok) return null;
-    const { token } = await response.json() as { token: string }; await refreshAfterMutation(folderId); return token;
-  }, [refreshAfterMutation]);
-
-  const revokeShare = useCallback(async (folderId: string) => {
-    const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}/share`, { method: "DELETE" });
-    if (response.ok) await refreshAfterMutation(folderId); return response.ok;
+    const { token } = await response.json() as { token: string };
+    // Sharing has committed. A failed metadata refresh must not discard the new link.
+    await refreshAfterMutation(folderId).catch(() => undefined);
+    return token;
   }, [refreshAfterMutation]);
 
   const getPointFolderIds = useCallback((point: TerraPoint) => {
@@ -104,6 +102,6 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
     activeFolder, addPointToFolder, createFolder, deleteFolder, folderLoading, folders,
     getPointFolderIds, loadFolder, loadPoints, loading, memberships, points,
     favouriteIds: useMemo(() => new Set(points.map(getPointKey)), [points]),
-    refreshAfterMutation, removePointFromFolder, revokeShare, shareFolder, updateFolder
+    refreshAfterMutation, removePointFromFolder, shareFolder, updateFolder
   };
 }

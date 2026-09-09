@@ -52,6 +52,8 @@ export type TerraDataset = {
 };
 
 export type TerraPointPage = TerraDataset & {
+  /** Full published catalog size; independent of the paginated selection. */
+  catalogTotal?: number;
   pageToken?: string;
   recommendation?: { kind: "personalized" | "discovery" };
   limit: number;

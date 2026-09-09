@@ -14,13 +14,13 @@ export class RecommendationPageExpired extends Error {}
 
 export async function getRadioRecommendations(userId: string | null, limit: number, offset: number, pageToken?: string): Promise<TerraPointPage> {
   const ownerKey = userId ?? "guest";
+  const generation = await activeRadioDirectory();
   if (pageToken) {
     const [snapshot] = await getDb().select().from(snapshots).where(and(eq(snapshots.id, pageToken),
       eq(snapshots.ownerKey, ownerKey), gt(snapshots.expiresAt, new Date())));
     if (!snapshot) throw new RecommendationPageExpired();
-    return snapshotPage(snapshot, limit, offset);
+    return snapshotPage(snapshot, limit, offset, generation?.stationCount);
   }
-  const generation = await activeRadioDirectory();
   if (!generation?.publishedAt) {
     const dataset = await getRadioDataset();
     return { ...dataset, points: dataset.points.slice(0, limit), limit, offset: 0, nextOffset: null,
@@ -35,7 +35,7 @@ export async function getRadioRecommendations(userId: string | null, limit: numb
     await tx.execute(sql`select pg_advisory_xact_lock(hashtextextended(${`radio-recommendations:${ownerKey}`}, 0))`);
     const [existing] = await tx.select().from(snapshots).where(and(eq(snapshots.ownerKey, ownerKey),
       eq(snapshots.profileKey, profileKey), gt(snapshots.expiresAt, new Date()))).limit(1);
-    if (existing) return snapshotPage(existing, limit, offset);
+    if (existing) return snapshotPage(existing, limit, offset, generation.stationCount);
     const rows = await tx.select({ record: schema.radioCatalogEntries.record }).from(schema.radioCatalogEntries)
       .where(eq(schema.radioCatalogEntries.generationId, generation.id));
     const ranked = rankRadioRecommendations(rows.map(({ record }) => record), signals);
@@ -45,7 +45,7 @@ export async function getRadioRecommendations(userId: string | null, limit: numb
     if (obsolete.length) await tx.delete(snapshots).where(inArray(snapshots.id, obsolete));
     const [snapshot] = await tx.insert(snapshots).values({ ownerKey, userId, profileKey, ...ranked,
       expiresAt: new Date(Date.now() + 60 * 60 * 1000), source }).returning();
-    return snapshotPage(snapshot, limit, offset);
+    return snapshotPage(snapshot, limit, offset, generation?.stationCount);
   });
 }
 
@@ -64,8 +64,8 @@ async function preferenceSignals(userId: string | null): Promise<RadioPreference
   return [...signals.values()].sort((a, b) => a.point.id.localeCompare(b.point.id));
 }
 
-function snapshotPage(snapshot: typeof snapshots.$inferSelect, limit: number, offset: number): TerraPointPage {
-  return { modeId: "radio", source: snapshot.source, points: snapshot.points.slice(offset, offset + limit),
+function snapshotPage(snapshot: typeof snapshots.$inferSelect, limit: number, offset: number, catalogTotal?: number): TerraPointPage {
+  return { modeId: "radio", catalogTotal, source: snapshot.source, points: snapshot.points.slice(offset, offset + limit),
     limit, offset, total: snapshot.points.length, totalKind: "exact", pageToken: snapshot.id,
     nextOffset: offset + limit < snapshot.points.length ? offset + limit : null,
     recommendation: { kind: snapshot.personalized ? "personalized" : "discovery" } };

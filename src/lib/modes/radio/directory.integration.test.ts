@@ -65,7 +65,9 @@ describe.skipIf(!enabled)("radio directory PostgreSQL integration (rolled back)"
         const first = await getRadioRecommendations(owner, 50, 0);
         expect(first.points).toHaveLength(50);
         expect(first.total).toBe(500);
+        expect(first.catalogTotal).toBe(1000);
         const second = await getRadioRecommendations(owner, 50, 50, first.pageToken);
+        expect(second.catalogTotal).toBe(1000);
         expect(second.points.some((point) => first.points.some((other) => other.id === point.id))).toBe(false);
         await expect(getRadioRecommendations("another-owner", 50, 0, first.pageToken)).rejects.toBeInstanceOf(RecommendationPageExpired);
         await expect(getRadioRecommendations(null, 50, 0, first.pageToken)).rejects.toBeInstanceOf(RecommendationPageExpired);

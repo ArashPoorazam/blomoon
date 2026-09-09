@@ -1,8 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { terraThemeIds } from "@/lib/theme/ids";
-import { favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
+import { favouriteFolderShareInputSchema, favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
 
 describe("user API validation", () => {
+  it("accepts only explicit boolean share rotation options", () => {
+    expect(favouriteFolderShareInputSchema.safeParse({}).success).toBe(true);
+    expect(favouriteFolderShareInputSchema.safeParse({ rotate: true }).success).toBe(true);
+    for (const input of [null, [], { rotate: "true" }, { rotate: true, userId: "another-owner" }]) {
+      expect(favouriteFolderShareInputSchema.safeParse(input).success).toBe(false);
+    }
+  });
   it("accepts known theme ids", () => {
     for (const themeId of terraThemeIds) {
       expect(themeInputSchema.safeParse({ themeId }).success).toBe(true);

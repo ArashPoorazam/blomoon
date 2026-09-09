@@ -19,7 +19,7 @@ type DrawerListToolbarProps = {
   selectedCountry: CountryInfo | null;
   sortId: string;
   suggestionTitle?: string;
-  onRefreshSuggestions?: () => void;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
@@ -40,7 +40,7 @@ export function DrawerListToolbar({
   selectedCountry,
   sortId,
   suggestionTitle,
-  onRefreshSuggestions,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
   onCountryFilterChange,
@@ -67,7 +67,9 @@ export function DrawerListToolbar({
         title={suggestionTitle ?? "Directory"}
         subtitle={loading
           ? activeMode.copy.loadingLabel
-          : formatVisibleCount({
+          : suggestionTitle
+            ? `${numberFormatter.format(listedCount)} listed · ${catalogTotal === undefined ? "Catalog total unavailable" : `${numberFormatter.format(catalogTotal)} stations available`}`
+            : formatVisibleCount({
             listedCount,
             totalCount: totalPoints,
             totalKind: totalPointsKind
@@ -113,7 +115,6 @@ export function DrawerListToolbar({
         </button>
       </div>
 
-      {onRefreshSuggestions ? <button className="secondary-action compact-action" type="button" disabled={loading} onClick={onRefreshSuggestions}>Refresh suggestions</button> : null}
       <ProviderNotice message={providerError} />
 
       {filtersOpen ? (

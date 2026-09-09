@@ -54,7 +54,6 @@ button:focus:not(:focus-visible) {
   .point-row-main,
   .point-list-more,
   .favourite-star,
-  .favourite-row-main,
   .favourite-remove,
   .filter-toggle,
   .filter-menu-trigger,
@@ -264,21 +263,33 @@ button.press-feedback-active::after {
 
 .crosshair-point-card {
   position: absolute;
-  top: calc(50% - 16px);
-  left: 50%;
+  visibility: hidden;
+  top: 0;
+  left: 0;
   display: grid;
-  width: min(280px, calc(100vw - 32px));
+  width: min(220px, calc(100vw - 32px));
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  padding: 10px;
-  border: 1px solid var(--info-border);
-  border-radius: 8px;
+  gap: 4px;
+  padding: 6px 8px;
+  border: 1px solid var(--tooltip-border);
+  border-radius: var(--radius-row);
   background: var(--panel);
   box-shadow: 0 16px 42px var(--shadow-tooltip);
   pointer-events: auto;
   transform: translate(-50%, -100%);
   backdrop-filter: blur(var(--panel-blur));
+}
+
+.crosshair-point-card::after {
+  position: absolute;
+  top: 100%;
+  left: calc(50% - 10px);
+  width: 20px;
+  height: 10px;
+  background: var(--panel);
+  clip-path: polygon(0 0, 100% 0, 50% 100%);
+  content: "";
 }
 
 .crosshair-point-copy {
@@ -315,20 +326,20 @@ button.press-feedback-active::after {
 .crosshair-point-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 0;
 }
 
 .crosshair-point-actions button {
   display: inline-flex;
-  width: 34px;
-  min-height: 34px;
-  flex: 0 0 34px;
+  width: 44px;
+  min-height: 44px;
+  flex: 0 0 44px;
   align-items: center;
   justify-content: center;
   padding: 0;
-  border: 1px solid var(--panel-border);
-  border-radius: 8px;
-  background: var(--control);
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
   color: var(--muted-strong);
   cursor: pointer;
   font-size: 11px;

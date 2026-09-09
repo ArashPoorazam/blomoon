@@ -51,7 +51,7 @@ type SideDrawerProps = {
   shellRef: RefObject<HTMLElement | null>;
   sortId: string;
   suggestionTitle?: string;
-  onRefreshSuggestions?: () => void;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   user: ViewerDto | null;
@@ -78,8 +78,7 @@ type SideDrawerProps = {
   onPointShare: (point: TerraPoint) => void;
   onQueryChange: (value: string) => void;
   onRemoveFavouriteFromFolder: (folderId: string, point: TerraPoint) => Promise<void>;
-  onRevokeFavouriteFolderShare: (folderId: string) => Promise<boolean>;
-  onShareFavouriteFolder: (folderId: string) => Promise<string | null>;
+  onShareFavouriteFolder: (folderId: string, rotate?: boolean) => Promise<string | null>;
   onUpdateFavouriteFolder: (folderId: string, name: string, description: string | null) => Promise<boolean>;
   onSetAccountView: (view: Extract<ShellDrawerView, "account-info" | "themes" | "contact">) => void;
   onSetMobilePosition: (position: DrawerMobilePosition) => void;
@@ -120,7 +119,7 @@ export function SideDrawer({
   shellRef,
   sortId,
   suggestionTitle,
-  onRefreshSuggestions,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
   user,
@@ -147,7 +146,6 @@ export function SideDrawer({
   onPointShare,
   onQueryChange,
   onRemoveFavouriteFromFolder,
-  onRevokeFavouriteFolderShare,
   onShareFavouriteFolder,
   onUpdateFavouriteFolder,
   onSetAccountView,
@@ -231,7 +229,6 @@ export function SideDrawer({
               onInspect={onFavouritePointInspect}
               onPlay={onFavouritePointPlay}
               onRemove={onRemoveFavouriteFromFolder}
-              onRevokeShare={onRevokeFavouriteFolderShare}
               onShare={onShareFavouriteFolder}
               onSharePoint={onPointShare}
               onUpdate={onUpdateFavouriteFolder}
@@ -265,8 +262,8 @@ export function SideDrawer({
               selectedCountry={selectedCountry}
               selectedId={selectedId}
               sortId={sortId}
-            suggestionTitle={suggestionTitle}
-            onRefreshSuggestions={onRefreshSuggestions}
+              suggestionTitle={suggestionTitle}
+              catalogTotal={catalogTotal}
               totalPoints={totalPoints}
               totalPointsKind={totalPointsKind}
               onCountryFilterChange={onCountryFilterChange}

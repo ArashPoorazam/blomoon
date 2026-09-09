@@ -1,9 +1,10 @@
 "use client";
 
-import { ChevronLeft, FolderHeart, Import, LockKeyhole, Plus, RadioTower } from "lucide-react";
+import { ChevronLeft, FolderHeart, Plus } from "lucide-react";
 import { useState } from "react";
 import type { FavouriteFolderSummaryDto } from "@/lib/persistence/types";
 import { DrawerHeader } from "../drawer/DrawerHeader";
+import { FolderSummary } from "./FolderSummary";
 import { FavouriteFolderForm } from "./FavouriteFolderForm";
 
 export function FavouriteFolderIndex({ canGoBack, folders, loading, onBack, onCreate, onOpen }: {
@@ -20,13 +21,8 @@ export function FavouriteFolderIndex({ canGoBack, folders, loading, onBack, onCr
       {loading ? <div className="empty-state">Loading favourites</div> : null}
       {!loading && folders.length === 0 ? <div className="favourites-empty"><FolderHeart size={22} aria-hidden="true" /><strong>No folders yet</strong><span>Your protected Favourites folder will appear here.</span></div> : null}
       <div className="favourite-folder-grid">{folders.map((folder) => <button className="favourite-folder-card" key={folder.id} type="button" onClick={() => onOpen(folder.id)}>
-        <span className="folder-card-tab" aria-hidden="true" />
-        <span className="folder-card-heading"><span className="folder-card-icon"><RadioTower size={17} aria-hidden="true" /></span><strong>{folder.name}</strong><span className="folder-count">{folder.itemCount}</span></span>
-        {folder.description ? <span className="folder-card-description">{folder.description}</span> : <span className="folder-card-description muted">No description</span>}
-        <span className="folder-card-meta"><span>Updated {formatRelativeDate(folder.updatedAt)}</span><span className="folder-card-badges">{folder.isDefault ? <span><LockKeyhole size={12} aria-hidden="true" /> Protected</span> : null}{folder.isImported ? <span><Import size={12} aria-hidden="true" /> Imported</span> : null}</span></span>
+        <FolderSummary folder={folder} />
       </button>)}</div>
     </div>
   </div>;
 }
-
-function formatRelativeDate(value: string) { return new Intl.DateTimeFormat(undefined, { dateStyle: "medium" }).format(new Date(value)); }

@@ -7,7 +7,7 @@ import type { DataSourceInfo, TerraDataset, TerraMode, TerraPoint, TerraPointDet
 export type ModeDatasetState = {
   recommendation: TerraPointPage["recommendation"];
   suggested: boolean;
-  refreshList: () => void;
+  catalogTotal?: number;
   detail: TerraPointDetail | null;
   globePoints: TerraPoint[];
   hasMoreVisiblePoints: boolean;
@@ -231,7 +231,7 @@ export function useModeDataset(
   return {
     recommendation: visiblePage.recommendation,
     suggested: list.suggested,
-    refreshList: list.refresh,
+    catalogTotal: visiblePage.catalogTotal,
     detail,
     globePoints,
     hasMoreVisiblePoints,

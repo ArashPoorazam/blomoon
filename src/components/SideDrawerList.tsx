@@ -20,7 +20,7 @@ type SideDrawerListProps = {
   selectedId: string | null;
   sortId: string;
   suggestionTitle?: string;
-  onRefreshSuggestions?: () => void;
+  catalogTotal?: number;
   totalPoints: number;
   totalPointsKind: "exact" | "lowerBound";
   onCountryFilterChange: (country: CountryInfo | null) => void;
@@ -48,7 +48,7 @@ export function SideDrawerList({
   selectedId,
   sortId,
   suggestionTitle,
-  onRefreshSuggestions,
+  catalogTotal,
   totalPoints,
   totalPointsKind,
   onCountryFilterChange,
@@ -77,8 +77,8 @@ export function SideDrawerList({
         query={query}
         selectedCountry={selectedCountry}
         sortId={sortId}
-            suggestionTitle={suggestionTitle}
-            onRefreshSuggestions={onRefreshSuggestions}
+        suggestionTitle={suggestionTitle}
+        catalogTotal={catalogTotal}
         totalPoints={totalPoints}
         totalPointsKind={totalPointsKind}
         onCountryFilterChange={onCountryFilterChange}

@@ -1,14 +1,18 @@
 "use client";
 
+import { createPortal } from "react-dom";
 import { X } from "lucide-react";
-import { useEffect, useId, useRef, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 
 export function ModalShell({ children, className = "", kicker, onClose, title }: { children: ReactNode; className?: string; kicker?: string; onClose: () => void; title: string }) {
   const titleId = useId();
+  const [host, setHost] = useState<HTMLElement | null>(null);
+  useEffect(() => { setHost(document.querySelector<HTMLElement>(".blomoon-shell") ?? document.body); }, []);
   const ref = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
+    if (!host) return;
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
     ref.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
@@ -26,8 +30,9 @@ export function ModalShell({ children, className = "", kicker, onClose, title }:
     };
     window.addEventListener("keydown", onKeyDown);
     return () => { window.removeEventListener("keydown", onKeyDown); previous?.focus(); };
-  }, []);
-  return (
+  }, [host]);
+  if (!host) return null;
+  return createPortal(
     <div className="favourite-modal-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) onClose(); }}>
       <section ref={ref} className={`favourite-modal ${className}`} role="dialog" aria-modal="true" aria-labelledby={titleId} tabIndex={-1}>
         <div className="favourite-picker-header">
@@ -36,6 +41,6 @@ export function ModalShell({ children, className = "", kicker, onClose, title }:
         </div>
         {children}
       </section>
-    </div>
+    </div>, host
   );
 }

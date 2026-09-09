@@ -15,7 +15,6 @@ const point: TerraPoint = {
 
 function renderCrosshair(playbackStatus: CrosshairPlaybackStatus, selected = true) {
   return renderToStaticMarkup(createElement(MobileCrosshair, {
-    metric: "128 kbps",
     onInfo: vi.fn(),
     onPause: vi.fn(),
     onPlay: vi.fn(),

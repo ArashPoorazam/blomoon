@@ -196,14 +196,15 @@ export async function removeFavouriteFolderItem(userId: string, folderId: string
   });
 }
 
-export async function enableFavouriteFolderShare(userId: string, folderId: string) {
-  const [existing] = await getDb().select({ shareToken: schema.userFavouriteFolders.shareToken })
-    .from(schema.userFavouriteFolders).where(and(eq(schema.userFavouriteFolders.id, folderId), eq(schema.userFavouriteFolders.userId, userId))).limit(1);
-  if (!existing) return null;
-  if (existing.shareToken) return existing.shareToken;
-  const shareToken = randomBytes(24).toString("base64url");
-  const [row] = await getDb().update(schema.userFavouriteFolders).set({ shareToken, sharedAt: new Date(), updatedAt: new Date() })
-    .where(eq(schema.userFavouriteFolders.id, folderId)).returning({ shareToken: schema.userFavouriteFolders.shareToken });
+export async function enableFavouriteFolderShare(userId: string, folderId: string, rotate = false) {
+  const folders = schema.userFavouriteFolders;
+  const token = randomBytes(24).toString("base64url");
+  const [row] = await getDb().update(folders).set({
+    shareToken: rotate ? token : sql`coalesce(${folders.shareToken}, ${token})`,
+    sharedAt: rotate ? new Date() : sql`coalesce(${folders.sharedAt}, now())`,
+    updatedAt: rotate ? new Date() : sql`case when ${folders.shareToken} is null then now() else ${folders.updatedAt} end`
+  }).where(and(eq(folders.id, folderId), eq(folders.userId, userId)))
+    .returning({ shareToken: folders.shareToken });
   return row?.shareToken ?? null;
 }
 

@@ -115,7 +115,7 @@
     display: block;
     overflow: hidden;
     margin: 0;
-    color: var(--accent-strong);
+    color: var(--accent);
     font-size: 21px;
     font-weight: 850;
     line-height: 1.15;
@@ -180,7 +180,6 @@
     padding-bottom: 22px;
   }
 
-  .favourite-row-main,
   .favourite-remove {
     min-height: 44px;
   }
@@ -196,4 +195,8 @@
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+@media (max-width: 760px) {
+  .drawer-directory-header .drawer-subtitle { white-space: normal; overflow: visible; }
 }

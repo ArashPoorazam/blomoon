@@ -18,11 +18,22 @@ export function AnchoredMenu({ label, items }: { label: string; items: AnchoredM
   useEffect(() => {
     if (!open) return;
     menuRef.current?.querySelector<HTMLButtonElement>("button")?.focus();
-    const close = (event: MouseEvent) => {
+    const outside = (event: Event) => {
       if (!menuRef.current?.contains(event.target as Node) && !triggerRef.current?.contains(event.target as Node)) setOpen(false);
     };
-    window.addEventListener("mousedown", close);
-    return () => window.removeEventListener("mousedown", close);
+    const dismiss = () => setOpen(false);
+    window.addEventListener("pointerdown", outside, true);
+    window.addEventListener("focusin", outside);
+    window.addEventListener("scroll", dismiss, true);
+    window.addEventListener("resize", dismiss);
+    window.addEventListener("blur", dismiss);
+    return () => {
+      window.removeEventListener("pointerdown", outside, true);
+      window.removeEventListener("focusin", outside);
+      window.removeEventListener("scroll", dismiss, true);
+      window.removeEventListener("resize", dismiss);
+      window.removeEventListener("blur", dismiss);
+    };
   }, [open]);
   function close(returnFocus = true) { setOpen(false); if (returnFocus) requestAnimationFrame(() => triggerRef.current?.focus()); }
   return <>
@@ -36,6 +47,6 @@ export function AnchoredMenu({ label, items }: { label: string; items: AnchoredM
         if (event.key === "End") { event.preventDefault(); buttons.at(-1)?.focus(); }
       }}>
         {items.map(({ icon: Icon, label: itemLabel, onSelect, tone }) => <button className={tone === "danger" ? "danger" : undefined} key={itemLabel} role="menuitem" type="button" onClick={() => { close(false); onSelect(); }}><Icon size={14} aria-hidden="true" /><span>{itemLabel}</span></button>)}
-      </div>, document.body) : null}
+      </div>, triggerRef.current?.closest(".blomoon-shell") ?? document.body) : null}
   </>;
 }

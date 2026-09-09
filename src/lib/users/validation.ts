@@ -11,6 +11,8 @@ export const favouriteFolderItemInputSchema = z.object({
   pointId: z.string().min(1).max(160)
 });
 
+export const favouriteFolderShareInputSchema = z.object({ rotate: z.boolean().optional() }).strict();
+
 export const favouriteFolderIdSchema = z.uuid();
 export const favouriteShareTokenSchema = z.string().regex(/^[A-Za-z0-9_-]{32,128}$/);
 

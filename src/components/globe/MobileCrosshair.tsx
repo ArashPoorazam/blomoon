@@ -1,12 +1,13 @@
 "use client";
 
 import { Info, LoaderCircle, Pause, Play } from "lucide-react";
+import type { RefObject } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 
 export type CrosshairPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
 
 type MobileCrosshairProps = {
-  metric: string | null;
+  anchorRef?: RefObject<HTMLElement | null>;
   playbackStatus: CrosshairPlaybackStatus;
   point: TerraPoint | null;
   onInfo: (point: TerraPoint) => void;
@@ -14,18 +15,17 @@ type MobileCrosshairProps = {
   onPlay: (point: TerraPoint) => void;
 };
 
-export function MobileCrosshair({ metric, onInfo, onPause, onPlay, playbackStatus, point }: MobileCrosshairProps) {
+export function MobileCrosshair({ anchorRef, onInfo, onPause, onPlay, playbackStatus, point }: MobileCrosshairProps) {
   const playbackLoading = playbackStatus === "loading";
   const playbackPlaying = playbackStatus === "playing";
 
   return (
     <div className="mobile-crosshair">
       {point ? (
-        <section className="crosshair-point-card" aria-label={`Selected station: ${point.name}`}>
+        <section ref={anchorRef} className="crosshair-point-card" aria-label={`Selected station: ${point.name}`}>
           <div className="crosshair-point-copy">
             <strong>{point.name}</strong>
             <span>{point.summary}</span>
-            {metric ? <small>{metric}</small> : null}
           </div>
           <div className="crosshair-point-actions">
             <button aria-label={`View information for ${point.name}`} title="Station information" type="button" onClick={() => onInfo(point)}>

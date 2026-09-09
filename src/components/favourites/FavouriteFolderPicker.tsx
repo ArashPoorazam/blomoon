@@ -1,9 +1,10 @@
 "use client";
 
-import { Check, Plus, Star } from "lucide-react";
+import { Check, Plus } from "lucide-react";
 import { useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { FavouriteFolderSummaryDto } from "@/lib/persistence/types";
+import { FolderSummary } from "./FolderSummary";
 import { FavouriteFolderForm } from "./FavouriteFolderForm";
 import { ModalShell } from "../ui/ModalShell";
 
@@ -61,12 +62,8 @@ export function FavouriteFolderPicker({
                   void action(folder.id, point).finally(() => setBusyListId(null));
                 }}
               >
-                <Star size={16} aria-hidden="true" />
-                <span>
-                  <strong>{folder.name}</strong>
-                  <span>{formatListCount(folder.itemCount)}</span>
-                </span>
-                {selected ? <Check size={16} aria-hidden="true" /> : null}
+                <FolderSummary folder={folder} />
+                <span className="folder-selection" aria-hidden="true">{selected ? <Check size={16} /> : null}</span>
               </button>
             );
           })}
@@ -80,8 +77,4 @@ export function FavouriteFolderPicker({
         ) : null}
     </ModalShell>
   );
-}
-
-function formatListCount(count: number) {
-  return count === 1 ? "1 item" : `${count} items`;
 }

@@ -21,8 +21,7 @@ export function useModeList(mode: TerraMode, countryCode: string | null, viewerK
     search: mode.searchSortId ?? mode.defaultSortId };
   const sortId = sorts.modeId === mode.id ? sorts[context] : defaults[context];
   const suggested = context === "home" && sortId === mode.recommendations?.sortId;
-  const [revision, setRevision] = useState(0);
-  const requestKey = JSON.stringify([mode.id, countryCode, debouncedQuery.trim(), sortId, viewerKey, revision]);
+  const requestKey = JSON.stringify([mode.id, countryCode, debouncedQuery.trim(), sortId, viewerKey]);
   const currentKey = useRef(requestKey);
   currentKey.current = requestKey;
   const [state, setState] = useState({ key: "", page: empty(), loading: true, loadingMore: false, error: null as string | null });
@@ -60,10 +59,10 @@ export function useModeList(mode: TerraMode, countryCode: string | null, viewerK
     if (!current || state.loading || state.loadingMore || page.nextOffset === null) return;
     setState((value) => ({ ...value, loadingMore: true, error: null }));
     try {
-      const result = await fetchPage(endpoint(page.nextOffset, page.pageToken));
+      const { page: result, replaced } = await fetchNextModePage(endpoint(page.nextOffset, page.pageToken), endpoint(0));
       if (currentKey.current !== requestKey) return;
       setState((value) => ({ ...value, loadingMore: false, page: { ...createModeListSnapshot(result),
-        points: [...new Map([...value.page.points, ...result.points].map((point) => [point.id, point])).values()] } }));
+        points: [...new Map([...(replaced ? [] : value.page.points), ...result.points].map((point) => [point.id, point])).values()] } }));
     } catch (error) {
       if (currentKey.current !== requestKey) return;
       setState((value) => ({ ...value, loadingMore: false,
@@ -74,14 +73,29 @@ export function useModeList(mode: TerraMode, countryCode: string | null, viewerK
   return { page, query, setQuery, debouncedQuery, sortId, suggested,
     loading: !current || state.loading, loadingMore: current && state.loadingMore,
     settled: current && !state.loading, error: current ? state.error : null, loadMore,
-    refresh: () => setRevision((value) => value + 1),
     setSortId: (value: string) => setSorts((previous) => ({ ...(previous.modeId === mode.id ? previous : { ...defaults, modeId: mode.id }), [context]: value })),
   };
 }
 
 async function fetchPage(endpoint: string, signal?: AbortSignal): Promise<TerraPointPage> {
   const response = await fetch(endpoint, { cache: "no-store", signal });
-  if (response.status === 409) throw new Error("Suggestions expired. Refresh suggestions to continue.");
+  if (response.status === 409) throw new RecommendationExpiredError();
   if (!response.ok) throw new Error("Stations are unavailable. Please retry.");
   return await response.json() as TerraPointPage;
+}
+
+class RecommendationExpiredError extends Error {}
+
+/** An expired snapshot must be replaced, never appended to the previous ranking. */
+export async function fetchNextModePage(nextEndpoint: string, firstEndpoint: string) {
+  try {
+    return { page: await fetchPage(nextEndpoint), replaced: false };
+  } catch (error) {
+    if (!(error instanceof RecommendationExpiredError)) throw error;
+    try {
+      return { page: await fetchPage(firstEndpoint), replaced: true };
+    } catch {
+      throw new Error("Could not renew suggestions. Please try loading again.");
+    }
+  }
 }

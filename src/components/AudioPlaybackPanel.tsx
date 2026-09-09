@@ -4,6 +4,7 @@ import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward }
 import { useEffect, useRef, useState } from "react";
 import type { TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
+import { StationArtwork } from "./ui/StationArtwork";
 import { FavouriteStarButton } from "./favourites/FavouriteStarButton";
 
 type AudioPlaybackPanelProps = {
@@ -28,31 +29,10 @@ export function AudioPlaybackPanel({
 
   return (
     <section className="media-player media-player-detail" aria-label={`${playbackLabel} playback`}>
-      <div className="media-player-header">
-        <div className="media-player-icon" aria-hidden="true">
-          <AudioLines size={18} />
-        </div>
-        <div className="media-player-copy">
-          <div className="media-player-kicker">{playbackLabel}</div>
-          {isCurrentItem ? <div className="media-player-status">{formatAudioPlaybackStatus(status)}</div> : null}
-        </div>
-        <FavouriteStarButton
-          favourited={favourited}
-          point={detail}
-          onToggle={onToggleFavourite}
-        />
-      </div>
-
-      <AudioPlaybackControls
-        detail={detail}
-        itemSingularLabel={itemSingularLabel}
-        playback={playback}
-        status={status}
-      />
-
-      <div className="media-player-meta">
-        <span>{formatMetric(detail, "Codec")}</span>
-        <span>{formatMetric(detail, "Bitrate")}</span>
+      <div className="detail-playback-bar">
+        <AudioPlaybackControls detail={detail} itemSingularLabel={itemSingularLabel} playback={playback} status={status} />
+        {isCurrentItem ? <span className="media-player-status" role="status">{formatAudioPlaybackStatus(status)}</span> : null}
+        <FavouriteStarButton favourited={favourited} point={detail} onToggle={onToggleFavourite} />
       </div>
 
       {isCurrentItem && playback.error ? (
@@ -71,8 +51,7 @@ export function AudioMiniPlayer({
   onNext,
   onPointOpen,
   onShuffle,
-  playback,
-  playbackLabel
+  playback
 }: {
   canPlayNext: boolean;
   canShuffle: boolean;
@@ -90,11 +69,8 @@ export function AudioMiniPlayer({
   return (
     <section className="media-mini-player" aria-label="Current media playback">
       <div className="media-mini-main">
-        <div className="media-player-icon" aria-hidden="true">
-          <AudioLines size={18} />
-        </div>
+        {currentPoint ? <StationArtwork key={`${currentPoint.modeId}:${currentPoint.id}`} name={currentPoint.name} artworkUrl={currentPoint.artworkUrl} size="player" /> : <div className="media-player-icon" aria-hidden="true"><AudioLines size={18} /></div>}
         <div className="media-player-copy">
-          <div className="media-player-kicker">{playbackLabel}</div>
           {currentPoint ? (
             <button
               className="media-player-title media-player-title-button clickable-text"
@@ -304,11 +280,6 @@ function MiniOverflowText({ text }: { text: string }) {
       </span>
     </span>
   );
-}
-
-function formatMetric(detail: TerraPointDetail, key: string) {
-  const value = detail.metrics?.[key];
-  return value === undefined || value === null ? "Unknown" : String(value);
 }
 
 export function formatAudioPlaybackStatus(status: AudioPlaybackStatus) {

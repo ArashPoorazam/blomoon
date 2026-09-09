@@ -3,10 +3,17 @@ import type { TerraDataset } from "./types";
 import {
   beginModeListRefresh,
   createInitialModeListSnapshot,
+  createModeListSnapshot,
   createModeListRequestKey
 } from "./modeListState";
 
 describe("mode list refresh state", () => {
+  it("keeps catalog size separate from pagination and drops it for ordinary search", () => {
+    const page = { ...seedDataset(), total: 500, totalKind: "exact" as const, nextOffset: 50, limit: 50, offset: 0 };
+    const recommendations = createModeListSnapshot({ ...page, catalogTotal: 42000 });
+    expect(recommendations).toMatchObject({ catalogTotal: 42000, total: 500, nextOffset: 50 });
+    expect(createModeListSnapshot(page).catalogTotal).toBeUndefined();
+  });
   it("retains seeded rows, totals, and source while the same default list refreshes", () => {
     const snapshot = createInitialModeListSnapshot(seedDataset(), 50);
     const requestKey = listKey({});

@@ -1,15 +1,18 @@
 "use client";
 
 import { Canvas } from "@react-three/fiber";
-import { memo } from "react";
+import { memo, type RefObject } from "react";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
 import { GlobeCameraController } from "./globe/CameraControls";
 import { Earth } from "./globe/Earth";
+import { PointScreenAnchor } from "./globe/PointScreenAnchor";
 import { PointMarkers } from "./globe/PointMarkers";
 
 type GlobeSceneProps = {
+  anchorPoint?: TerraPoint | null;
+  anchorTarget?: RefObject<HTMLElement | null>;
   crosshairEnabled: boolean;
   dpr: [number, number];
   earthSpinEnabled: boolean;
@@ -35,6 +38,8 @@ type GlobeSceneProps = {
 
 export const GlobeScene = memo(function GlobeScene({
   crosshairEnabled,
+  anchorPoint,
+  anchorTarget,
   dpr,
   earthSpinEnabled,
   focusKey,
@@ -77,6 +82,8 @@ export const GlobeScene = memo(function GlobeScene({
         onHover={onPointHover}
         onSelect={onPointSelect}
       />
+
+      {anchorTarget ? <PointScreenAnchor point={anchorPoint ?? null} target={anchorTarget} /> : null}
 
       <GlobeCameraController
         crosshairEnabled={crosshairEnabled}
