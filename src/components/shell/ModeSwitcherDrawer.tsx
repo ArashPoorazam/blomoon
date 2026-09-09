@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft } from "lucide-react";
+import { Check, ChevronLeft } from "lucide-react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 import { DrawerHeader } from "../drawer/DrawerHeader";
 import { modeIcons } from "./modeIcons";
@@ -29,13 +29,13 @@ const plannedModes = [
     label: "Radio"
   },
   {
-    description: "Podcasts and live audio discovery will be added later.",
+    description: "Stories and conversations from around the world.",
     icon: "podcast",
     id: "podcasts",
     label: "Podcasts"
   },
   {
-    description: "TV and video modes will open when media contracts are ready.",
+    description: "Discover live television from around the world.",
     icon: "tv",
     id: "tv",
     label: "TV"
@@ -54,7 +54,7 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
     <div className="mode-switcher-view" aria-label="Change mode">
       <DrawerHeader
         title="Change mode"
-        subtitle="More live entertainment modes are planned."
+        subtitle="Choose how you explore the world."
         actions={canGoBack ? (
           <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
             <ChevronLeft size={17} aria-hidden="true" />
@@ -82,7 +82,7 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
                 <strong>{item.label}</strong>
                 <span>{item.description}</span>
               </span>
-              <span className="mode-switcher-status">{item.available ? active ? "Active" : "Open" : "Soon"}</span>
+              <span className="mode-switcher-status">{active ? <Check size={13} aria-hidden="true" /> : null}{item.available ? active ? "Active" : "Open" : "Soon"}</span>
             </button>
           );
         })}

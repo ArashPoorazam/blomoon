@@ -5,7 +5,7 @@ import { and, count, desc, eq, sql } from "drizzle-orm";
 import { getDb, schema, type BlomoonDb } from "@/db";
 import { logger } from "@/lib/server/logging";
 import { getPointRefKey } from "@/lib/modes/pointKeys";
-import { getModePersistenceAdapter } from "./registry";
+import { getModePersistenceAdapter, modePersistenceAdapters } from "./registry";
 import { hydratePersistedPoints } from "./points";
 import { resolveImportedFolderName } from "./favouriteFolderNames";
 import type {
@@ -24,23 +24,17 @@ type FolderMutationResult =
 
 const DEFAULT_FOLDER_NAME = "Favourites";
 
-export async function ensureDefaultFavouriteFolder(userId: string, tx: BlomoonDb | BlomoonTransaction = getDb()) {
-  await tx.insert(schema.userFavouriteFolders).values({
+export async function ensureDefaultFavouriteFolders(userId: string, tx: BlomoonDb | BlomoonTransaction = getDb()) {
+  await tx.insert(schema.userFavouriteFolders).values(modePersistenceAdapters.map(({ modeId }) => ({
     isDefault: true,
+    modeId,
     name: DEFAULT_FOLDER_NAME,
     userId
-  }).onConflictDoNothing();
-
-  const [folder] = await tx.select({ id: schema.userFavouriteFolders.id })
-    .from(schema.userFavouriteFolders)
-    .where(and(eq(schema.userFavouriteFolders.userId, userId), eq(schema.userFavouriteFolders.isDefault, true)))
-    .limit(1);
-
-  return folder?.id ?? null;
+  }))).onConflictDoNothing();
 }
 
 export async function listFavouriteFolders(userId: string): Promise<FavouriteFolderSummaryDto[]> {
-  await ensureDefaultFavouriteFolder(userId);
+  await ensureDefaultFavouriteFolders(userId);
   const rows = await logger.measure("persistence.favourite_folders.list", { userId }, () => getDb()
     .select({
       createdAt: schema.userFavouriteFolders.createdAt,
@@ -49,6 +43,7 @@ export async function listFavouriteFolders(userId: string): Promise<FavouriteFol
       importedAt: schema.userFavouriteFolders.importedAt,
       isDefault: schema.userFavouriteFolders.isDefault,
       itemCount: count(schema.userFavouriteFolderItems.mediaItemId),
+      modeId: schema.userFavouriteFolders.modeId,
       name: schema.userFavouriteFolders.name,
       sharedAt: schema.userFavouriteFolders.sharedAt,
       updatedAt: schema.userFavouriteFolders.updatedAt
@@ -67,6 +62,7 @@ export async function getFavouriteFolder(userId: string, folderId: string): Prom
     createdAt: schema.userFavouriteFolders.createdAt,
     description: schema.userFavouriteFolders.description,
     folderId: schema.userFavouriteFolders.id,
+    folderModeId: schema.userFavouriteFolders.modeId,
     importedAt: schema.userFavouriteFolders.importedAt,
     isDefault: schema.userFavouriteFolders.isDefault,
     itemCreatedAt: schema.userFavouriteFolderItems.createdAt,
@@ -87,7 +83,7 @@ export async function getFavouriteFolder(userId: string, folderId: string): Prom
   const points = await hydratePersistedPoints(refs);
 
   return {
-    ...folderRowToSummary({ ...first, id: first.folderId, itemCount: refs.length }),
+    ...folderRowToSummary({ ...first, modeId: first.folderModeId, id: first.folderId, itemCount: refs.length }),
     items: rows.flatMap((row) => {
       if (!row.modeId || !row.pointId || !row.itemCreatedAt) return [];
       const point = points.get(getPointRefKey({ modeId: row.modeId, pointId: row.pointId }));
@@ -118,8 +114,9 @@ export async function listFavouritePoints(userId: string) {
   };
 }
 
-export async function createFavouriteFolder(userId: string, name: string, description?: string | null) {
+export async function createFavouriteFolder(userId: string, name: string, description: string | null | undefined, modeId: string) {
   const [row] = await getDb().insert(schema.userFavouriteFolders).values({
+    modeId,
     description: normalizeDescription(description),
     name: normalizeName(name),
     userId,
@@ -165,9 +162,10 @@ export async function addFavouriteFolderItem(userId: string, folderId: string, r
   ref = { ...ref, pointId: point.id };
 
   return getDb().transaction(async (tx) => {
-    const [folder] = await tx.select({ id: schema.userFavouriteFolders.id }).from(schema.userFavouriteFolders)
+    const [folder] = await tx.select({ id: schema.userFavouriteFolders.id, modeId: schema.userFavouriteFolders.modeId }).from(schema.userFavouriteFolders)
       .where(and(eq(schema.userFavouriteFolders.id, folderId), eq(schema.userFavouriteFolders.userId, userId))).limit(1);
     if (!folder) return null;
+    if (folder.modeId !== ref.modeId) throw new FolderModeMismatchError();
     const [saved] = await tx.insert(schema.userSavedMediaItems).values({ mediaItemId: ref.pointId, userId, updatedAt: new Date() })
       .onConflictDoNothing().returning({ id: schema.userSavedMediaItems.mediaItemId });
     if (saved) await incrementStarCount(tx, ref.pointId, 1);
@@ -244,10 +242,11 @@ export async function importSharedFavouriteFolder(userId: string, token: string)
     if (prior) return { folderId: prior.id, kind: "existing" };
 
     const names = await tx.select({ name: schema.userFavouriteFolders.name }).from(schema.userFavouriteFolders)
-      .where(eq(schema.userFavouriteFolders.userId, userId));
+      .where(and(eq(schema.userFavouriteFolders.userId, userId), eq(schema.userFavouriteFolders.modeId, source.modeId)));
     const name = resolveImportedFolderName(source.name, names.map((row) => row.name));
     const now = new Date();
     const [folder] = await tx.insert(schema.userFavouriteFolders).values({
+      modeId: source.modeId,
       description: source.description,
       importSourceFolderId: source.id,
       importedAt: now,
@@ -268,11 +267,11 @@ export async function importSharedFavouriteFolder(userId: string, token: string)
 }
 
 function folderRowToSummary(row: {
-  createdAt: Date; description: string | null; id: string; importedAt: Date | null; isDefault: boolean;
+  modeId: string; createdAt: Date; description: string | null; id: string; importedAt: Date | null; isDefault: boolean;
   itemCount: number; name: string; sharedAt: Date | null; updatedAt: Date;
 }): FavouriteFolderSummaryDto {
   return {
-    createdAt: row.createdAt.toISOString(), description: row.description, id: row.id,
+    modeId: row.modeId, createdAt: row.createdAt.toISOString(), description: row.description, id: row.id,
     importedAt: row.importedAt?.toISOString() ?? null, isDefault: row.isDefault,
     isImported: Boolean(row.importedAt), isShared: Boolean(row.sharedAt), itemCount: Number(row.itemCount),
     name: row.name, sharedAt: row.sharedAt?.toISOString() ?? null, updatedAt: row.updatedAt.toISOString()
@@ -300,4 +299,8 @@ async function incrementStarCount(tx: BlomoonTransaction, mediaItemId: string, d
     starCount: delta > 0 ? sql`${schema.mediaItems.starCount} + 1` : sql`greatest(${schema.mediaItems.starCount} - 1, 0)`,
     updatedAt: new Date()
   }).where(eq(schema.mediaItems.id, mediaItemId));
+}
+
+export class FolderModeMismatchError extends Error {
+  constructor() { super("This folder belongs to a different mode."); }
 }

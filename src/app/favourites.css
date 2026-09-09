@@ -8,7 +8,8 @@
 .favourites-actions {
   display: flex;
   justify-content: flex-end;
-  padding: 12px 20px 0;
+  padding: 14px 20px;
+  border-bottom: 1px solid var(--panel-border);
 }
 
 .new-folder-action {
@@ -28,6 +29,7 @@
 
 .favourite-folder-grid {
   display: grid;
+  gap: 8px;
 }
 
 .favourite-folder-card {
@@ -35,7 +37,7 @@
   width: 100%;
   padding: 18px 8px;
   border: 0;
-  border-bottom: 1px solid var(--line);
+  border-bottom: 1px solid var(--panel-border);
   border-radius: 0;
   background: transparent;
   color: var(--text);
@@ -328,4 +330,23 @@
 .shared-folder-samples span {
   color: var(--muted-strong);
   font-size: 12px;
+}
+
+.folder-summary-aside {
+  display: grid;
+  flex-shrink: 0;
+  justify-items: end;
+  gap: 6px;
+}
+
+.folder-mode-badge {
+  display: inline-flex;
+  width: fit-content;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--info-surface);
+  color: var(--accent);
+  font-size: 10px;
+  font-weight: 650;
+  line-height: 1.4;
 }

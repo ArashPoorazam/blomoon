@@ -86,7 +86,33 @@
       "tag": "0011_radio_snapshot_account_cleanup",
       "breakpoints": true
     },
-    { "idx": 12, "version": "7", "when": 1788912000003, "tag": "0012_radio_station_identity", "breakpoints": true },
-    { "idx": 13, "version": "7", "when": 1788912000004, "tag": "0013_radio_media_identity_guard", "breakpoints": true }
+    {
+      "idx": 12,
+      "version": "7",
+      "when": 1788912000003,
+      "tag": "0012_radio_station_identity",
+      "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "7",
+      "when": 1788912000004,
+      "tag": "0013_radio_media_identity_guard",
+      "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "7",
+      "when": 1788912000005,
+      "tag": "0014_favourite_folder_modes",
+      "breakpoints": true
+    },
+    {
+      "idx": 15,
+      "version": "7",
+      "when": 1788912000006,
+      "tag": "0015_favourite_folder_mode_guards",
+      "breakpoints": true
+    }
   ]
 }

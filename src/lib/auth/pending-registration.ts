@@ -7,7 +7,7 @@ import { getDb, schema } from "@/db";
 import { ensureDatabaseReady } from "@/db/readiness";
 import { sendAccountVerificationOtp } from "@/lib/email/verification";
 import { logger } from "@/lib/server/logging";
-import { ensureDefaultFavouriteFolder } from "@/lib/persistence/favouriteFolders";
+import { ensureDefaultFavouriteFolders } from "@/lib/persistence/favouriteFolders";
 
 const OTP_DIGITS = 6;
 const OTP_EXPIRES_IN_MS = 10 * 60 * 1000;
@@ -168,7 +168,7 @@ export async function verifyPendingRegistration(email: string, otp: string): Pro
           userId: user.id
         });
 
-      await ensureDefaultFavouriteFolder(user.id, tx);
+      await ensureDefaultFavouriteFolders(user.id, tx);
 
       await tx
         .delete(schema.pendingRegistrations)

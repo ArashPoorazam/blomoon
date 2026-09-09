@@ -4,7 +4,9 @@ import { terraThemeIds } from "@/lib/theme/ids";
 export const favouriteFolderInputSchema = z.object({
   name: z.string().trim().min(1).max(80),
   description: z.string().trim().max(240).nullable().optional()
-});
+}).strict();
+
+export const favouriteFolderCreateSchema = favouriteFolderInputSchema.extend({ modeId: z.string().min(1).max(40) });
 
 export const favouriteFolderItemInputSchema = z.object({
   modeId: z.string().min(1).max(40),

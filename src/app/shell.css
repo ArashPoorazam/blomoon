@@ -100,93 +100,108 @@
 .account-drawer-actions,
 .account-drawer-body {
   display: grid;
-  gap: 10px;
+  align-content: start;
+  grid-auto-rows: max-content;
+  gap: 8px;
   min-height: 0;
   overflow: auto;
-  padding: 14px;
+  padding: 18px 14px 24px;
 }
 
 .mode-switcher-option,
 .account-drawer-actions button {
   display: grid;
   width: 100%;
-  min-height: 58px;
+  min-height: 76px;
+  grid-template-columns: auto minmax(0, 1fr) auto;
   align-items: center;
-  gap: 10px;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  background: var(--surface);
+  gap: 12px;
+  padding: 14px 12px;
+  border: 0;
+  border-radius: var(--radius-row);
+  background: transparent;
   color: var(--muted-strong);
   cursor: pointer;
   text-align: left;
 }
 
-.mode-switcher-option {
-  grid-template-columns: auto minmax(0, 1fr) auto;
-  padding: 9px;
-}
-
-.account-drawer-actions button {
-  grid-template-columns: auto minmax(0, 1fr);
-  padding: 0 12px;
-  font-weight: 700;
-}
-
 .mode-switcher-option:hover:not(:disabled),
-.mode-switcher-option:focus-visible,
 .account-drawer-actions button:hover {
-  border-color: color-mix(in srgb, var(--accent) 52%, var(--panel-border));
-  background: var(--control-hover);
+  background: var(--row-hover);
   color: var(--text);
 }
 
+.mode-switcher-option:focus-visible,
+.account-drawer-actions button:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: -2px;
+}
+
 .mode-switcher-option.active {
-  color: var(--accent-strong);
+  background: var(--info-surface);
 }
 
 .mode-switcher-option:disabled {
-  cursor: not-allowed;
-  opacity: 0.62;
+  cursor: default;
+  opacity: 0.65;
 }
 
-.mode-switcher-icon {
+.mode-switcher-icon,
+.account-drawer-actions button > svg:first-child {
   display: grid;
-  width: 38px;
-  height: 38px;
+  width: 40px;
+  height: 40px;
   place-items: center;
-  border-radius: 8px;
+  border-radius: 50%;
   background: var(--control);
-  color: var(--accent-strong);
+  color: var(--accent);
 }
 
-.mode-switcher-copy {
+.account-drawer-actions button > svg:first-child {
+  padding: 11px;
+}
+
+.mode-switcher-copy,
+.account-navigation-copy {
+  display: grid;
   min-width: 0;
+  gap: 5px;
 }
 
 .mode-switcher-copy strong,
-.mode-switcher-copy span {
-  display: block;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.mode-switcher-copy strong {
+.account-navigation-copy strong {
   color: var(--text);
   font-size: 14px;
 }
 
-.mode-switcher-copy span,
-.mode-switcher-status {
+.mode-switcher-copy > span,
+.account-navigation-copy > span {
   color: var(--muted);
   font-size: 12px;
+  line-height: 1.5;
+  overflow-wrap: anywhere;
 }
 
 .mode-switcher-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--accent);
+  font-size: 10px;
   font-weight: 750;
 }
 
+.account-navigation-chevron {
+  color: var(--muted);
+}
+
 .account-drawer-actions .logout-action {
+  margin-top: 12px;
+  border-top: 1px solid var(--line);
+  border-radius: 0 0 var(--radius-row) var(--radius-row);
+}
+
+.account-drawer-actions .logout-action > svg:first-child {
   color: var(--danger);
 }
 

@@ -402,3 +402,18 @@
 @media (max-width: 760px), (pointer: coarse) {
   .media-mini-player .media-control.primary { min-width: 44px; width: 44px; }
 }
+
+.media-player-detail .favourite-star {
+  width: 44px;
+  height: 44px;
+  flex: 0 0 44px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  background: var(--control);
+}
+
+.media-player-detail .favourite-star:hover,
+.media-player-detail .favourite-star.active {
+  border-color: var(--accent);
+  background: var(--info-surface);
+}

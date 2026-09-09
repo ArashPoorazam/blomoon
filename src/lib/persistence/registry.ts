@@ -4,7 +4,7 @@ import { radioPersistenceAdapter } from "@/lib/persistence/radio";
 import type { TerraModeId } from "@/lib/modes/types";
 import type { ModePersistenceAdapter } from "./types";
 
-const modePersistenceAdapters = [
+export const modePersistenceAdapters = [
   radioPersistenceAdapter
 ] satisfies ModePersistenceAdapter[];
 

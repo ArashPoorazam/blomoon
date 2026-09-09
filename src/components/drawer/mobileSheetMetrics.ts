@@ -1,6 +1,9 @@
 import type { DrawerMobilePosition } from "../shell/drawerState";
 
 export const MOBILE_DRAWER_HEADER_HEIGHT = 92;
+const MOBILE_DRAWER_HANDLE_HEIGHT = 24;
+// Include the sheet’s top border so the collapsed header is not clipped.
+const MOBILE_DRAWER_CLOSED_HEIGHT = MOBILE_DRAWER_HEADER_HEIGHT + MOBILE_DRAWER_HANDLE_HEIGHT + 1;
 
 const DEFAULT_MOBILE_NAV_BOTTOM = 72;
 const MOBILE_LOADING_SLOT_HEIGHT = 46;
@@ -47,14 +50,14 @@ export function getMobileSheetMetrics({
   viewportHeight?: number;
 } = {}): MobileSheetMetrics {
   const sheetBottom = viewportHeight - playerHeight;
-  const fullHeight = Math.max(MOBILE_DRAWER_HEADER_HEIGHT, sheetBottom - navBottom - MOBILE_LOADING_SLOT_HEIGHT);
+  const fullHeight = Math.max(MOBILE_DRAWER_CLOSED_HEIGHT, sheetBottom - navBottom - MOBILE_LOADING_SLOT_HEIGHT);
   const middleHeight = clampMobileSheetHeight(Math.round(viewportHeight * MOBILE_MIDDLE_VIEWPORT_RATIO), {
-    closedHeight: MOBILE_DRAWER_HEADER_HEIGHT,
+    closedHeight: MOBILE_DRAWER_CLOSED_HEIGHT,
     fullHeight
   });
 
   return {
-    closedHeight: MOBILE_DRAWER_HEADER_HEIGHT,
+    closedHeight: MOBILE_DRAWER_CLOSED_HEIGHT,
     fullHeight,
     middleHeight,
     navBottom,

@@ -16,19 +16,19 @@ const metrics = getMobileSheetMetrics({
 describe("mobile drawer sheet metrics", () => {
   it("reserves the header, middle viewport share, player, nav, and loading slot", () => {
     expect(metrics).toMatchObject({
-      closedHeight: 92,
+      closedHeight: 117,
       fullHeight: 590,
       middleHeight: 320,
       sheetBottom: 708
     });
-    expect(getMobileDrawerHeight("closed", metrics)).toBe(92);
+    expect(getMobileDrawerHeight("closed", metrics)).toBe(117);
     expect(getMobileDrawerHeight("middle", metrics)).toBe(320);
     expect(getMobileDrawerHeight("full", metrics)).toBe(590);
     expect(metrics.sheetBottom - metrics.fullHeight - metrics.navBottom).toBe(46);
   });
 
   it("uses the nearest detent for a slow release", () => {
-    expect(resolveMobileDrawerDetent({ height: 210, heightVelocity: 0.1, metrics })).toBe("middle");
+    expect(resolveMobileDrawerDetent({ height: 230, heightVelocity: 0.1, metrics })).toBe("middle");
     expect(resolveMobileDrawerDetent({ height: 480, heightVelocity: 0, metrics })).toBe("full");
   });
 
@@ -39,7 +39,7 @@ describe("mobile drawer sheet metrics", () => {
   });
 
   it("caps globe movement at the middle detent", () => {
-    expect(getMobileGlobeOffset(metrics.closedHeight, metrics)).toBe(-56);
+    expect(getMobileGlobeOffset(metrics.closedHeight, metrics)).toBe(-68);
     expect(getMobileGlobeOffset(metrics.middleHeight, metrics)).toBe(-170);
     expect(getMobileGlobeOffset(metrics.fullHeight, metrics)).toBe(-170);
   });

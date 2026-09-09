@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { terraThemeIds } from "@/lib/theme/ids";
-import { favouriteFolderShareInputSchema, favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
+import { favouriteFolderCreateSchema, favouriteFolderShareInputSchema, favouriteFolderInputSchema, favouriteFolderItemInputSchema, favouriteShareTokenSchema, themeInputSchema } from "./validation";
 
 describe("user API validation", () => {
   it("accepts only explicit boolean share rotation options", () => {
@@ -9,6 +9,12 @@ describe("user API validation", () => {
     for (const input of [null, [], { rotate: "true" }, { rotate: true, userId: "another-owner" }]) {
       expect(favouriteFolderShareInputSchema.safeParse(input).success).toBe(false);
     }
+  });
+  it("requires a mode when creating and prohibits changing it through edit", () => {
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning", modeId: "radio" }).success).toBe(true);
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning" }).success).toBe(false);
+    expect(favouriteFolderCreateSchema.safeParse({ name: "Morning", modeId: "" }).success).toBe(false);
+    expect(favouriteFolderInputSchema.safeParse({ name: "Morning", modeId: "tv" }).success).toBe(false);
   });
   it("accepts known theme ids", () => {
     for (const themeId of terraThemeIds) {

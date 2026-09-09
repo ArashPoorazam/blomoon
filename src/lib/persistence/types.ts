@@ -15,6 +15,7 @@ export type FavouriteFolderItemDto = FavouriteFolderMembershipDto & {
 };
 
 export type FavouriteFolderSummaryDto = {
+  modeId: TerraModeId;
   createdAt: string;
   description: string | null;
   id: string;

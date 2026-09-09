@@ -7,14 +7,17 @@ import { useEffect, useId, useRef, useState, type ReactNode } from "react";
 export function ModalShell({ children, className = "", kicker, onClose, title }: { children: ReactNode; className?: string; kicker?: string; onClose: () => void; title: string }) {
   const titleId = useId();
   const [host, setHost] = useState<HTMLElement | null>(null);
-  useEffect(() => { setHost(document.querySelector<HTMLElement>(".blomoon-shell") ?? document.body); }, []);
+  const returnFocus = useRef<HTMLElement | null>(null);
+  useEffect(() => {
+    returnFocus.current = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    setHost(document.querySelector<HTMLElement>(".blomoon-shell") ?? document.body);
+  }, []);
   const ref = useRef<HTMLElement>(null);
   const onCloseRef = useRef(onClose);
   onCloseRef.current = onClose;
   useEffect(() => {
     if (!host) return;
-    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
-    ref.current?.focus();
+    if (!ref.current?.contains(document.activeElement)) ref.current?.focus();
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") onCloseRef.current();
       if (event.key !== "Tab") return;
@@ -29,7 +32,7 @@ export function ModalShell({ children, className = "", kicker, onClose, title }:
       }
     };
     window.addEventListener("keydown", onKeyDown);
-    return () => { window.removeEventListener("keydown", onKeyDown); previous?.focus(); };
+    return () => { window.removeEventListener("keydown", onKeyDown); returnFocus.current?.focus(); };
   }, [host]);
   if (!host) return null;
   return createPortal(

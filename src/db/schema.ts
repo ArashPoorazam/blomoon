@@ -177,6 +177,7 @@ export const radioStations = pgTable("radio_stations", {
 export const userFavouriteFolders = pgTable("user_favourite_folders", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
+  modeId: text("mode_id").notNull().references(() => mediaModes.id, { onDelete: "restrict" }),
   name: text("name").notNull(),
   description: text("description"),
   isDefault: boolean("is_default").notNull().default(false),
@@ -187,8 +188,8 @@ export const userFavouriteFolders = pgTable("user_favourite_folders", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  uniqueIndex("user_favourite_folders_user_name_unique").on(table.userId, sql`lower(${table.name})`),
-  uniqueIndex("user_favourite_folders_one_default_unique").on(table.userId).where(sql`${table.isDefault}`),
+  uniqueIndex("user_favourite_folders_user_name_unique").on(table.userId, table.modeId, sql`lower(${table.name})`),
+  uniqueIndex("user_favourite_folders_one_default_unique").on(table.userId, table.modeId).where(sql`${table.isDefault}`),
   uniqueIndex("user_favourite_folders_import_source_unique").on(table.userId, table.importSourceFolderId).where(sql`${table.importSourceFolderId} IS NOT NULL`),
   index("user_favourite_folders_user_updated_idx").on(table.userId, table.updatedAt),
   check("user_favourite_folders_name_length", sql`length(btrim(${table.name})) BETWEEN 1 AND 80`),

@@ -60,7 +60,7 @@ type SideDrawerProps = {
   onAccountUpdated: () => void | Promise<void>;
   onCountryFilterChange: (country: CountryInfo | null) => void;
   onClearCountrySelection: () => void;
-  onCreateFavouriteFolder: (name: string, description: string | null) => Promise<FavouriteFolderSummaryDto | null>;
+  onCreateFavouriteFolder: (name: string, description: string | null, modeId: string) => Promise<FavouriteFolderSummaryDto | null>;
   onDeleteFavouriteFolder: (folderId: string) => Promise<boolean>;
   onOpenFavouriteFolder: (folderId: string) => void;
   onFavouritePointInspect: (point: TerraPoint) => void;
@@ -198,6 +198,7 @@ export function SideDrawer({
             />
           ) : view === "favourites" ? (
             <FavouriteFolderIndex
+              modeId={activeModeId}
               canGoBack={canGoBack}
               folders={favouriteFolders}
               loading={favouritesLoading}

@@ -26,7 +26,7 @@ describe.skipIf(!enabled)("station identity consolidation (rolled back)", () => 
         const b = "55555555-5555-4555-8555-555555555555";
         await tx.insert(schema.users).values({ id: owner, email: "identity-test@example.invalid" });
         const folders = await tx.insert(schema.userFavouriteFolders).values([
-          { userId: owner, name: "one" }, { userId: owner, name: "two" }
+          { userId: owner, modeId: "radio", name: "one" }, { userId: owner, modeId: "radio", name: "two" }
         ]).returning();
         await tx.insert(schema.mediaModes).values({ id: "radio", label: "Radio" }).onConflictDoNothing();
         await tx.insert(schema.mediaProviders).values({ id: "radio-browser", modeId: "radio", name: "Radio Browser", url: "https://radio-browser.info", attribution: "test" }).onConflictDoNothing();

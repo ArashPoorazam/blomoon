@@ -14,7 +14,7 @@ type FavouriteFolderPickerProps = {
   selectedFolderIds: Set<string>;
   onAddToFolder: (folderId: string, point: TerraPoint) => Promise<void>;
   onClose: () => void;
-  onCreateFolder: (name: string, description: string | null) => Promise<FavouriteFolderSummaryDto | null>;
+  onCreateFolder: (name: string, description: string | null, modeId: string) => Promise<FavouriteFolderSummaryDto | null>;
   onRemoveFromFolder: (folderId: string, point: TerraPoint) => Promise<void>;
 };
 
@@ -27,6 +27,7 @@ export function FavouriteFolderPicker({
   point,
   selectedFolderIds
 }: FavouriteFolderPickerProps) {
+  const [error, setError] = useState<string | null>(null);
   const [creating, setCreating] = useState(false);
   const [busyListId, setBusyListId] = useState<string | null>(null);
 
@@ -35,18 +36,19 @@ export function FavouriteFolderPicker({
         <div className="favourite-picker-list">
           {creating ? (
             <FavouriteFolderForm
+              modeId={point.modeId}
               submitLabel="Create"
               title="Create new folder"
               onCancel={() => setCreating(false)}
               onSubmit={async (name, description) => {
-                const folder = await onCreateFolder(name, description);
+                const folder = await onCreateFolder(name, description, point.modeId);
                 if (!folder) return false;
                 await onAddToFolder(folder.id, point);
                 setCreating(false);
                 return true;
               }}
             />
-          ) : folders.map((folder) => {
+          ) : folders.filter((folder) => folder.modeId === point.modeId).map((folder) => {
             const selected = selectedFolderIds.has(folder.id);
 
             return (
@@ -57,9 +59,10 @@ export function FavouriteFolderPicker({
                 key={folder.id}
                 type="button"
                 onClick={() => {
+                  setError(null);
                   setBusyListId(folder.id);
                   const action = selected ? onRemoveFromFolder : onAddToFolder;
-                  void action(folder.id, point).finally(() => setBusyListId(null));
+                  void action(folder.id, point).catch(() => setError("Could not update this folder. Please try again.")).finally(() => setBusyListId(null));
                 }}
               >
                 <FolderSummary folder={folder} />
@@ -69,6 +72,7 @@ export function FavouriteFolderPicker({
           })}
         </div>
 
+        {error ? <p className="form-error" role="alert">{error}</p> : null}
         {!creating ? (
           <button className="secondary-action compact-action" type="button" onClick={() => setCreating(true)}>
             <Plus size={15} aria-hidden="true" />

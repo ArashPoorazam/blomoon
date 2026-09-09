@@ -19,14 +19,19 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
   const [folderLoading, setFolderLoading] = useState(false);
   const [pointsLoaded, setPointsLoaded] = useState(false);
 
-  const refreshFolders = useCallback(async () => {
+  const refreshFolders = useCallback(async (foreground = true) => {
     if (!user) { setFolders([]); return; }
-    setLoading(true);
+    if (foreground) setLoading(true);
     try {
       const response = await fetch("/api/users/me/favourite-folders", { cache: "no-store" });
       if (!response.ok) throw new Error();
-      setFolders(((await response.json()) as { folders: FavouriteFolderSummaryDto[] }).folders);
-    } catch { setFolders([]); } finally { setLoading(false); }
+      const { folders: next } = await response.json() as { folders: FavouriteFolderSummaryDto[] };
+      setFolders(next);
+      setActiveFolder((current) => {
+        const summary = next.find((folder) => folder.id === current?.id);
+        return current && summary ? { ...current, ...summary } : current;
+      });
+    } finally { if (foreground) setLoading(false); }
   }, [user]);
 
   const loadPoints = useCallback(async (force = false) => {
@@ -48,25 +53,32 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
     } finally { setFolderLoading(false); }
   }, [onAuthRequired, user]);
 
-  useEffect(() => { setPoints([]); setMemberships([]); setPointsLoaded(false); setActiveFolder(null); void refreshFolders(); }, [refreshFolders, user?.id]);
+  useEffect(() => { setPoints([]); setMemberships([]); setPointsLoaded(false); setActiveFolder(null); void refreshFolders().catch(() => setFolders([])); }, [refreshFolders, user?.id]);
 
   const refreshAfterMutation = useCallback(async (folderId?: string) => {
     await Promise.all([refreshFolders(), pointsLoaded ? loadPoints(true) : Promise.resolve(), folderId ? loadFolder(folderId) : Promise.resolve()]);
   }, [loadFolder, loadPoints, pointsLoaded, refreshFolders]);
 
-  const createFolder = useCallback(async (name: string, description: string | null) => {
+  const createFolder = useCallback(async (name: string, description: string | null, modeId: string) => {
     if (!user) { onAuthRequired(); return null; }
-    const response = await fetch("/api/users/me/favourite-folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, description }) });
-    if (!response.ok) return null;
+    const response = await fetch("/api/users/me/favourite-folders", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, description, modeId }) });
+    if (response.status === 409) return null;
+    if (!response.ok) throw new Error("Could not create the folder.");
     const folder = ((await response.json()) as { folder: FavouriteFolderSummaryDto }).folder;
-    await refreshFolders(); return folder;
+    void refreshFolders(false).catch(() => undefined);
+    setFolders((current) => [...current, folder]);
+    return folder;
   }, [onAuthRequired, refreshFolders, user]);
 
   const updateFolder = useCallback(async (folderId: string, name: string, description: string | null) => {
     const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}`, { method: "PATCH", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ name, description }) });
-    if (response.ok) await refreshAfterMutation(folderId);
-    return response.ok;
-  }, [refreshAfterMutation]);
+    if (response.status === 409) return false;
+    if (!response.ok) throw new Error("Could not save the folder.");
+    const { folder } = await response.json() as { folder: FavouriteFolderSummaryDto };
+    setActiveFolder((current) => current?.id === folder.id ? { ...current, ...folder } : current);
+    setFolders((current) => current.map((item) => item.id === folder.id ? folder : item));
+    return true;
+  }, []);
 
   const deleteFolder = useCallback(async (folderId: string) => {
     const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}`, { method: "DELETE" });
@@ -76,12 +88,14 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
 
   const addPointToFolder = useCallback(async (folderId: string, point: TerraPoint) => {
     const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}/items`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ modeId: point.modeId, pointId: point.id }) });
-    if (response.ok) await refreshAfterMutation(activeFolder?.id === folderId ? folderId : undefined);
+    if (!response.ok) throw new Error("Could not update this folder. Please try again.");
+    await refreshAfterMutation(activeFolder?.id === folderId ? folderId : undefined);
   }, [activeFolder?.id, refreshAfterMutation]);
 
   const removePointFromFolder = useCallback(async (folderId: string, point: TerraPoint) => {
     const response = await fetch(`/api/users/me/favourite-folders/${encodeURIComponent(folderId)}/items/${encodeURIComponent(point.modeId)}/${encodeURIComponent(point.id)}`, { method: "DELETE" });
-    if (response.ok) await refreshAfterMutation(activeFolder?.id === folderId ? folderId : undefined);
+    if (!response.ok) throw new Error("Could not update this folder. Please try again.");
+    await refreshAfterMutation(activeFolder?.id === folderId ? folderId : undefined);
   }, [activeFolder?.id, refreshAfterMutation]);
 
   const shareFolder = useCallback(async (folderId: string, rotate = false) => {
@@ -89,9 +103,9 @@ export function useFavouriteFolders({ onAuthRequired, user }: { onAuthRequired: 
     if (!response.ok) return null;
     const { token } = await response.json() as { token: string };
     // Sharing has committed. A failed metadata refresh must not discard the new link.
-    await refreshAfterMutation(folderId).catch(() => undefined);
+    void refreshFolders(false).catch(() => undefined);
     return token;
-  }, [refreshAfterMutation]);
+  }, [refreshFolders]);
 
   const getPointFolderIds = useCallback((point: TerraPoint) => {
     const key = getPointKey(point);
