@@ -91,12 +91,15 @@ jobs:
           VPS_SSH_PRIVATE_KEY: ${{ secrets.VPS_SSH_PRIVATE_KEY }}
           VPS_SSH_KNOWN_HOSTS: ${{ secrets.VPS_SSH_KNOWN_HOSTS }}
         run: |
-          test -n "$VPS_HOST"
-          test -n "$VPS_SSH_PRIVATE_KEY"
+          for secret_name in VPS_HOST VPS_SSH_PRIVATE_KEY VPS_SSH_KNOWN_HOSTS; do
+            if [[ -z "${!secret_name}" ]]; then
+              echo "::error::Missing required GitHub Actions secret: $secret_name"
+              exit 1
+            fi
+          done
           mkdir -p ~/.ssh
           install -m 600 /dev/null ~/.ssh/blomoon_deploy_key
           printf '%s\n' "$VPS_SSH_PRIVATE_KEY" > ~/.ssh/blomoon_deploy_key
-          test -n "$VPS_SSH_KNOWN_HOSTS"
           printf '%s\n' "$VPS_SSH_KNOWN_HOSTS" > ~/.ssh/known_hosts
           chmod 600 ~/.ssh/known_hosts
 
