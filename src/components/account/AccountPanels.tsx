@@ -357,12 +357,12 @@ export function ContactPanel({ links }: { links: ContactLink[] }) {
       <a href={BLOMOON_PRIVACY_PATH} target="_blank" rel="noopener noreferrer">
         <ShieldCheck size={14} aria-hidden="true" />
         <span>Privacy Policy</span>
-        <strong>How Blomoon handles your information · Opens in a new tab</strong>
+        <strong>How Blomoon handles your information</strong>
       </a>
       <a href={BLOMOON_TERMS_PATH} target="_blank" rel="noopener noreferrer">
         <FileText size={14} aria-hidden="true" />
         <span>Terms of Service</span>
-        <strong>Terms and conditions for using Blomoon · Opens in a new tab</strong>
+        <strong>Terms and conditions for using Blomoon</strong>
       </a>
     </div>
   );
