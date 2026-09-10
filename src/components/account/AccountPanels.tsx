@@ -1,9 +1,10 @@
 "use client";
 
-import { KeyRound, LoaderCircle, Mail } from "lucide-react";
+import { FileText, KeyRound, LoaderCircle, Mail, ShieldCheck } from "lucide-react";
 import { useState, type FormEvent } from "react";
 import { authClient } from "@/lib/auth/client";
 import type { ContactLink } from "@/lib/app-config/types";
+import { BLOMOON_PRIVACY_PATH, BLOMOON_TERMS_PATH } from "@/lib/app-config/public";
 import type { ViewerDto } from "@/lib/users/dto";
 
 type AccountPanelProps = {
@@ -353,6 +354,16 @@ export function ContactPanel({ links }: { links: ContactLink[] }) {
           <strong>{link.value}</strong>
         </a>
       ))}
+      <a href={BLOMOON_PRIVACY_PATH} target="_blank" rel="noopener noreferrer">
+        <ShieldCheck size={14} aria-hidden="true" />
+        <span>Privacy Policy</span>
+        <strong>How Blomoon handles your information · Opens in a new tab</strong>
+      </a>
+      <a href={BLOMOON_TERMS_PATH} target="_blank" rel="noopener noreferrer">
+        <FileText size={14} aria-hidden="true" />
+        <span>Terms of Service</span>
+        <strong>Terms and conditions for using Blomoon · Opens in a new tab</strong>
+      </a>
     </div>
   );
 }

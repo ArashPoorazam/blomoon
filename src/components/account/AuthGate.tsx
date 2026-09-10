@@ -57,6 +57,7 @@ export function AuthGate({ googleAuthEnabled, nextPath, serviceError }: AuthGate
             <Link href="/privacy">Privacy</Link>
             <Link href="/terms">Terms</Link>
           </nav>
+          <p className="auth-copyright">© 2026 Daedalus. All rights reserved.</p>
         </section>
 
         <AuthCard
