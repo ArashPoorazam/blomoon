@@ -4,8 +4,7 @@ import {
   COUNTRY_MARKER_LIMIT,
   FALLBACK_CACHE_TTL_MS,
   STATION_CACHE_TTL_MS,
-  STREAM_CACHE_TTL_MS,
-  STREAM_VALIDATION_TIMEOUT_MS
+  STREAM_CACHE_TTL_MS
 } from "./config";
 import {
   compareRadioRecords,
@@ -17,6 +16,7 @@ import {
 import { createRadioFallbackSource, createRadioLiveSource } from "./source";
 import { getLiveRadioRecordPage } from "./searchPages";
 import type { RadioSortOption } from "./api";
+import { resolveRadioStream } from "./streamValidation";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
 import { fetchRadioBrowserJson } from "./provider";
 import { getLiveRandomRadioRecord } from "./random";
@@ -296,10 +296,10 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
 
   const clickedUrl = await resolveClickedStationUrl(id);
   const streamUrl = clickedUrl ?? record.streamUrl;
-  let validation: Awaited<ReturnType<typeof validateStreamUrl>>;
+  let validation: Awaited<ReturnType<typeof resolveRadioStream>>;
 
   try {
-    validation = await validateStreamUrl(streamUrl);
+    validation = await resolveRadioStream([clickedUrl ?? null, record.streamUrl]);
   } catch (error) {
     logger.warn("radio.playback.validation_failed", {
       context: {
@@ -319,7 +319,7 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
     contentType: validation.contentType,
     mediaKind: "audio",
     pointId: id,
-    streamUrl
+    streamUrl: validation.streamUrl
   };
 
   playableCache.set(id, {
@@ -645,67 +645,6 @@ async function resolveClickedStationUrl(id: string) {
       message: "Radio clicked URL resolution failed; using catalog stream URL"
     });
     return null;
-  }
-}
-
-async function validateStreamUrl(streamUrl: string) {
-  if (!isSafeStreamUrl(streamUrl)) {
-    throw new Error("Station stream URL is not playable.");
-  }
-
-  const headResult = await probeStream(streamUrl, "HEAD");
-
-  if (headResult.ok) {
-    return headResult;
-  }
-
-  const getResult = await probeStream(streamUrl, "GET");
-
-  if (getResult.ok) {
-    return getResult;
-  }
-
-  throw new Error("Station stream did not respond with a playable status.");
-}
-
-async function probeStream(streamUrl: string, method: "GET" | "HEAD") {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), STREAM_VALIDATION_TIMEOUT_MS);
-
-  try {
-    const response = await fetch(streamUrl, {
-      method,
-      redirect: "follow",
-      signal: controller.signal,
-      headers: {
-        accept: "audio/*,*/*;q=0.8",
-        ...(method === "GET" ? { range: "bytes=0-0" } : {})
-      }
-    });
-
-    if (method === "GET") {
-      await response.body?.cancel();
-    }
-
-    return {
-      ok: response.ok || response.status === 206,
-      contentType: response.headers.get("content-type") ?? undefined
-    };
-  } catch (error) {
-    logger.debug("radio.playback.probe_failed", {
-      context: {
-        host: getUrlHost(streamUrl),
-        method
-      },
-      error,
-      message: "Radio stream probe failed"
-    });
-    return {
-      ok: false,
-      contentType: undefined
-    };
-  } finally {
-    clearTimeout(timeout);
   }
 }
 
