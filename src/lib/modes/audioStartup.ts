@@ -10,6 +10,7 @@ export function playbackFailure(error: unknown, audio?: HTMLAudioElement | null)
   if (error instanceof PlaybackError) return error.reason;
   if (error instanceof Error && error.name === "NotAllowedError") return "permission";
   if (error instanceof Error && error.name === "NotSupportedError") return "unsupported";
+  if (error instanceof Error && error.name === "AbortError") return "unknown";
   if (audio?.error?.code === 2) return "network";
   if (audio?.error?.code === 3 || audio?.error?.code === 4) return "unsupported";
   return "unknown";
@@ -58,4 +59,15 @@ export function validatePlayableAudio(value: unknown, audio: HTMLAudioElement): 
     throw new PlaybackError("unsupported");
   }
   return url.href;
+}
+
+export function playbackFailureMessage(reason: PlaybackFailure): string {
+  switch (reason) {
+    case "lookup": return "Could not resolve this station. Try again.";
+    case "timeout": return "This station took too long to start. Try again or choose another station.";
+    case "network": return "The stream connection failed. Try again or choose another station.";
+    case "unsupported": return "This stream format is not supported by your browser. Choose another station.";
+    case "permission": return "Press play to allow audio in your browser.";
+    default: return "This stream is unavailable. Try again or choose another station.";
+  }
 }

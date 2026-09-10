@@ -105,6 +105,7 @@ export type TerraModeListParams = {
 };
 
 export type TerraPlayableAudio = {
+  /** Server validation time; does not certify successful browser playback. */
   checkedAt: string;
   contentType?: string;
   mediaKind: "audio";

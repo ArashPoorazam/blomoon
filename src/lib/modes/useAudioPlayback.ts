@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appendPlaybackHistory, takePreviousPlaybackPoint } from "./playbackNavigation";
 import type { TerraPlaybackConfig, TerraPoint } from "./types";
-import { PlaybackError, playbackFailure, startAudio, validatePlayableAudio } from "./audioStartup";
+import { PlaybackError, playbackFailure, playbackFailureMessage, startAudio, validatePlayableAudio } from "./audioStartup";
 import { reportPlaybackDiagnostic } from "./playbackDiagnostics";
 
 export type AudioPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
@@ -87,6 +87,10 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybac
       return;
     }
 
+    if (stateRef.current.status === "loading") {
+      playRequestRef.current += 1;
+      resolutionAbortRef.current?.abort();
+    }
     audio.pause();
     setPlaybackState((current) => ({
       ...current,
@@ -128,7 +132,7 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybac
       status: "loading"
     });
 
-    const lookupStarted = performance.now();
+    let lookupStarted = performance.now();
     let lookupMs = 0;
     let startupStarted: number | null = null;
     let outcomeReported = false;
@@ -146,64 +150,81 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybac
       });
     };
 
-    try {
-      let audio = resume ? existingAudio : null;
-      if (!audio) {
-        const playable = await fetchPlayableAudio(playback.playableEndpoint(point.id), resolutionController.signal);
-        if (playRequestRef.current !== requestId) return;
-        audio = new Audio();
-        audioRef.current = audio;
-        audio.preload = "none";
-        audio.src = validatePlayableAudio(playable, audio);
-      }
-      lookupMs = performance.now() - lookupStarted;
-      startupStarted = performance.now();
-      const activeAudio = audio;
-      const isActive = () => playRequestRef.current === requestId && !resolutionController.signal.aborted;
-      const markPlaying = () => {
-        if (!isActive()) return;
-        setPlaybackState({ error: null, point, pointId: point.id, status: "playing" });
-        report("playing");
-        if (!reportedAudioRef.current.has(activeAudio)) {
-          reportedAudioRef.current.add(activeAudio);
-          onPlaybackStartRef.current?.(point);
+    const manualRefresh = currentState.pointId === point.id && currentState.status === "error";
+    for (let attempt = 0; attempt < 2; attempt += 1) {
+      const attemptController = new AbortController();
+      const attemptSignal = AbortSignal.any([resolutionController.signal, attemptController.signal]);
+      outcomeReported = false;
+      lookupStarted = performance.now();
+      startupStarted = null;
+      try {
+        let audio = attempt === 0 && resume ? existingAudio : null;
+        if (!audio) {
+          const playable = await fetchPlayableAudio(playback.playableEndpoint(point.id), resolutionController.signal, manualRefresh || attempt > 0);
+          if (playRequestRef.current !== requestId) return;
+          audio = new Audio();
+          audioRef.current = audio;
+          audio.preload = "none";
+          audio.src = validatePlayableAudio(playable, audio);
         }
-      };
-      const listenerOptions = { signal: resolutionController.signal };
-      audio.addEventListener("playing", markPlaying, listenerOptions);
-      audio.addEventListener("pause", () => {
-        if (isActive()) setPlaybackState((current) => current.status === "playing" ? { ...current, status: "paused" } : current);
-      }, listenerOptions);
-      audio.addEventListener("error", () => {
-        // Startup errors are handled by startAudio; this handles failures after playback begins.
-        if (!isActive() || stateRef.current.status === "loading") return;
-        outcomeReported = false;
-        report(playbackFailure(undefined, activeAudio));
+        lookupMs = performance.now() - lookupStarted;
+        startupStarted = performance.now();
+        const activeAudio = audio;
+        const isActive = () => playRequestRef.current === requestId && !attemptSignal.aborted;
+        const markPlaying = () => {
+          if (!isActive()) return;
+          setPlaybackState({ error: null, point, pointId: point.id, status: "playing" });
+          report("playing");
+          if (!reportedAudioRef.current.has(activeAudio)) {
+            reportedAudioRef.current.add(activeAudio);
+            onPlaybackStartRef.current?.(point);
+          }
+        };
+        const listenerOptions = { signal: attemptSignal };
+        audio.addEventListener("playing", markPlaying, listenerOptions);
+        audio.addEventListener("pause", () => {
+          if (isActive()) setPlaybackState((current) => current.status === "playing" ? { ...current, status: "paused" } : current);
+        }, listenerOptions);
+        audio.addEventListener("error", () => {
+          // Startup errors are handled by startAudio; this handles failures after playback begins.
+          if (!isActive() || stateRef.current.status === "loading") return;
+          outcomeReported = false;
+          const reason = playbackFailure(undefined, activeAudio);
+          report(reason);
+          resolutionController.abort();
+          disposeAudio(activeAudio);
+          audioRef.current = null;
+          setPlaybackState({ error: playbackFailureMessage(reason), point, pointId: point.id, status: "error" });
+        }, listenerOptions);
+        audioRef.current = audio;
+        await startAudio(audio, attemptSignal);
+        markPlaying();
+        return;
+      } catch (error) {
+        if (playRequestRef.current !== requestId || resolutionController.signal.aborted) return;
+        const reason = playbackFailure(error, audioRef.current);
+        report(reason);
+        if (reason === "permission") {
+          // Keep the resolved source so the next click calls play() without an intervening fetch.
+          setPlaybackState({ error: null, point, pointId: point.id, status: "idle" });
+          return;
+        }
+        attemptController.abort();
+        if (attempt === 0 && (reason === "network" || reason === "timeout")) {
+          disposeAudio(audioRef.current);
+          audioRef.current = null;
+          continue;
+        }
         resolutionController.abort();
-        disposeAudio(activeAudio);
+        resolutionAbortRef.current = null;
+        disposeAudio(audioRef.current);
         audioRef.current = null;
-        setPlaybackState({ error: "This stream is unavailable. Try again or choose another station.", point, pointId: point.id, status: "error" });
-      }, listenerOptions);
-      audioRef.current = audio;
-      await startAudio(audio, resolutionController.signal);
-      markPlaying();
-    } catch (error) {
-      if (playRequestRef.current !== requestId || resolutionController.signal.aborted) return;
-      const reason = playbackFailure(error, audioRef.current);
-      report(reason);
-      if (reason === "permission") {
-        // Keep the resolved source so the next click calls play() without an intervening fetch.
-        setPlaybackState({ error: null, point, pointId: point.id, status: "idle" });
+        setPlaybackState({
+          error: playbackFailureMessage(reason),
+          point, pointId: point.id, status: "error"
+        });
         return;
       }
-      resolutionController.abort();
-      resolutionAbortRef.current = null;
-      disposeAudio(audioRef.current);
-      audioRef.current = null;
-      setPlaybackState({
-        error: "This stream is unavailable. Try again or choose another station.",
-        point, pointId: point.id, status: "error"
-      });
     }
   }, [playback, replaceHistory, setPlaybackState]);
 
@@ -252,14 +273,16 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybac
   };
 }
 
-async function fetchPlayableAudio(endpoint: string, signal: AbortSignal): Promise<unknown> {
+async function fetchPlayableAudio(endpoint: string, signal: AbortSignal, refresh: boolean): Promise<unknown> {
   const controller = new AbortController();
   const abort = () => controller.abort();
   signal.addEventListener("abort", abort, { once: true });
   const timeout = window.setTimeout(abort, PLAYABLE_RESOLUTION_TIMEOUT_MS);
   try {
     if (signal.aborted) controller.abort();
-    const response = await fetch(endpoint, { method: "POST", signal: controller.signal });
+    const url = new URL(endpoint, window.location.href);
+    if (refresh) url.searchParams.set("refresh", "true");
+    const response = await fetch(url.href, { method: "POST", signal: controller.signal });
     if (!response.ok) throw new PlaybackError("lookup");
     return await response.json();
   } catch {

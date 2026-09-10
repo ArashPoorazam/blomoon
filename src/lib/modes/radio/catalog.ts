@@ -18,7 +18,7 @@ import { getLiveRadioRecordPage } from "./searchPages";
 import type { RadioSortOption } from "./api";
 import { resolveRadioStream } from "./streamValidation";
 import { isSafeStreamUrl, normalizeStation } from "./normalize";
-import { fetchRadioBrowserJson } from "./provider";
+import { fetchRadioBrowserJson, fetchRadioBrowserJsonWithOptions } from "./provider";
 import { getLiveRandomRadioRecord } from "./random";
 import { getRandomCatalogRecord } from "./randomSelection";
 import { logger } from "@/lib/server/logging";
@@ -271,12 +271,12 @@ export async function getRandomRadioPoint({
   }
 }
 
-export async function getRadioPlayableStream(id: string): Promise<TerraPlayableAudio | null> {
+export async function getRadioPlayableStream(id: string, refresh = false): Promise<TerraPlayableAudio | null> {
   const now = Date.now();
   const startedAt = performance.now();
   const cached = playableCache.get(id);
 
-  if (cached && now - cached.fetchedAt < STREAM_CACHE_TTL_MS) {
+  if (!refresh && cached && now - cached.fetchedAt < STREAM_CACHE_TTL_MS) {
     logger.info("radio.playback.cache_hit", {
       context: { pointId: id },
       message: "Radio playable stream cache hit"
@@ -284,6 +284,10 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
     return cached.stream;
   }
 
+  playableCache.delete(id);
+  logger.info("radio.playback.cache_miss", {
+    context: { pointId: id, refresh }, message: "Resolving fresh radio playback"
+  });
   const record = await getRadioStationRecord(id);
 
   if (!record) {
@@ -294,12 +298,19 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
     return null;
   }
 
-  const clickedUrl = await resolveClickedStationUrl(id);
+  // Playback candidates must not come from catalog/identity caches: those may
+  // contain provider-resolved temporary destinations.
+  const fixture = getRadioFixtureRecords().find((candidate) => candidate.point.id === id);
+  const stations = fixture ? [{ url: fixture.streamUrl }] : await fetchRadioBrowserJsonWithOptions<RadioBrowserStation[]>(
+    `/json/stations/byuuid/${encodeURIComponent(id)}`, undefined, { cache: "no-store" }
+  );
+  const station = stations[0];
+  const clickedUrl = fixture ? null : await resolveClickedStationUrl(id);
   const streamUrl = clickedUrl ?? record.streamUrl;
   let validation: Awaited<ReturnType<typeof resolveRadioStream>>;
 
   try {
-    validation = await resolveRadioStream([clickedUrl ?? null, record.streamUrl]);
+    validation = await resolveRadioStream([station?.url ?? null], [clickedUrl ?? null, station?.url_resolved ?? null]);
   } catch (error) {
     logger.warn("radio.playback.validation_failed", {
       context: {
@@ -322,13 +333,14 @@ export async function getRadioPlayableStream(id: string): Promise<TerraPlayableA
     streamUrl: validation.streamUrl
   };
 
-  playableCache.set(id, {
-    fetchedAt: now,
-    stream
-  });
+  if (validation.cacheable) {
+    playableCache.set(id, { fetchedAt: Date.now(), stream });
+  }
 
   logger.info("radio.playback.resolved", {
     context: {
+      cacheable: validation.cacheable,
+      refresh,
       contentType: validation.contentType,
       host: getUrlHost(streamUrl),
       pointId: id,
@@ -636,7 +648,7 @@ function toPersistenceSnapshot(record: RadioStationRecord): RadioStationPersiste
 
 async function resolveClickedStationUrl(id: string) {
   try {
-    const response = await fetchRadioBrowserJson<RadioClickResponse>(`/json/url/${encodeURIComponent(id)}`);
+    const response = await fetchRadioBrowserJsonWithOptions<RadioClickResponse>(`/json/url/${encodeURIComponent(id)}`, undefined, { cache: "no-store" });
     return response.ok && isSafeStreamUrl(response.url) ? response.url : null;
   } catch (error) {
     logger.warn("radio.playback.click_url_failed", {

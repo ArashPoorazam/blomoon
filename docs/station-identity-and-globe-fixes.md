@@ -1,5 +1,3 @@
-# Station identity and drawer/globe fixes
-
 ## Root causes and ownership
 
 Radio Browser UUIDs identify provider records, not necessarily distinct channels. Dance Wave! had 20 records across stream formats and conflicting country metadata. Deduplication by UUID and exact stream URL allowed one recommendation per format. The radio-owned identity resolver now groups exact stream matches or normalized channel names on the same station website. Only trailing codec/bitrate labels are removed; regional and channel names, website paths, and stream query parameters are preserved. Unnamed stations and missing websites require matching streams. This is conservative metadata matching, not a guarantee that all real-world duplicates can be identified.

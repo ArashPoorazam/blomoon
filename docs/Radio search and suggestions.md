@@ -1,5 +1,3 @@
-# Radio search and suggestions
-
 Radio Browser remains the provider and playback resolver. The radio directory is a local, normalized copy of usable provider stations; it is independent of saved media and history. Removing an unavailable station from the directory does not delete anyone's favourites.
 
 ## Running it
