@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { useEffect, useState, type ReactNode, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
@@ -9,6 +9,7 @@ import type { FavouriteFolderDto, FavouriteFolderSummaryDto } from "@/lib/persis
 import type { PlaybackHistoryModeState } from "./history/usePlaybackHistory";
 import type { TerraThemeId } from "@/lib/theme/themes";
 import type { ViewerDto } from "@/lib/users/dto";
+import { useMobileDrawerGestures } from "./drawer/useMobileDrawerGestures";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
 import { PointDetailDrawer } from "./drawer/PointDetailDrawer";
 import { FavouriteFolderDetail } from "./favourites/FavouriteFolderDetail";
@@ -154,12 +155,19 @@ export function SideDrawer({
   onThemeChange,
   onToggleCollapsed
 }: SideDrawerProps) {
+  const drawerRef = useRef<HTMLElement>(null);
+  useMobileDrawerGestures({
+    drawerRef, shellRef, mobilePosition,
+    navigationKey: `${activeModeId}:${JSON.stringify(entry)}`,
+    onMobilePositionChange: onSetMobilePosition
+  });
   const isDetail = Boolean(selectedId) && view === "point-detail";
   const isAccountView = view === "account" || view === "account-info" || view === "themes" || view === "contact";
   return (
     <>
       <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
       <aside
+        ref={drawerRef}
         className={`drawer ${collapsed ? "collapsed" : ""}`}
         aria-label={`${activeMode.label} data`}
         data-mobile-position={mobilePosition}
@@ -175,7 +183,6 @@ export function SideDrawer({
 
         <MobileDrawerHandle
           mobilePosition={mobilePosition}
-          shellRef={shellRef}
           onMobilePositionChange={onSetMobilePosition}
         />
 

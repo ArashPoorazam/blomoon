@@ -80,6 +80,30 @@
     cursor: grabbing;
   }
 
+  /* Own vertical gestures from the start so a list can hand off mid-swipe.
+     Horizontal gestures and browser pinch zoom retain their native behavior. */
+  .drawer .drawer-header,
+  .drawer .drawer-sheet-handle,
+  .drawer .point-list,
+  .drawer .favourites-body {
+    touch-action: pan-x pinch-zoom;
+  }
+
+  .drawer .drawer-header {
+    cursor: grab;
+    user-select: none;
+    -webkit-user-select: none;
+  }
+
+  .drawer .point-list,
+  .drawer .favourites-body {
+    overscroll-behavior-y: contain;
+  }
+
+  .blomoon-shell[data-mobile-drawer-dragging="true"] .drawer-header {
+    cursor: grabbing;
+  }
+
   .drawer-sheet-handle:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
@@ -182,6 +206,12 @@
 
   .favourite-remove {
     min-height: 44px;
+  }
+}
+
+@media (max-width: 760px) and (prefers-reduced-motion: reduce) {
+  .drawer {
+    transition-duration: 0ms;
   }
 }
 
