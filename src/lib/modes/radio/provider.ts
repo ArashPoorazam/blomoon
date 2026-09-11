@@ -12,6 +12,7 @@ import type { RadioBrowserServer } from "./types";
 type RadioBrowserJsonOptions = {
   cache?: RequestCache;
   timeoutMs?: number;
+  signal?: AbortSignal;
 };
 
 let serverCache: {
@@ -30,10 +31,14 @@ export async function fetchRadioBrowserJsonWithOptions<T>(
   params?: Record<string, string>,
   options: RadioBrowserJsonOptions = {}
 ): Promise<T> {
-  const hosts = await getRadioBrowserHosts();
+  options.signal?.throwIfAborted();
+  const hosts = options.signal
+    ? [...new Set([lastHealthyHost, ...(serverCache?.hosts ?? RADIO_BROWSER_FALLBACK_HOSTS)].filter((host): host is string => Boolean(host)))]
+    : await getRadioBrowserHosts();
   let lastError: Error | null = null;
 
   for (const host of hosts) {
+    options.signal?.throwIfAborted();
     try {
       return await fetchRadioBrowserHostJson<T>(host, path, params, options);
     } catch (error) {
@@ -74,6 +79,7 @@ export async function fetchRadioBrowserHostJson<T>(
 
   const result = await fetchJsonWithTimeout<T>(url, {
     cache: options.cache,
+    signal: options.signal,
     headers: {
       accept: "application/json",
       "user-agent": RADIO_BROWSER_USER_AGENT
@@ -182,7 +188,7 @@ async function fetchJsonWithTimeout<T>(
   try {
     const response = await fetch(url, {
       ...init,
-      signal: controller.signal
+      signal: init.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal
     });
 
     logger.debug("provider.radio.fetch", {
@@ -223,7 +229,7 @@ export async function fetchWithTimeout(input: URL | string, init: RequestInit = 
   try {
     return await fetch(input, {
       ...init,
-      signal: controller.signal
+      signal: init.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal
     });
   } finally {
     clearTimeout(timeout);

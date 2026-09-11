@@ -5,7 +5,6 @@ export {
   getRadioDetail,
   getRadioFixtureDataset,
   getRadioPointPage,
-  getRadioPlayableStream,
   getRandomRadioPoint,
   getRadioStationPersistenceSnapshot
 } from "./catalog";
@@ -15,3 +14,4 @@ export {
   getRadioStartupDataset,
   refreshRadioStartupDataset
 } from "./startup";
+export { getRadioPlayableStream } from "./playback";

@@ -132,7 +132,7 @@ function AudioPlaybackControls({
   status: AudioPlaybackStatus;
 }) {
   const isBusy = status === "loading";
-  const isPlaying = status === "playing";
+  const isPlaying = status === "playing" || status === "buffering";
   const isPaused = status === "paused";
   const primaryLabel = isPlaying ? "Pause" : isPaused ? "Resume" : "Play";
   const primaryAriaLabel = isBusy ? `Cancel loading ${itemSingularLabel}` : `${primaryLabel} ${itemSingularLabel}`;
@@ -293,6 +293,10 @@ export function formatAudioPlaybackStatus(status: AudioPlaybackStatus) {
       return "Loading";
     case "playing":
       return "Playing";
+    case "buffering":
+      return "Buffering";
+    case "stopped":
+      return "Stopped";
     case "paused":
       return "Paused";
     case "error":

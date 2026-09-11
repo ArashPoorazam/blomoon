@@ -1,19 +1,17 @@
-# Radio playback URL lifetime
+# Radio playback resolution and lifetime
 
-The radio resolver probes the final response but returns the original HTTPS entry URL when it validates successfully. This lets the browser follow redirects itself instead of reusing the server's signed destination. HTTP entries are never returned; a validated HTTPS destination can be used as an uncached fallback.
+Playback resolves addresses; only the browser establishes whether audio plays. The resolver never probes stream servers, loads the world catalog, or writes account data. It validates provider metadata separately from geographic catalog normalization.
 
-Only query-free HTTPS entry URLs receive the five-minute playable cache. Query-bearing entries and provider-resolved fallback destinations are not cached. On a cache miss or `POST .../playable?refresh=true`, station and click resolution use `cache: "no-store"`; catalog and persisted identity stream URLs are not playback candidates. Explicit fixture entries remain supported. A failed refresh discards the old playable cache entry.
+A cache miss looks up the canonical provider UUID, then at most two known aliases in sorted order if the canonical station has disappeared. The response retains the requested public point ID. Identity lookup and provider requests share an eight-second deadline. Provider requests receive cancellation and use no-store; the client allows ten seconds for resolution.
 
-`refresh` is optional; when present it must occur once and equal `true`. It never accepts a stream URL. The playable response shape is unchanged. `checkedAt` records server validation, not successful browser playback.
+Sources are the original entry and, when distinct, the provider-resolved alternative. Recognizable PLS/M3U/ASX playlists use the resolved source. Provider HTTPS addresses are preferred. Public HTTP addresses are upgraded to HTTPS; ports, paths, and queries remain intact. Credentials, local/private literals, unsupported schemes and malformed addresses are rejected. Certificate checks remain enabled; there is no insecure fallback, stream proxy, or transcoding.
 
-The player makes at most one automatic fresh-resolution retry per play command, only for startup network failures or startup timeouts. A manual retry from an error requests fresh resolution. Permission failures preserve the source for a direct user gesture; unsupported formats and cancellations do not trigger automatic resolution retries. Stop and station switches invalidate pending attempts. Diagnostics record cache hits/misses, refresh requests, and browser outcomes without stream URLs or tokens.
+POST `/api/modes/radio/points/{id}/playable` preserves `streamUrl`, `mediaKind`, `pointId`, and `checkedAt`; it adds `format` (`audio` or `hls`) and `alternatives` (at most one source). `checkedAt` means address validation, not a successful network or playback test. HLS requires native browser support. Provider click counting is deferred with Next.js `after` and bounded to two seconds; its result never changes playback.
 
-## Verification on 2026-09-10 UTC
+Only responses containing reusable original entries without query strings are cached for five minutes, with a 500-entry process limit. Temporary resolved alternatives are not cached. `refresh=true` bypasses and removes the previous entry; a failed refresh cannot resurrect it. Explicit fixture entries use no provider or database lookup.
 
-- Focused automated coverage: signed redirect preservation, HTTPS enforcement, query/fallback cache exclusion, five-minute expiry, forced refresh, failed refresh, fixtures, refresh parameter validation, bounded startup retries, manual retry, non-retryable failures, station switching, and stop during retry.
-- Typecheck and production build passed.
-- Local app requests returned 502 because its database was unavailable. End-to-end player verification through the authenticated app remains blocked.
-- A direct live provider/resolver check for `46d2e1f5-b7ec-464e-9913-cb848488abdc` (Smooth Jazz 101.1) followed the Surfernetwork redirect: HEAD returned 405 and GET timed out. A direct browser attempt with a play-button gesture produced media error 4, `MEDIA_ELEMENT_ERROR: Format error`, and `NotSupportedError`. This does not prove a codec issue or establish expiry as the cause; no browser HTTP status was captured.
-- A direct native-browser KEXP HTTPS MP3 check started, paused, resumed after a scheduled 61-second pause, stopped, and restarted successfully. SomaFM did not start in this browser. A deliberately unavailable stream produced media error 4.
+Resolution errors carry codes: `invalid_input` (400), `not_found` (404), `no_source` (409), `provider_failure` (502), `resolution_timeout` (503), and `internal_error` (500). Unexpected details stay in server logs.
 
-The example station never reached playback, so its one-minute pause/resume and fresh authorization cycle remain unverified. Native-browser checks do not substitute for the app's complete playback flow. No proxy, transcoding, HLS library, or Cloudflare changes were introduced.
+The client maintains one cancellable session with one active audio element. A distinct source can be tried after a media error, within one shared 30-second startup budget. A timeout does not restart another 30-second cycle. Explicit Retry refreshes resolution. Permission retry and pause/resume reuse the prepared source. Stop, mode changes, unmount and station switches detach listeners and invalidate pending work. Buffering and ended streams have explicit states; history is recorded only once on first successful session playback.
+
+Diagnostics correlate the client session UUID with the resolution request ID. They identify resolution/startup/playback stage, HTTP status, candidate index, timings, and native media error codes. They do not contain stream URLs or query tokens. Browser media error 4 alone is not classified as a codec incompatibility.

@@ -4,7 +4,7 @@ import { Info, LoaderCircle, Pause, Play } from "lucide-react";
 import { useState, type RefObject } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 
-export type CrosshairPlaybackStatus = "idle" | "loading" | "playing" | "paused" | "error";
+export type CrosshairPlaybackStatus = "idle" | "loading" | "playing" | "buffering" | "stopped" | "paused" | "error";
 
 type MobileCrosshairProps = {
   anchorRef?: RefObject<HTMLElement | null>;
@@ -21,7 +21,7 @@ export function MobileCrosshair({ anchorRef, onInfo, onPause, onPlay, playbackSt
   const point = currentPoint ?? retainedPoint;
   const closing = !currentPoint;
   const playbackLoading = playbackStatus === "loading";
-  const playbackPlaying = playbackStatus === "playing";
+  const playbackPlaying = playbackStatus === "playing" || playbackStatus === "buffering";
 
   return (
     <div className="mobile-crosshair">
@@ -63,7 +63,7 @@ function getPlaybackActionLabel(status: CrosshairPlaybackStatus, pointName: stri
     return `Loading ${pointName}`;
   }
 
-  if (status === "playing") {
+  if (status === "playing" || status === "buffering") {
     return `Pause ${pointName}`;
   }
 

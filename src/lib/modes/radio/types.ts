@@ -1,4 +1,4 @@
-import type { TerraPlayableAudio, TerraPoint, TerraPointDetail } from "../types";
+import type { TerraPoint, TerraPointDetail } from "../types";
 
 export type RadioBrowserServer = {
   name?: string;
@@ -84,9 +84,4 @@ export type RadioStationPersistenceSnapshot = {
   tags: string[];
   timestamp: string | null;
   votes: number;
-};
-
-export type PlayableCacheEntry = {
-  fetchedAt: number;
-  stream: TerraPlayableAudio;
 };

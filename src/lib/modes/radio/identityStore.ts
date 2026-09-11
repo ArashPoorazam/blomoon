@@ -3,9 +3,22 @@ import { eq, inArray, or, sql } from "drizzle-orm";
 import { getDb, isDatabaseConfigured, schema, type BlomoonDb } from "@/db";
 import { canonicalizeRadioRecords, stationIdentityKey, streamIdentity } from "./stationIdentity";
 import type { RadioStationRecord } from "./types";
+import { abortable } from "@/lib/abort";
 
 export type RadioTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 const aliases = schema.radioStationAliases;
+
+/** Playback needs provider identities, never a catalog refresh or an account write. */
+export async function radioPlaybackIds(id: string, signal: AbortSignal): Promise<string[]> {
+  if (!isDatabaseConfigured()) return [id];
+  const [alias] = await abortable(getDb().select({ canonicalId: aliases.canonicalId })
+    .from(aliases).where(eq(aliases.stationId, id)), signal);
+  if (!alias) return [id];
+  signal.throwIfAborted();
+  const rows = await abortable(getDb().select({ id: aliases.stationId }).from(aliases)
+    .where(eq(aliases.canonicalId, alias.canonicalId)).orderBy(aliases.stationId).limit(3), signal);
+  return [alias.canonicalId, ...rows.map(row => row.id).filter(value => value !== alias.canonicalId)].slice(0, 3);
+}
 
 export async function lookupCanonicalRecord(id: string): Promise<RadioStationRecord | null> {
   if (!isDatabaseConfigured()) return null;

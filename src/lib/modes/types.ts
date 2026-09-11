@@ -104,13 +104,18 @@ export type TerraModeListParams = {
   pageToken?: string;
 };
 
-export type TerraPlayableAudio = {
-  /** Server validation time; does not certify successful browser playback. */
-  checkedAt: string;
+export type TerraAudioSource = {
+  streamUrl: string;
+  format?: "audio" | "hls";
   contentType?: string;
+};
+
+export type TerraPlayableAudio = TerraAudioSource & {
+  /** Address validation time; does not certify successful browser playback. */
+  checkedAt: string;
+  alternatives?: TerraAudioSource[];
   mediaKind: "audio";
   pointId: string;
-  streamUrl: string;
 };
 
 export type TerraMode = {

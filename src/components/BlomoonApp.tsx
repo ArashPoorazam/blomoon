@@ -119,7 +119,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     listPoints: modeState.visiblePoints,
     queueSource: playbackQueueSource
   });
-  const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "paused")
+  const activePlaybackPointKey = audioPlayback.point && (audioPlayback.status === "playing" || audioPlayback.status === "buffering" || audioPlayback.status === "paused")
     ? getPointKey(audioPlayback.point)
     : null;
   const activePlaybackPoint = activePlaybackPointKey ? audioPlayback.point : null;

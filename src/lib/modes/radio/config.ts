@@ -10,7 +10,6 @@ export const STATION_CACHE_TTL_MS = 30 * 60 * 1000;
 export const FALLBACK_CACHE_TTL_MS = 2 * 60 * 1000;
 export const STREAM_CACHE_TTL_MS = 5 * 60 * 1000;
 export const REQUEST_TIMEOUT_MS = 8_000;
-export const STREAM_VALIDATION_TIMEOUT_MS = 5_000;
 export const RADIO_STARTUP_SOFT_TIMEOUT_MS = 1_800;
 
 export const WORLD_MARKER_LIMIT = 500;
