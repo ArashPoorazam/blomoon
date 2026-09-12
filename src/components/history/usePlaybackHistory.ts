@@ -25,8 +25,10 @@ export function usePlaybackHistory(userId: string | null) {
     setStates({});
   }, [userId]);
 
-  const load = useCallback(async (modeId: TerraModeId) => {
-    if (!enabled) return;
+  const load = useCallback(async (modeId: TerraModeId, refresh = false) => {
+    // Entering a drawer reuses this session's result; Retry explicitly refreshes it.
+    if (!enabled || (!refresh && requestIds.current.has(modeId))) return;
+    const requestUserId = userIdRef.current;
     const requestId = (requestIds.current.get(modeId) ?? 0) + 1;
     requestIds.current.set(modeId, requestId);
     setStates((current) => ({
@@ -38,10 +40,10 @@ export function usePlaybackHistory(userId: string | null) {
       const response = await fetch(`/api/users/me/playback-history?modeId=${encodeURIComponent(modeId)}`, { cache: "no-store" });
       if (!response.ok) throw new Error("Recent playback history could not be refreshed.");
       const payload = await response.json() as { items: PlaybackHistoryItemDto[] };
-      if (requestIds.current.get(modeId) !== requestId) return;
+      if (userIdRef.current !== requestUserId || requestIds.current.get(modeId) !== requestId) return;
       setStates((current) => ({ ...current, [modeId]: { error: null, items: payload.items, status: "ready" } }));
     } catch (error) {
-      if (requestIds.current.get(modeId) !== requestId) return;
+      if (userIdRef.current !== requestUserId || requestIds.current.get(modeId) !== requestId) return;
       setStates((current) => ({
         ...current,
         [modeId]: {

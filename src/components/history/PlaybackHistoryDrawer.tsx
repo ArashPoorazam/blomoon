@@ -1,6 +1,6 @@
 "use client";
 
-import { ChevronLeft, RefreshCw } from "lucide-react";
+import { RefreshCw } from "lucide-react";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { groupPlaybackHistory } from "@/lib/playback-history/history";
 import type { PlaybackHistoryItemDto } from "@/lib/persistence/types";
@@ -9,13 +9,12 @@ import { DrawerHeader } from "../drawer/DrawerHeader";
 import { PointListRow } from "../drawer/PointListRow";
 import type { PlaybackHistoryModeState } from "./usePlaybackHistory";
 
-export function PlaybackHistoryDrawer({ activeMode, activePlaybackPointKey, favouritePointIds, history, selectedId, onBack, onInspect, onPlay, onRetry, onShare, onToggleFavourite }: {
+export function PlaybackHistoryDrawer({ activeMode, activePlaybackPointKey, favouritePointIds, history, selectedId, onInspect, onPlay, onRetry, onShare, onToggleFavourite }: {
   activeMode: TerraMode;
   activePlaybackPointKey: string | null;
   favouritePointIds: Set<string>;
   history: PlaybackHistoryModeState;
   selectedId: string | null;
-  onBack: () => void;
   onInspect: (point: TerraPoint) => void;
   onPlay: (point: TerraPoint) => void;
   onRetry: () => void;
@@ -30,7 +29,6 @@ export function PlaybackHistoryDrawer({ activeMode, activePlaybackPointKey, favo
         className="history-header"
         title="History"
         subtitle={`Your 50 most recent ${activeMode.copy.itemSingular.toLowerCase()}-day plays`}
-        actions={<button className="icon-button" type="button" aria-label="Back to station list" onClick={onBack}><ChevronLeft size={17} aria-hidden="true" /></button>}
       />
       {history.status === "error" ? (
         <div className="history-notice" role="status">

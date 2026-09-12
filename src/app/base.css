@@ -374,7 +374,7 @@ button.press-feedback-active::after {
     display: grid;
     width: calc(100vw - max(10px, env(safe-area-inset-left, 0px)) - max(10px, env(safe-area-inset-right, 0px)));
     height: 52px;
-    grid-template-columns: 48px 48px minmax(94px, 1fr) 48px 48px;
+    grid-template-columns: 48px 48px minmax(0, 1fr) 48px 48px;
     align-items: center;
     gap: 6px;
     padding: 5px;
@@ -400,7 +400,6 @@ button.press-feedback-active::after {
 
   .shell-mobile-nav-button:hover,
   .shell-mobile-nav-button:focus-visible {
-    border-color: color-mix(in srgb, var(--accent) 58%, var(--panel-border));
     background: var(--control-hover);
     color: var(--accent-strong);
   }
@@ -420,6 +419,7 @@ button.press-feedback-active::after {
     padding: 0 7px;
   }
 
+  .shell-mobile-nav-button:focus-visible,
   .shell-mobile-logo-button:focus-visible {
     outline: 2px solid var(--focus-ring);
     outline-offset: 2px;
@@ -499,4 +499,17 @@ button.press-feedback-active::after {
 
 @media (prefers-reduced-motion: reduce) {
   .crosshair-point-card { transition: none; }
+}
+
+.shell-mobile-nav-indicator {
+  position: absolute;
+  top: 0;
+  left: 0;
+  pointer-events: none;
+  border: 1px solid color-mix(in srgb, var(--accent) 58%, var(--panel-border));
+  transition: transform 240ms ease, width 240ms ease, height 240ms ease, border-radius 240ms ease;
+}
+.shell-mobile-nav-indicator[data-tracking="true"] { transition: none; }
+@media (prefers-reduced-motion: reduce) {
+  .shell-mobile-nav-indicator { transition: none; }
 }

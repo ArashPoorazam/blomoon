@@ -13,7 +13,6 @@ import { DrawerHeader } from "../drawer/DrawerHeader";
 import type { ShellDrawerView } from "./drawerState";
 
 type AccountDrawerProps = {
-  canGoBack: boolean;
   contactLinks: ContactLink[];
   loading: boolean;
   selectedThemeId: TerraThemeId;
@@ -28,7 +27,6 @@ type AccountDrawerProps = {
 };
 
 export function AccountDrawer({
-  canGoBack,
   contactLinks,
   loading,
   onAccountUpdated,
@@ -70,11 +68,6 @@ export function AccountDrawer({
       <DrawerHeader
         title={user ? "Manage account" : "Account access"}
         subtitle={user ? user.email : "Log in or register to save folders across devices."}
-        actions={canGoBack ? (
-          <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
-            <ChevronLeft size={17} aria-hidden="true" />
-          </button>
-        ) : null}
       />
       <div className="account-drawer-actions">
         <InstallButton />

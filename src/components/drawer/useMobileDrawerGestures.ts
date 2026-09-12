@@ -1,21 +1,26 @@
 "use client";
 
 import { useEffect, useRef, type RefObject } from "react";
+import type { HorizontalDrawerGesture } from "./useDrawerTransition";
 import type { DrawerMobilePosition } from "../shell/drawerState";
 import { advanceDrawerListMomentum, DRAWER_DRAG_THRESHOLD, DRAWER_VELOCITY_MAX_AGE, moveDrawerGesture } from "./mobileDrawerMotion";
 import { getMobileDrawerHeight, getMobileGlobeOffset, getMobileSheetMetrics, resolveMobileDrawerDetent } from "./mobileSheetMetrics";
 
 const HEADER = ".drawer-header, .drawer-sheet-handle";
 const LIST = ".point-list, .favourites-body";
-const EXCLUDED = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="menu"], [role="listbox"], .drawer-search-controls';
+const EXCLUDED = 'input, textarea, select, [contenteditable]:not([contenteditable="false"]), [role="dialog"], [role="menu"], [role="listbox"], [inert], .drawer-search-controls, [data-drawer-swipe-exclude]';
 const DRAG_DAMPING = 0.3;
 
 type Gesture = {
   pointerId: number;
+  pointerType: string;
   surface: HTMLElement;
   list: HTMLElement | null;
   owner: "list" | "drawer";
   active: boolean;
+  axis: "horizontal" | "vertical" | null;
+  lastX: number;
+  width: number;
   startX: number;
   startY: number;
   lastY: number;
@@ -24,7 +29,8 @@ type Gesture = {
   height: number;
 };
 
-export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, navigationKey, onMobilePositionChange }: {
+export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, navigationKey, onMobilePositionChange, horizontal }: {
+  horizontal?: HorizontalDrawerGesture;
   drawerRef: RefObject<HTMLElement | null>;
   shellRef: RefObject<HTMLElement | null>;
   mobilePosition: DrawerMobilePosition;
@@ -32,6 +38,8 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
   onMobilePositionChange: (position: DrawerMobilePosition) => void;
 }) {
   const suppressClick = useRef(false);
+  const horizontalRef = useRef(horizontal);
+  useEffect(() => { horizontalRef.current = horizontal; }, [horizontal]);
   useEffect(() => {
     const drawer = drawerRef.current;
     const shell = shellRef.current;
@@ -66,6 +74,7 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
 
     function syncLayout() {
       stopAnimation();
+      if (gesture?.axis === "horizontal") horizontalRef.current?.cancel();
       releaseGesture();
       if (!mobile.matches) return;
       metrics = getMobileSheetMetrics();
@@ -109,11 +118,12 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
       if (event.target.closest(EXCLUDED)) return;
       const header = event.target.closest<HTMLElement>(HEADER);
       const list = header ? null : event.target.closest<HTMLElement>(LIST);
-      const surface = header ?? list;
-      if (!surface || !drawer!.contains(surface) || (!header && event.pointerType === "mouse")) return;
+      const surface = header ?? list ?? (horizontalRef.current ? event.target.closest<HTMLElement>(".drawer-page") : null);
+      if (!surface || !drawer!.contains(surface)) return;
       metrics = getMobileSheetMetrics();
       gesture = {
-        pointerId: event.pointerId, surface, list, owner: header ? "drawer" : "list", active: false,
+        pointerId: event.pointerId, pointerType: event.pointerType, surface, list, owner: header ? "drawer" : "list", active: false,
+        axis: null, lastX: event.clientX, width: drawer!.getBoundingClientRect().width,
         startX: event.clientX, startY: event.clientY, lastY: event.clientY,
         lastTimestamp: event.timeStamp, velocity: 0, height: drawer!.getBoundingClientRect().height
       };
@@ -127,12 +137,26 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
         const dx = Math.abs(event.clientX - state.startX);
         const dy = Math.abs(event.clientY - state.startY);
         if (Math.max(dx, dy) < DRAWER_DRAG_THRESHOLD) return;
-        if (dx >= dy) { releaseGesture(); return; }
+        if (dx >= dy) {
+          if (!horizontalRef.current?.begin()) { releaseGesture(); return; }
+          state.axis = "horizontal";
+        } else {
+          // Bodies outside the sheet/list gesture surfaces retain native vertical scrolling.
+          if ((!state.list || state.pointerType === "mouse") && !state.surface.matches(HEADER)) { releaseGesture(); return; }
+          state.axis = "vertical";
+        }
         state.active = true;
         suppressClick.current = true;
         state.surface.setPointerCapture(event.pointerId);
       }
       event.preventDefault();
+      if (state.axis === "horizontal") {
+        state.velocity = (event.clientX - state.lastX) / Math.max(1, event.timeStamp - state.lastTimestamp);
+        state.lastX = event.clientX;
+        state.lastTimestamp = event.timeStamp;
+        horizontalRef.current?.move(event.clientX - state.startX, state.width);
+        return;
+      }
       const deltaY = event.clientY - state.lastY;
       const next = moveDrawerGesture({
         deltaY, height: state.height, owner: state.owner,
@@ -159,6 +183,10 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
       releaseGesture();
       if (!state.active) return;
       const velocity = event.timeStamp - state.lastTimestamp > DRAWER_VELOCITY_MAX_AGE ? 0 : state.velocity;
+      if (state.axis === "horizontal") {
+        horizontalRef.current?.end(state.lastX - state.startX, velocity, state.width);
+        return;
+      }
       if (state.owner === "list" && state.list) startMomentum(state.list, velocity);
       else {
         const position = resolveMobileDrawerDetent({ height: state.height, heightVelocity: velocity, metrics });
@@ -214,6 +242,7 @@ export function useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, n
     reducedMotion.addEventListener("change", syncLayout);
     return () => {
       stopAnimation();
+      if (gesture?.axis === "horizontal") horizontalRef.current?.cancel();
       releaseGesture();
       resizeObserver?.disconnect();
       mutationObserver.disconnect();

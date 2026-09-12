@@ -80,13 +80,13 @@
     cursor: grabbing;
   }
 
-  /* Own vertical gestures from the start so a list can hand off mid-swipe.
-     Horizontal gestures and browser pinch zoom retain their native behavior. */
+  /* Own both axes on sheet/list surfaces; the direction lock chooses the gesture.
+     Other bodies retain native vertical scrolling and browser pinch zoom. */
   .drawer .drawer-header,
   .drawer .drawer-sheet-handle,
   .drawer .point-list,
   .drawer .favourites-body {
-    touch-action: pan-x pinch-zoom;
+    touch-action: pinch-zoom;
   }
 
   .drawer .drawer-header {
@@ -225,4 +225,19 @@
     opacity: 1;
     transform: translateX(0);
   }
+}
+
+/* A single sheet contains at most the current page and its destination. */
+.drawer-pages { height: 100%; }
+@media (max-width: 760px) {
+  .drawer-pages { position: relative; height: calc(100% - 24px); overflow: hidden; }
+  .drawer-pages > .drawer-page { height: 100%; width: 100%; }
+  .drawer-page-incoming { position: absolute; inset: 0; }
+  /* Touch-action is resolved only as far as the nearest scrolling ancestor.
+     Native-scroll bodies need their own policy, not just the page above them. */
+  .drawer-page,
+  .drawer .mode-switcher-list,
+  .drawer .account-drawer-actions,
+  .drawer .account-drawer-body,
+  .drawer .detail-body { touch-action: pan-y pinch-zoom; }
 }

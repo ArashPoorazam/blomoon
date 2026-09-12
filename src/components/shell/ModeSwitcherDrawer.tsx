@@ -1,15 +1,13 @@
 "use client";
 
-import { Check, ChevronLeft } from "lucide-react";
+import { Check } from "lucide-react";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 import { DrawerHeader } from "../drawer/DrawerHeader";
 import { modeIcons } from "./modeIcons";
 
 type ModeSwitcherDrawerProps = {
   activeModeId: TerraModeId;
-  canGoBack: boolean;
   modes: TerraMode[];
-  onBack: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
 };
 
@@ -42,7 +40,7 @@ const plannedModes = [
   }
 ] satisfies Array<Omit<ModeSwitcherItem, "available">>;
 
-export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onModeSelect }: ModeSwitcherDrawerProps) {
+export function ModeSwitcherDrawer({ activeModeId, modes, onModeSelect }: ModeSwitcherDrawerProps) {
   const registeredModes = new Map(modes.map((mode) => [mode.id, mode]));
   const items = plannedModes.map((item) => ({
     ...item,
@@ -55,11 +53,6 @@ export function ModeSwitcherDrawer({ activeModeId, canGoBack, modes, onBack, onM
       <DrawerHeader
         title="Change mode"
         subtitle="Choose how you explore the world."
-        actions={canGoBack ? (
-          <button className="icon-button" type="button" aria-label="Back to list" onClick={onBack}>
-            <ChevronLeft size={17} aria-hidden="true" />
-          </button>
-        ) : null}
       />
       <div className="mode-switcher-list">
         {items.map((item) => {

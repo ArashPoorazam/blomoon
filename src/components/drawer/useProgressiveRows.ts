@@ -12,7 +12,8 @@ export function scheduleRowBatch(render: () => void) {
 }
 
 export function useProgressiveRows<T>(items: readonly T[]) {
-  const [rendered, setRendered] = useState({ items, count: 0 });
+  // Cached drawers show their first rows immediately when sliding into view.
+  const [rendered, setRendered] = useState({ items, count: Math.min(items.length, ROW_BATCH_SIZE) });
   const count = rendered.items === items ? rendered.count : 0;
   useEffect(() => {
     if (count >= items.length) return;

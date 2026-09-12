@@ -11,6 +11,8 @@ let container: HTMLElement;
 let clock = 0;
 let reduced = true;
 let mobile = true;
+let horizontalEnabled = false;
+const horizontal = { begin: vi.fn(() => true), move: vi.fn(), end: vi.fn(), cancel: vi.fn() };
 let listClass = "point-list";
 const clicked = vi.fn();
 const positions = vi.fn();
@@ -20,14 +22,17 @@ function Harness({ navigationKey = "main" }: { navigationKey?: string }) {
   const shellRef = useRef<HTMLDivElement>(null);
   const drawerRef = useRef<HTMLElement>(null);
   const [mobilePosition, setPosition] = useState<DrawerMobilePosition>("middle");
-  useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, navigationKey, onMobilePositionChange: setPosition });
+  useMobileDrawerGestures({ drawerRef, shellRef, mobilePosition, navigationKey, onMobilePositionChange: setPosition, horizontal: horizontalEnabled ? horizontal : undefined });
   positions(mobilePosition);
   return createElement("div", { ref: shellRef }, createElement("aside", { ref: drawerRef, className: "drawer" },
     createElement(MobileDrawerHandle, { mobilePosition, onMobilePositionChange: setPosition }),
     createElement("div", { className: "drawer-header" },
       createElement("h2", null, "Stations"), createElement("button", { onClick: clicked }, "Header action")),
     createElement("div", { className: "drawer-search-controls" }, createElement("input")),
-    createElement("div", { className: listClass }, createElement("button", { onClick: clicked }, "Station"))));
+    createElement("div", { className: listClass }, createElement("button", { onClick: clicked }, "Station")),
+    createElement("div", { className: "drawer-page" },
+      createElement("div", { className: "mode-switcher-list" }, createElement("button", { onClick: clicked }, "Mode")),
+      createElement("div", { className: "account-drawer-actions" }, createElement("button", { onClick: clicked }, "Account")))));
 }
 
 function element(selector: string) { return container.querySelector<HTMLElement>(selector)!; }
@@ -49,6 +54,8 @@ async function mount(navigationKey = "main") {
 
 beforeEach(async () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
+  horizontalEnabled = false;
+  Object.values(horizontal).forEach((fn) => fn.mockClear());
   reduced = true; mobile = true; clock = 0; listClass = "point-list";
   captured.clear(); clicked.mockReset(); positions.mockReset();
   vi.stubGlobal("matchMedia", (query: string) => ({ get matches() { return query.includes("reduced-motion") ? reduced : mobile; }, addEventListener: vi.fn(), removeEventListener: vi.fn() }));
@@ -168,5 +175,73 @@ describe("mobile drawer gestures", () => {
       act(() => handle.dispatchEvent(new KeyboardEvent("keydown", { key, bubbles: true })));
       expect(positions).toHaveBeenLastCalledWith(expected);
     }
+  });
+});
+
+
+describe("horizontal drawer gestures", () => {
+  beforeEach(async () => { horizontalEnabled = true; await mount(); });
+  it("locks horizontal movement without changing sheet height or list scrolling", () => {
+    const list = element(".point-list"); list.scrollTop = 80;
+    pointer(list, "pointerdown", 300, { x: 250 });
+    pointer(window, "pointermove", 310, { x: 170 });
+    pointer(window, "pointermove", 450, { x: 100 });
+    pointer(window, "pointerup", 450, { x: 100 });
+    expect(horizontal.begin).toHaveBeenCalledOnce();
+    expect(horizontal.move).toHaveBeenLastCalledWith(-150, 390);
+    expect(horizontal.end).toHaveBeenCalledOnce();
+    expect(list.scrollTop).toBe(80); expect(height()).toBe(320);
+    click(list.firstElementChild as HTMLElement); expect(clicked).not.toHaveBeenCalled();
+  });
+  it("keeps vertical ownership after a diagonal start and ignores editable controls", () => {
+    const list = element(".point-list");
+    pointer(list, "pointerdown", 300);
+    pointer(window, "pointermove", 200, { x: 30 });
+    pointer(window, "pointermove", 180, { x: 200 });
+    pointer(window, "pointerup", 180, { x: 200 });
+    expect(horizontal.begin).not.toHaveBeenCalled(); expect(list.scrollTop).toBe(120);
+    pointer(element("input"), "pointerdown", 300);
+    pointer(window, "pointermove", 300, { x: 200 });
+    expect(horizontal.begin).not.toHaveBeenCalled();
+  });
+  it("cancels horizontal capture on pointercancel and multitouch", () => {
+    const header = element(".drawer-header");
+    pointer(header, "pointerdown", 300); pointer(window, "pointermove", 300, { x: 150 });
+    pointer(window, "pointercancel", 300, { x: 150 });
+    expect(horizontal.cancel).toHaveBeenCalledOnce(); expect(captured.size).toBe(0);
+    pointer(header, "pointerdown", 300); pointer(window, "pointermove", 300, { x: 150 });
+    pointer(header, "pointerdown", 300, { id: 2 });
+    expect(horizontal.cancel).toHaveBeenCalledTimes(2); expect(captured.size).toBe(0);
+  });
+});
+
+
+describe("drawer body swipe surfaces", () => {
+  beforeEach(async () => { horizontalEnabled = true; await mount(); });
+  it.each([".mode-switcher-list", ".account-drawer-actions", ".point-list"])("accepts inward swipes from %s without activating a row", (selector) => {
+    const body = element(selector);
+    const button = body.querySelector("button")!;
+    for (const direction of [-1, 1]) {
+      pointer(button, "pointerdown", 300, { x: 180 });
+      pointer(window, "pointermove", 304, { x: 180 + direction * 120 });
+      pointer(window, "pointerup", 304, { x: 180 + direction * 120 });
+      expect(horizontal.move).toHaveBeenLastCalledWith(direction * 120, 390);
+      click(button);
+    }
+    expect(horizontal.end).toHaveBeenCalledTimes(2);
+    expect(clicked).not.toHaveBeenCalled();
+    expect(height()).toBe(320);
+  });
+  it("accepts mouse horizontal drags in the body but leaves native vertical movement alone", () => {
+    const button = element(".account-drawer-actions button");
+    pointer(button, "pointerdown", 300, { x: 180, pointerType: "mouse" });
+    pointer(window, "pointermove", 300, { x: 60, pointerType: "mouse" });
+    pointer(window, "pointerup", 300, { x: 60, pointerType: "mouse" });
+    expect(horizontal.end).toHaveBeenCalledOnce();
+    horizontal.begin.mockClear();
+    pointer(button, "pointerdown", 300);
+    pointer(window, "pointermove", 200);
+    expect(horizontal.begin).not.toHaveBeenCalled();
+    expect(height()).toBe(320);
   });
 });

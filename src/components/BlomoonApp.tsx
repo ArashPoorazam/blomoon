@@ -33,6 +33,8 @@ import { useDisplayedGlobePoints } from "./globe/useDisplayedGlobePoints";
 import { useEarthSpinControls } from "./globe/useEarthSpinControls";
 import { useGlobeProfile } from "./globe/useGlobeProfile";
 import { ShellChrome } from "./shell/ShellChrome";
+import { useDrawerTransition } from "./drawer/useDrawerTransition";
+import type { MainDrawer } from "./shell/mainDrawerNavigation";
 import { useDrawerNavigation } from "./shell/useDrawerNavigation";
 import { SideDrawer } from "./SideDrawer";
 import { usePointInteractions } from "./usePointInteractions";
@@ -289,6 +291,16 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
     playPoint(randomPoint, "list");
   }, [activeMode.copy.randomPlaybackError, activeMode.playback?.randomPointEndpoint, audioPlayback, playPoint, randomPlaybackPoint]);
 
+  const navigateMainDrawer = useCallback((target: MainDrawer) => {
+    const actions: Record<MainDrawer, () => void> = {
+      "mode-switcher": openModeSwitcher, history: openHistory, main: restoreHomeDrawer,
+      favourites: openFavourites, account: openAccountDrawer
+    };
+    actions[target]();
+  }, [openModeSwitcher, openHistory, restoreHomeDrawer, openFavourites, openAccountDrawer]);
+  const drawerTransition = useDrawerTransition(drawer.view,
+    `${activeModeId}:${JSON.stringify(drawer.entry)}:${drawer.mobilePosition}`, navigateMainDrawer);
+
   return (
     <main
       ref={shellRef}
@@ -335,6 +347,8 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         activeModeId={activeModeId}
         appConfig={appConfig}
         drawerView={drawer.view}
+        drawerMotion={drawerTransition.motion}
+        onMainDrawerNavigate={drawerTransition.navigate}
         earthSpinEnabled={earthSpin.earthSpinEnabled}
         earthSpinDisabled={!globeProfile.motionEnabled}
         modes={terraModes}
@@ -342,7 +356,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         showListedOnGlobe={showListedOnGlobe}
         user={viewer.user}
         viewerLoading={viewer.loading}
-        onAccountOpen={openAccountDrawer}
         onAccountUpdated={viewer.refresh}
         onAuthOpen={() => setAuthModalOpen(true)}
         onDesktopLogout={async () => {
@@ -353,8 +366,6 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         }}
         onFavouritesOpen={openFavourites}
         onHistoryOpen={openHistory}
-        onHome={restoreHomeDrawer}
-        onModeOpen={openModeSwitcher}
         onModeSelect={selectMode}
         onThemeChange={selectTheme}
         onToggleEarthSpin={toggleEarthSpin}
@@ -372,12 +383,13 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
       ) : null}
 
       <SideDrawer
+        motion={drawerTransition.motion}
+        horizontal={drawerTransition.horizontal}
         activeMode={activeMode}
         activeModeId={activeModeId}
         activePlaybackPointKey={activePlaybackPointKey}
         accountContactLinks={appConfig.contactLinks}
         accountLoading={viewer.loading}
-        canGoBack={drawer.canGoBack}
         collapsed={drawer.collapsed}
         detail={pointDetail}
         detailAccessory={detailAccessory}
@@ -436,7 +448,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onFavouritePointInspect={inspectPoint}
         onFavouritePointPlay={playFromFavourites}
         onHistoryPointPlay={playFromHistory}
-        onHistoryRetry={() => void playbackHistory.load(activeModeId)}
+        onHistoryRetry={() => void playbackHistory.load(activeModeId, true)}
       />
 
       <FavouriteOverlays favourites={favourites} pickerPoint={favouritePickerPoint} sharePoint={stationSharePoint} onCleanUrl={() => router.replace("/")} onClosePicker={() => setFavouritePickerPoint(null)} onCloseShare={() => setStationSharePoint(null)} onOpenFolder={openFavouriteFolder} onStationEntry={inspectPoint} />

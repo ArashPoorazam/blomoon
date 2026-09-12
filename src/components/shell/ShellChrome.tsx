@@ -11,7 +11,12 @@ import type { ShellDrawerView } from "./drawerState";
 import { ShellGlobeControls } from "./ShellGlobeControls";
 import { ShellMobileNav } from "./ShellMobileNav";
 
+import type { MainDrawer } from "./mainDrawerNavigation";
+import type { DrawerMotion } from "../drawer/useDrawerTransition";
+
 type ShellChromeProps = {
+  drawerMotion: DrawerMotion;
+  onMainDrawerNavigate: (target: MainDrawer) => void;
   crosshairEnabled: boolean;
   onToggleCrosshair: () => void;
   listedPointsDisabled: boolean;
@@ -26,14 +31,11 @@ type ShellChromeProps = {
   showListedOnGlobe: boolean;
   user: ViewerDto | null;
   viewerLoading: boolean;
-  onAccountOpen: () => void;
   onAccountUpdated: () => void | Promise<void>;
   onAuthOpen: () => void;
   onDesktopLogout: () => void | Promise<void>;
   onFavouritesOpen: () => void;
   onHistoryOpen: () => void;
-  onHome: () => void;
-  onModeOpen: () => void;
   onModeSelect: (modeId: TerraModeId) => void;
   onThemeChange: (themeId: TerraThemeId) => void;
   onToggleEarthSpin: (event: MouseEvent<HTMLButtonElement>) => void;
@@ -41,6 +43,8 @@ type ShellChromeProps = {
 };
 
 export function ShellChrome({
+  drawerMotion,
+  onMainDrawerNavigate,
   crosshairEnabled,
   onToggleCrosshair,
   listedPointsDisabled,
@@ -51,14 +55,11 @@ export function ShellChrome({
   earthSpinDisabled,
   earthSpinEnabled,
   modes,
-  onAccountOpen,
   onAccountUpdated,
   onAuthOpen,
   onDesktopLogout,
   onFavouritesOpen,
   onHistoryOpen,
-  onHome,
-  onModeOpen,
   onModeSelect,
   onThemeChange,
   onToggleEarthSpin,
@@ -84,11 +85,8 @@ export function ShellChrome({
       <ShellMobileNav
         activeMode={activeMode}
         activeView={drawerView}
-        onAccountOpen={onAccountOpen}
-        onFavouritesOpen={onFavouritesOpen}
-        onHistoryOpen={onHistoryOpen}
-        onHome={onHome}
-        onModeOpen={onModeOpen}
+        motion={drawerMotion}
+        onNavigate={onMainDrawerNavigate}
       />
 
       <ShellControlRail
