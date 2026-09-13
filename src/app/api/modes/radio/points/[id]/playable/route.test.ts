@@ -1,4 +1,5 @@
 import { beforeEach, expect, it, vi } from "vitest";
+vi.mock("@/lib/admin/enforcement", () => ({ publicRestriction: vi.fn(async () => null) }));
 vi.mock("next/server", () => ({ after: vi.fn() }));
 vi.mock("@/lib/modes/radio/playback", async importOriginal => ({ ...await importOriginal<object>(), getRadioPlayableStream: vi.fn(), recordRadioPlaybackClick: vi.fn() }));
 vi.mock("@/lib/server/logging", () => ({ logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() } }));
@@ -20,7 +21,7 @@ it("rejects invalid refresh", async () => {
   expect(getRadioPlayableStream).not.toHaveBeenCalled();
 });
 it.each([["invalid_input",400],["not_found",404],["provider_failure",502],["resolution_timeout",503],["no_source",409]] as const)("reports %s", async (code, status) => {
-  vi.mocked(getRadioPlayableStream).mockRejectedValue(new RadioResolutionError(code)); const res = await request(); expect(res.status).toBe(status); expect(await res.json()).toMatchObject({ code }); expect(after).not.toHaveBeenCalled();
+  vi.mocked(getRadioPlayableStream).mockRejectedValue(new RadioResolutionError(code)); const res = await request(); expect(res.status).toBe(status); expect(await res.json()).toMatchObject({ code }); expect(after).toHaveBeenCalledTimes(status >= 500 ? 1 : 0);
 });
 it("does not expose internal errors", async () => {
   vi.mocked(getRadioPlayableStream).mockRejectedValue(new Error("private details")); const res = await request(); expect(res.status).toBe(500); expect(await res.text()).not.toContain("private details");

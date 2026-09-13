@@ -7,10 +7,12 @@ Radio discovery reads `radio_directory`, a database view combining the active Ra
 1. Apply migrations (`npm run db:migrate`) and backfill existing provider sources (`npm run health:backfill`). Both are additive; backfill does not contact streams or change accounts.
 2. Start `npm run catalog:worker` and `npm run health:worker`. Production Compose includes both. The deployment script runs backfill after migrations and before starting app/workers.
 3. Start with `BLOMOON_RADIO_HEALTH_MODE=observe`. Catalog discovery and stored-source playback remain usable while checks accumulate. The admin dashboard always reports actual verified coverage.
-4. Inspect coverage by country, worker heartbeat, due checks and failure distribution at `/admin/radio`. Then set `BLOMOON_RADIO_HEALTH_MODE=enforce` and restart the app. An unset setting defaults to enforcement; deployment examples explicitly choose observation for the initial rollout. Do not leave observation enabled as the final rollout state.
+4. Inspect coverage by country, worker heartbeat, due checks and failure distribution at `/omnisire/modes`. Then set `BLOMOON_RADIO_HEALTH_MODE=enforce` and restart the app. An unset setting defaults to enforcement; deployment examples explicitly choose observation for the initial rollout. Do not leave observation enabled as the final rollout state.
 5. Set `BLOMOON_ADMIN_USER_IDS` to a comma-separated list of verified account UUIDs. Empty configuration grants no access. Access is enforced in both the page and every admin endpoint. `BETTER_AUTH_URL` supplies the allowed mutation origin.
 
 The rollout switch only changes eligibility policy; it does not restore deleted provider discovery paths. Reverting to observation preserves data and keeps the checker running. A full application rollback should leave the additive tables in place.
+
+The unified owner panel lives at `/omnisire`; see [Omnisire operations](omnisire.md) for jobs, settings, user access, and server monitoring.
 
 ## Curation and identity
 

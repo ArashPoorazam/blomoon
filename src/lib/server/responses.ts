@@ -1,3 +1,4 @@
+import { AdminError } from "@/lib/admin/access";
 import { DatabaseNotConfiguredError, DatabaseRlsDisabledError, DatabaseSchemaMissingError } from "@/db/readiness";
 import { AuthUnavailableError, UnauthorizedError } from "@/lib/auth/server";
 import { logger } from "@/lib/server/logging";
@@ -9,6 +10,7 @@ type ApiErrorContext = {
 };
 
 export function apiError(error: unknown, context: ApiErrorContext = {}) {
+  if(error instanceof AdminError)return Response.json({error:error.message},{status:error.status,headers:{"Cache-Control":"no-store"}});
   if (error instanceof ProviderPointLookupError) {
     logger.warn("api.error", {
       context: { route: context.route, status: 502 },

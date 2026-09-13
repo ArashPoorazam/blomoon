@@ -9,6 +9,8 @@ const SESSION_COOKIE_NAMES = [
 export function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
+  if (pathname === "/admin" || pathname.startsWith("/admin/")) return new NextResponse(null, { status: 404 });
+
   if (PUBLIC_PATHS.has(pathname)) {
     return NextResponse.next();
   }

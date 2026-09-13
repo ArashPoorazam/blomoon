@@ -354,3 +354,5 @@ export const userPlaybackHistoryRelations = relations(userPlaybackHistory, ({ on
 }));
 
 export * from "./radioHealthSchema";
+
+export * from "./adminSchema";

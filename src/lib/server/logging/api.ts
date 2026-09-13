@@ -1,4 +1,7 @@
 import "server-only";
+import { after } from "next/server";
+import { recordApiFailure } from "@/lib/admin/events";
+import { publicRestriction } from "@/lib/admin/enforcement";
 
 import { randomUUID } from "node:crypto";
 import { apiError } from "@/lib/server/responses";
@@ -35,7 +38,8 @@ export function withApiLogging<Context>(
     });
 
     try {
-      const response = finalizeResponse(await handler(request, context), requestId, options.noStore);
+      const restriction = await publicRestriction(request);
+      const response = finalizeResponse(restriction ?? await handler(request, context), requestId, options.noStore);
       const level = response.status >= 500 ? "warn" : "info";
       logger[level]("api.request.complete", {
         context: {
@@ -47,6 +51,7 @@ export function withApiLogging<Context>(
         message: "API request completed",
         requestId
       });
+      if(response.status>=500) after(() => recordApiFailure(event,response.status));
       return response;
     } catch (error) {
       const response = apiError(error, {
@@ -64,6 +69,7 @@ export function withApiLogging<Context>(
         message: "API request failed",
         requestId
       });
+      if(response.status>=500) after(() => recordApiFailure(event,response.status));
       return responseWithRequestId;
     }
   };

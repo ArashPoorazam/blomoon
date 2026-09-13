@@ -1,5 +1,7 @@
 import "server-only";
 
+import { APIError } from "better-auth/api";
+import { isSuspended, getSettings } from "@/lib/admin/settings";
 import { betterAuth } from "better-auth";
 import { drizzleAdapter } from "better-auth/adapters/drizzle";
 import { nextCookies } from "better-auth/next-js";
@@ -79,7 +81,7 @@ export async function getOptionalUser(): Promise<SafeUser | null> {
     message: "Auth session lookup completed"
   });
 
-  return user;
+  return user && await isSuspended(user.id) ? null : user;
 }
 
 export async function requireUser(): Promise<SafeUser> {
@@ -185,8 +187,14 @@ function createAuth() {
       transaction: true
     }),
     databaseHooks: {
+      user: { create: { before: async () => {
+        if (!(await getSettings()).registrationEnabled) throw new APIError("FORBIDDEN", { message: "Registration is closed." });
+      } } },
       session: {
         create: {
+          before: async (session) => {
+            if (await isSuspended(session.userId)) throw new APIError("FORBIDDEN", { message: "This account is suspended." });
+          },
           after: async (session) => {
             const userId = typeof session.userId === "string" ? session.userId : null;
 

@@ -8,9 +8,12 @@ async function main() {
     await backfillProviderSources();
     process.exit(0);
   }
+  const { runRecheckJob } = await import("../src/lib/modes/radio/health/adminJobs");
+  let recheckTask: Promise<unknown> | null = null;
   const once = process.argv.includes("--once");
   do {
     try {
+      if (!once && !recheckTask) recheckTask = runRecheckJob().catch(() => console.error("Recheck job processing unavailable")).finally(() => { recheckTask = null; });
       const result = await runHealthBatch();
       if (once) {
         console.log(result);

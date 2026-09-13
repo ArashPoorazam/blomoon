@@ -1,4 +1,5 @@
 import "server-only";
+import { getModeSettings } from "@/lib/admin/settings";
 import { discoveryEligibility } from "./health/query";
 import { healthFilteringEnabled } from "./health/policy";
 import { and, asc, desc, eq, sql } from "drizzle-orm";
@@ -56,11 +57,13 @@ export async function searchRadioDirectory({
   offset: number;
 }): Promise<TerraPointPage> {
   const generation = await activeRadioDirectory();
+  const modeSettings = await getModeSettings("radio");
+  const enforceHealth = (modeSettings.policy ?? (healthFilteringEnabled() ? "enforce" : "observe")) === "enforce";
   const source = await directorySource(generation?.publishedAt);
   const updatedAt = new Date(source.lastUpdated).getTime();
   if (!generation && !updatedAt)
     source.notice = "The station catalog is warming up. Verified stations appear as checks complete.";
-  else if (!healthFilteringEnabled())
+  else if (!enforceHealth)
     source.notice = "Availability checks are in observation mode; stations may be unverified.";
   else if (generation?.publishedAt && Date.now() - generation.publishedAt.getTime() > 12 * 60 * 60 * 1000)
     source.notice = "Catalog refresh is delayed. Showing recently verified stations.";
@@ -142,7 +145,7 @@ export async function searchRadioDirectory({
       .select({ total: sql<number>`count(*)::integer` })
       .from(entries)
       .where(where);
-    if (healthFilteringEnabled()) {
+    if (enforceHealth) {
       const [worker] = await tx.select().from(schema.radioHealthWorker).limit(1);
       if (!worker || Date.now() - worker.heartbeat.getTime() > 5 * 60_000 || worker.status !== "running")
         source.notice =

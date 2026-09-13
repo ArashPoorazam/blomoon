@@ -11,13 +11,12 @@ vi.mock("@/db", async () => ({
   isDatabaseConfigured: () => true,
 }));
 vi.mock("@/lib/auth/server", () => ({ getOptionalUser: vi.fn() }));
+import { isAdmin as isRadioAdmin, assertAdminOrigin } from "@/lib/admin/access";
+import { requireAdmin as requireRadioAdmin } from "@/lib/admin/http";
 import { getOptionalUser } from "@/lib/auth/server";
 import {
   saveCuratedStation,
   recheckAsAdmin,
-  isRadioAdmin,
-  assertAdminOrigin,
-  requireRadioAdmin,
 } from "../admin";
 import { searchRadioDirectory } from "../directory";
 import {
@@ -166,8 +165,8 @@ describe.skipIf(!enabled)("verified radio PostgreSQL integration (rolled back)",
         await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "no_source" });
         const audit = await tx
           .select()
-          .from(schema.radioAdminAudit)
-          .where(eq(schema.radioAdminAudit.stationId, id));
+          .from(schema.adminAudit)
+          .where(eq(schema.adminAudit.resource, `radio:${id}`));
         expect(audit.length).toBeGreaterThanOrEqual(5);
         // Catalog publication cannot delete curated sources or reset their health.
         await publishProviderSources(tx, []);

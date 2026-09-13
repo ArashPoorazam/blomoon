@@ -1,4 +1,5 @@
 import "server-only";
+import { getModeSettings } from "@/lib/admin/settings";
 import { and, desc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
@@ -42,6 +43,9 @@ async function resolveStoredStream(id: string, refresh: boolean): Promise<Resolu
   const record = await getRadioStationRecord(id);
   if (!record) throw new RadioResolutionError("not_found");
   const stationId = record.point.id;
+  const modeSettings = await getModeSettings("radio");
+  const [block] = await getDb().select().from(schema.mediaBlocks).where(and(eq(schema.mediaBlocks.modeId, "radio"), eq(schema.mediaBlocks.pointId, stationId)));
+  if (!modeSettings.enabled || block) throw new RadioResolutionError("no_source");
   const [curated] = await getDb()
     .select()
     .from(schema.radioCuratedStations)
@@ -56,7 +60,7 @@ async function resolveStoredStream(id: string, refresh: boolean): Promise<Resolu
         and(eq(schema.radioStreamSources.stationId, stationId), eq(schema.radioStreamSources.enabled, true)),
       )
       .orderBy(desc(schema.radioStreamSources.lastSuccess))
-  ).filter((s) => !healthFilteringEnabled() || isRecentlyVerified(s)).slice(0, 2);
+  ).filter((s) => (modeSettings.policy ?? (healthFilteringEnabled() ? "enforce" : "observe")) === "observe" || isRecentlyVerified(s)).slice(0, 2);
   const [primary, ...others] = sources;
   if (!primary) throw new RadioResolutionError("no_source");
   await markSourcesPlayed([primary.id]);

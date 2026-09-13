@@ -3,6 +3,7 @@ const state = vi.hoisted(() => ({
   sources: [] as Array<Record<string, unknown>>,
   curated: [] as Array<Record<string, unknown>>,
 }));
+vi.mock("@/lib/admin/settings", () => ({ getModeSettings: vi.fn(async () => ({enabled:true,version:0})) }));
 vi.mock("./catalog", () => ({ getRadioStationRecord: vi.fn() }));
 vi.mock("./health/sources", () => ({
   requestStationRecheck: vi.fn(async () => 1),
@@ -17,7 +18,7 @@ vi.mock("@/db", async () => {
       select: () => ({
         from: (table: unknown) => ({
           where: () =>
-            table === schema.radioCuratedStations
+            table === schema.mediaBlocks ? Promise.resolve([]) : table === schema.radioCuratedStations
               ? Promise.resolve(state.curated)
               : { orderBy: () => Promise.resolve(state.sources) },
         }),

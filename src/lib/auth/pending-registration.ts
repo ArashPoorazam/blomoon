@@ -1,4 +1,5 @@
 import "server-only";
+import { assertRegistrationEnabled } from "@/lib/admin/settings";
 
 import { createHmac, randomBytes, randomInt, timingSafeEqual } from "node:crypto";
 import { eq, sql } from "drizzle-orm";
@@ -47,6 +48,7 @@ export type CleanupEligibilityInput = {
 };
 
 export async function startPendingRegistration({ email, password }: PendingRegistrationInput): Promise<PendingRegistrationStartResult> {
+  await assertRegistrationEnabled();
   const normalizedEmail = normalizeAuthEmail(email);
   await ensureDatabaseReady();
 
@@ -97,6 +99,7 @@ export async function startPendingRegistration({ email, password }: PendingRegis
 }
 
 export async function verifyPendingRegistration(email: string, otp: string): Promise<PendingRegistrationVerifyResult> {
+  await assertRegistrationEnabled();
   const normalizedEmail = normalizeAuthEmail(email);
   await ensureDatabaseReady();
 

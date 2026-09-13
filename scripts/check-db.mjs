@@ -2,6 +2,7 @@ import nextEnv from "@next/env";
 import postgres from "postgres";
 
 const requiredTables = [
+  "admin_settings", "admin_audit", "user_suspensions", "media_blocks", "admin_jobs", "monitor_samples", "admin_events",
   "accounts",
   "media_items",
   "media_modes",

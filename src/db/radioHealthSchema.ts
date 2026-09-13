@@ -28,6 +28,7 @@ export const radioCuratedStations = pgTable(
   "radio_curated_stations",
   {
     ...directoryColumns(),
+    streamUrls: text("stream_urls").array().notNull().default([]),
     enabled: boolean("enabled").notNull().default(true),
     updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow(),
   },

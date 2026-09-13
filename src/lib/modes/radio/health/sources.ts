@@ -97,6 +97,7 @@ export async function requestStationRecheck(
         eq(schema.radioStreamSources.stationId, stationId),
         eq(schema.radioStreamSources.enabled, true),
         sql`(${schema.radioStreamSources.lastRequested} is null or ${schema.radioStreamSources.lastRequested} < now() - interval '5 minutes')`,
+        sql`not exists (select 1 from media_blocks where mode_id='radio' and point_id=${stationId})`,
         sql`not exists (select 1 from radio_curated_stations c where c.station_id=${stationId} and not c.enabled)`,
       ),
     )

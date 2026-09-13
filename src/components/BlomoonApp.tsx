@@ -40,11 +40,11 @@ import { SideDrawer } from "./SideDrawer";
 import { usePointInteractions } from "./usePointInteractions";
 import { getDrawerPointSource, getListContextEntry, usePointSources } from "./usePointSources";
 
-type BlomoonAppProps = { appConfig: AppClientConfig; initialDatasets?: Partial<Record<TerraModeId, TerraDataset>> };
+type BlomoonAppProps = { enabledModeIds?: string[]; appConfig: AppClientConfig; initialDatasets?: Partial<Record<TerraModeId, TerraDataset>> };
 
-export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
+export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: BlomoonAppProps) {
   const router = useRouter();
-  const [activeModeId, setActiveModeId] = useState<TerraModeId>(defaultMode.id);
+  const [activeModeId, setActiveModeId] = useState<TerraModeId>(enabledModeIds?.[0] ?? defaultMode.id);
   const drawer = useDrawerNavigation();
   const [hoveredPoint, setHoveredPoint] = useState<TerraPoint | null>(null);
   const [selectedCountry, setSelectedCountry] = useState<CountryInfo | null>(null);
@@ -351,7 +351,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         onMainDrawerNavigate={drawerTransition.navigate}
         earthSpinEnabled={earthSpin.earthSpinEnabled}
         earthSpinDisabled={!globeProfile.motionEnabled}
-        modes={terraModes}
+        modes={terraModes.filter(m => !enabledModeIds || enabledModeIds.includes(m.id))}
         selectedThemeId={themeId}
         showListedOnGlobe={showListedOnGlobe}
         user={viewer.user}
@@ -405,7 +405,7 @@ export function BlomoonApp({ appConfig, initialDatasets }: BlomoonAppProps) {
         loadingTaskLabel={modeState.loadingTaskLabel}
         loadingMoreRemotePoints={modeState.loadingMoreVisiblePoints}
         mobilePosition={drawer.mobilePosition}
-        modes={terraModes}
+        modes={terraModes.filter(m => !enabledModeIds || enabledModeIds.includes(m.id))}
         points={modeState.visiblePoints}
         providerError={modeState.providerError}
         query={modeState.query}

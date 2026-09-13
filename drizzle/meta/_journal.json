@@ -127,6 +127,13 @@
       "when": 1789257600001,
       "tag": "0017_radio_health_security",
       "breakpoints": true
+    },
+    {
+      "idx": 18,
+      "version": "7",
+      "when": 1789257600002,
+      "tag": "0018_omnisire",
+      "breakpoints": true
     }
   ]
 }

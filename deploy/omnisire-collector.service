@@ -1,0 +1,22 @@
+[Unit]
+Description=Blomoon Omnisire host collector
+After=network-online.target docker.service
+Wants=network-online.target
+
+[Service]
+Type=simple
+# Set to the existing deployment user before installation.
+User=blomoon
+SupplementaryGroups=docker
+EnvironmentFile=/etc/blomoon/collector.env
+ExecStart=/usr/bin/node /opt/blomoon/collector/omnisire-collector.mjs
+Restart=on-failure
+RestartSec=15
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+RestrictAddressFamilies=AF_UNIX AF_INET AF_INET6
+
+[Install]
+WantedBy=multi-user.target

@@ -121,4 +121,6 @@ On Android Chrome and iPhone Safari, install and relaunch; check icons, standalo
 
 Radio: Radio Browser. Country borders: `world-atlas` simplified country geometry, derived from Natural Earth. Public support: `blomoon.support@gmail.com`.
 
-Radio curation, health checking, admin access and rollout: [radio availability](docs/radio-availability.md).
+Unified administration, host monitoring, and owner controls: [Omnisire](docs/omnisire.md).
+
+Radio curation, health checking, and rollout: [radio availability](docs/radio-availability.md).

@@ -1,4 +1,5 @@
 "use client";
+import { findTerraMode } from "./registry";
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import { appendPlaybackHistory, takePreviousPlaybackPoint } from "./playbackNavigation";
@@ -158,6 +159,22 @@ export function useAudioPlayback(playback: TerraPlaybackConfig | null, onPlaybac
     if (result.point) await playPoint(result.point, false);
   }, [playPoint, replaceHistory]);
   const reportError = useCallback((message: string) => { cancel(); update({ ...stateRef.current, error: message, status: "error" }); }, [cancel, update]);
+  useEffect(() => {
+    if (!state.point || !["playing", "paused"].includes(state.status)) return;
+    const point = state.point;
+    let active = true;
+    const check = async () => {
+      try {
+        const mode = findTerraMode(point.modeId);
+        if (!mode) return;
+        const response = await fetch(mode.detailEndpoint(point.id), { cache: "no-store" });
+        if ([401,403,404,503].includes(response.status)) { if(active)stop(); return; }
+        if(response.ok) { const detail = await response.json(); if(active && detail.availability?.status === "disabled")stop(); }
+      } catch { /* ApplicationGate separately monitors application access. */ }
+    };
+    const timer = setInterval(() => void check(), 15000);
+    return () => { active=false;clearInterval(timer); };
+  }, [state.point, state.status, stop]);
   useEffect(() => { stop(); }, [playback, stop]);
   useEffect(() => cancel, [cancel]);
   return { ...state, canPlayPrevious: history.length > 0, pause, play, playPrevious, reportError, stop };

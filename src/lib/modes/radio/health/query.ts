@@ -1,4 +1,5 @@
 import "server-only";
+import { getModeSettings, unblockedPredicate } from "@/lib/admin/settings";
 import { and, eq, inArray, sql, type SQL } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { TerraAvailability, TerraPoint } from "../../types";
@@ -12,7 +13,9 @@ export function verifiedStationPredicate(stationId: SQL | typeof schema.radioDir
 }
 /** The only discovery eligibility policy, including the explicit observation rollout. */
 export function discoveryEligibility(stationId: SQL | typeof schema.radioDirectory.stationId) {
-  return healthFilteringEnabled() ? verifiedStationPredicate(stationId) : sql`true`;
+  return sql`${unblockedPredicate("radio", stationId)} and (
+    coalesce((select value->>'policy' from admin_settings where id='mode:radio'), ${healthFilteringEnabled() ? "enforce" : "observe"})='observe'
+    or ${verifiedStationPredicate(stationId)})`;
 }
 export async function eligibleSnapshotPoints(points: TerraPoint[]) {
   if (!points.length) return [];
@@ -37,14 +40,18 @@ export async function stationAvailability(id: string): Promise<TerraAvailability
 
 export async function availabilityForStations(ids: string[]) {
   if (!ids.length) return new Map<string, TerraAvailability>();
-  const [sources, curated] = await Promise.all([
+  const [sources, curated, blocks, modeSettings] = await Promise.all([
     getDb().select().from(schema.radioStreamSources).where(inArray(schema.radioStreamSources.stationId, ids)),
     getDb()
       .select()
       .from(schema.radioCuratedStations)
       .where(inArray(schema.radioCuratedStations.stationId, ids)),
+    getDb().select().from(schema.mediaBlocks).where(and(eq(schema.mediaBlocks.modeId, "radio"), inArray(schema.mediaBlocks.pointId, ids))),
+    getModeSettings("radio"),
   ]);
   const disabled = new Set(curated.filter((c) => !c.enabled).map((c) => c.stationId));
+  blocks.forEach(b => disabled.add(b.pointId));
+  if (!modeSettings.enabled) ids.forEach(id => disabled.add(id));
   const grouped = new Map<string, typeof sources>();
   for (const source of sources) {
     const group = grouped.get(source.stationId) ?? [];

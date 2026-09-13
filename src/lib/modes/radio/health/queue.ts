@@ -14,6 +14,7 @@ export async function claimStreamSource(concurrency: number) {
     const rows = await tx.execute<{ id: string }>(sql`select s.id from radio_stream_sources s
       where s.enabled and s.next_check<=now() and (s.lease_until is null or s.lease_until<now())
       and (select count(*) from radio_stream_sources where lease_until > now()) < ${concurrency}
+      and not exists (select 1 from media_blocks b where b.mode_id='radio' and b.point_id=s.station_id)
       and not exists (select 1 from radio_curated_stations c where c.station_id=s.station_id and not c.enabled)
       and (select count(*) from radio_stream_sources busy where busy.host=s.host and busy.lease_until>now()) < 2
       order by s.next_check,s.id limit 1 for update skip locked`);
