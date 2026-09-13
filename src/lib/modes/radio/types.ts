@@ -56,6 +56,8 @@ export type RadioClickResponse = {
 };
 
 export type RadioStationRecord = {
+  /** Provider addresses; absent only on snapshots written before source-health support. */
+  providerStreamUrls?: string[];
   clickCount: number;
   detail: TerraPointDetail;
   point: TerraPoint & { countryCode: string };

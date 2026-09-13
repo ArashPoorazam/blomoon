@@ -14,6 +14,8 @@ export function productionConfig(contents, registry, tag) {
   if (Boolean(env.GHCR_USERNAME) !== Boolean(env.GHCR_TOKEN)) throw new Error("Configure both GHCR credentials or neither");
   if (!/^[a-f0-9]{40}$/.test(tag ?? "")) throw new Error("Deploy an immutable 40-character commit SHA");
   if (!/^ghcr\.io\/[a-z0-9._/-]+$/.test(registry ?? "")) throw new Error("Set BLOMOON_REGISTRY_IMAGE to ghcr.io/owner/repository");
+  if (env.BLOMOON_RADIO_HEALTH_MODE && !["observe", "enforce"].includes(env.BLOMOON_RADIO_HEALTH_MODE)) throw new Error("BLOMOON_RADIO_HEALTH_MODE must be observe or enforce");
+  if (env.BLOMOON_ADMIN_USER_IDS?.split(",").some(id => id.trim() && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id.trim()))) throw new Error("BLOMOON_ADMIN_USER_IDS must contain account UUIDs");
   env.BLOMOON_IMAGE = `${registry}:${tag}`;
   env.BLOMOON_MIGRATE_IMAGE = `${registry}-migrate:${tag}`;
   env.DATABASE_URL = `postgres://${encodeURIComponent(env.POSTGRES_USER)}:${encodeURIComponent(env.POSTGRES_PASSWORD)}@postgres:5432/${encodeURIComponent(env.POSTGRES_DB)}`;

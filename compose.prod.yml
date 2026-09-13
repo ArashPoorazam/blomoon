@@ -65,6 +65,8 @@ services:
       DATABASE_URL: ${DATABASE_URL:?Use deploy.sh to construct the encoded database URL}
       GOOGLE_CLIENT_ID: ${GOOGLE_CLIENT_ID:-}
       GOOGLE_CLIENT_SECRET: ${GOOGLE_CLIENT_SECRET:-}
+      BLOMOON_ADMIN_USER_IDS: ${BLOMOON_ADMIN_USER_IDS:-}
+      BLOMOON_RADIO_HEALTH_MODE: ${BLOMOON_RADIO_HEALTH_MODE:-observe}
       HOSTNAME: 0.0.0.0
       NODE_ENV: production
       PORT: 3000
@@ -110,6 +112,23 @@ services:
   catalog:
     image: ${BLOMOON_MIGRATE_IMAGE:?Set BLOMOON_MIGRATE_IMAGE before running the catalog worker}
     command: ["npm", "run", "catalog:worker"]
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: ${DATABASE_URL:?Use deploy.sh to construct the encoded database URL}
+      NODE_ENV: production
+      BLOMOON_LOG_LEVEL: ${BLOMOON_LOG_LEVEL:-info}
+    restart: unless-stopped
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+  health:
+    image: ${BLOMOON_MIGRATE_IMAGE:?Set BLOMOON_MIGRATE_IMAGE before running the health worker}
+    command: ["npm", "run", "health:worker"]
     depends_on:
       postgres:
         condition: service_healthy

@@ -34,14 +34,15 @@ try {
     process.exit(0);
   }
   if (config.GHCR_TOKEN) run("docker", ["login", "ghcr.io", "-u", config.GHCR_USERNAME, "--password-stdin"], { input: config.GHCR_TOKEN, stdio: ["pipe", "inherit", "inherit"] });
-  compose("pull", "traefik", "postgres", "app", "migrate", "catalog", "backup");
+  compose("pull", "traefik", "postgres", "app", "migrate", "catalog", "health", "backup");
   compose("up", "-d", "--wait", "postgres", "traefik");
   // A fresh database can be backed up too; this also covers legacy installations
   // that have no successful-release marker yet.
   compose("--profile", "backup", "run", "--rm", "backup");
   compose("--profile", "migrate", "run", "--rm", "migrate");
   compose("--profile", "migrate", "run", "--rm", "migrate", "npm", "run", "db:check");
-  compose("up", "-d", "--wait", "--wait-timeout", "120", "app", "catalog");
+  compose("run", "--rm", "--entrypoint", "npm", "migrate", "run", "health:backfill");
+  compose("up", "-d", "--wait", "--wait-timeout", "120", "app", "catalog", "health");
   const origin = `https://${config.BLOMOON_DOMAIN}`;
   let ready = false;
   for (let attempt = 0; attempt < 10; attempt++) {

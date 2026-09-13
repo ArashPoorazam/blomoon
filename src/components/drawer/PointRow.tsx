@@ -19,6 +19,7 @@ export function PointRow({ point, metadata, selected = false, playing, actions, 
       <span className="point-copy">
         <span className="point-name">{point.name}</span>
         <span className="point-meta">{metadata}</span>
+        {point.availability && point.availability.status !== "available" && <span className="point-meta">{point.availability.status === "unverified" ? "Awaiting verification" : point.availability.status === "disabled" ? "Disabled" : "Currently unavailable"}</span>}
       </span>
       {playing ? <span className="point-playing-indicator"><AudioLines size={13} aria-hidden="true" /><span className="sr-only">Current playback</span></span> : null}
     </button>

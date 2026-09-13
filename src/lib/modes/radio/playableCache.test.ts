@@ -1,67 +1,85 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-vi.mock("./identityStore", () => ({ radioPlaybackIds: vi.fn(async (id: string) => [id]) }));
+const state = vi.hoisted(() => ({
+  sources: [] as Array<Record<string, unknown>>,
+  curated: [] as Array<Record<string, unknown>>,
+}));
+vi.mock("./catalog", () => ({ getRadioStationRecord: vi.fn() }));
+vi.mock("./health/sources", () => ({
+  requestStationRecheck: vi.fn(async () => 1),
+  markSourcesPlayed: vi.fn(async () => {}),
+}));
 vi.mock("./provider", () => ({ fetchRadioBrowserJsonWithOptions: vi.fn() }));
-vi.mock("@/lib/server/logging", () => ({ logger: { info: vi.fn(), warn: vi.fn() } }));
-import { radioPlaybackIds } from "./identityStore";
-import { fetchRadioBrowserJsonWithOptions } from "./provider";
+vi.mock("@/db", async () => {
+  const schema = await import("@/db/schema");
+  return {
+    schema,
+    getDb: () => ({
+      select: () => ({
+        from: (table: unknown) => ({
+          where: () =>
+            table === schema.radioCuratedStations
+              ? Promise.resolve(state.curated)
+              : { orderBy: () => Promise.resolve(state.sources) },
+        }),
+      }),
+    }),
+  };
+});
+import { getRadioStationRecord } from "./catalog";
 import { getRadioPlayableStream } from "./playback";
+import { fetchRadioBrowserJsonWithOptions } from "./provider";
+import { requestStationRecheck } from "./health/sources";
 const id = "9625c394-0601-11e8-ae97-52543be04c81";
-const alias = "738363a2-edee-4ac6-b110-2ef70c4d06b9";
 beforeEach(() => {
-  vi.mocked(radioPlaybackIds).mockReset().mockImplementation(async id => [id]);
-  vi.mocked(fetchRadioBrowserJsonWithOptions).mockReset().mockImplementation(async path => [{ stationuuid: path.split("/").at(-1), url: "http://live.antenne.at/arr" }]);
-  vi.stubGlobal("fetch", vi.fn(() => { throw new Error("No stream probes allowed"); }));
+  vi.clearAllMocks();
+  state.curated = [];
+  state.sources = [
+    {
+      id,
+      streamUrl: "https://example.com/live",
+      providerId: null,
+      enabled: true,
+      lastSuccess: new Date(),
+      failures: 0,
+    },
+  ];
+  vi.mocked(getRadioStationRecord).mockResolvedValue({
+    point: { id, modeId: "radio", name: "test", countryCode: "826", latitude: 1, longitude: 1, summary: "" },
+    detail: { id, modeId: "radio", name: "test", latitude: 1, longitude: 1, summary: "", fields: [] },
+    streamUrl: "https://example.com/live",
+    searchText: "",
+    votes: 0,
+    clickCount: 0,
+  });
 });
-afterEach(() => { vi.unstubAllGlobals(); vi.useRealTimers(); vi.restoreAllMocks(); });
-describe("radio resolution", () => {
-  it("uses one provider request and caches for five minutes with refresh bypass", async () => {
-    const first = await getRadioPlayableStream(id, true);
-    expect(first.stream.streamUrl).toBe("https://live.antenne.at/arr"); expect(await getRadioPlayableStream(id)).toBe(first);
-    expect(fetchRadioBrowserJsonWithOptions).toHaveBeenCalledTimes(1);
-    vi.useFakeTimers(); vi.setSystemTime(Date.now() + 300_001);
-    await getRadioPlayableStream(id); await getRadioPlayableStream(id, true);
-    expect(fetchRadioBrowserJsonWithOptions).toHaveBeenCalledTimes(3); expect(fetch).not.toHaveBeenCalled();
+afterEach(() => vi.useRealTimers());
+describe("stored verified playback", () => {
+  it("resolves curated streams without provider calls", async () => {
+    expect((await getRadioPlayableStream(id)).stream.streamUrl).toBe("https://example.com/live");
+    expect(fetchRadioBrowserJsonWithOptions).not.toHaveBeenCalled();
   });
-  it("finds a surviving alias without changing the public ID", async () => {
-    vi.mocked(radioPlaybackIds).mockResolvedValue([id, alias]); vi.mocked(fetchRadioBrowserJsonWithOptions).mockResolvedValueOnce([]);
-    const result = await getRadioPlayableStream(id, true); expect(result.providerId).toBe(alias); expect(result.stream.pointId).toBe(id);
+  it("does not cache eligibility across failures", async () => {
+    await getRadioPlayableStream(id);
+    state.sources[0].failures = 3;
+    await expect(getRadioPlayableStream(id)).rejects.toMatchObject({ code: "no_source" });
   });
-  it("does not resurrect an old URL after provider failure", async () => {
-    await getRadioPlayableStream(id, true); vi.mocked(fetchRadioBrowserJsonWithOptions).mockRejectedValue(new Error("outage"));
-    await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "provider_failure" });
-    await expect(getRadioPlayableStream(id)).rejects.toMatchObject({ code: "provider_failure" });
-  });
-  it.each([null, {}, [{ stationuuid: alias }], [{ stationuuid: id, url: 42 }]])("rejects malformed metadata", async value => {
-    vi.mocked(fetchRadioBrowserJsonWithOptions).mockResolvedValue(value);
-    await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "provider_failure" });
-  });
-  it("distinguishes missing station and no source", async () => {
-    vi.mocked(fetchRadioBrowserJsonWithOptions).mockResolvedValueOnce([]).mockResolvedValueOnce([{ stationuuid: id, url: "http://localhost/" }]);
-    await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "not_found" });
+  it("queues a controlled retry without admitting failed sources", async () => {
+    state.sources[0].lastSuccess = null;
     await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "no_source" });
+    expect(requestStationRecheck).toHaveBeenCalledWith(id);
   });
-  it("does not cache query entries", async () => {
-    vi.mocked(fetchRadioBrowserJsonWithOptions).mockResolvedValue([{ stationuuid: id, url: "https://radio.example/live?key=v" }]);
-    await getRadioPlayableStream(id, true); await getRadioPlayableStream(id); expect(fetchRadioBrowserJsonWithOptions).toHaveBeenCalledTimes(2);
+  it("does not retry disabled stations", async () => {
+    state.curated = [{ enabled: false }];
+    await expect(getRadioPlayableStream(id, true)).rejects.toMatchObject({ code: "no_source" });
+    expect(requestStationRecheck).not.toHaveBeenCalled();
   });
-  it("cancels before scheduling alias requests", async () => {
-    await expect(getRadioPlayableStream(id, true, AbortSignal.abort())).rejects.toThrow(); expect(fetchRadioBrowserJsonWithOptions).not.toHaveBeenCalled();
+  it("rejects old fixture IDs and missing stations", async () => {
+    await expect(getRadioPlayableStream("fixture-kexp")).rejects.toMatchObject({ code: "invalid_input" });
+    vi.mocked(getRadioStationRecord).mockResolvedValue(null);
+    await expect(getRadioPlayableStream(id)).rejects.toMatchObject({ code: "not_found" });
   });
-  it("uses fixtures without database or provider access", async () => {
-    expect((await getRadioPlayableStream("fixture-kexp", true)).providerId).toBeNull(); expect(radioPlaybackIds).not.toHaveBeenCalled(); expect(fetchRadioBrowserJsonWithOptions).not.toHaveBeenCalled();
+  it("uses a healthy alternate when primary has failed", async () => {
+    state.sources.unshift({ ...state.sources[0], streamUrl: "https://example.com/dead", failures: 3 });
+    expect((await getRadioPlayableStream(id)).stream.streamUrl).toBe("https://example.com/live");
   });
-});
-
-it("bounds even a non-cancellable identity lookup by the resolution deadline", async () => {
-  const deadline = new AbortController();
-  vi.spyOn(AbortSignal, "timeout").mockReturnValue(deadline.signal);
-  vi.mocked(radioPlaybackIds).mockImplementation(async (_id, signal) => {
-    const { abortable } = await import("@/lib/abort");
-    return abortable(new Promise<string[]>(() => {}), signal);
-  });
-  const pending = getRadioPlayableStream(id, true);
-  const assertion = expect(pending).rejects.toMatchObject({ code: "resolution_timeout" });
-  deadline.abort(new DOMException("deadline", "TimeoutError"));
-  await assertion;
-  expect(fetchRadioBrowserJsonWithOptions).not.toHaveBeenCalled();
 });

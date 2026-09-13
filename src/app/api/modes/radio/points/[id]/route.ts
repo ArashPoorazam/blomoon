@@ -16,7 +16,7 @@ export const GET = withApiLogging("api.modes.radio.points.detail", async (
 
   return Response.json(detail, {
     headers: {
-      "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600"
+      "Cache-Control": "no-store"
     }
   });
 }, {

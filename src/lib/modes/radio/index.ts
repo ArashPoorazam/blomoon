@@ -1,17 +1,13 @@
 export {
   getRadioCountryMarkerDataset,
-  getRadioCountryPointPage,
   getRadioDataset,
   getRadioDetail,
   getRadioFixtureDataset,
-  getRadioPointPage,
   getRandomRadioPoint,
   getRadioStationPersistenceSnapshot
 } from "./catalog";
 export { COUNTRY_MARKER_LIMIT, COUNTRY_PAGE_LIMIT, COUNTRY_PAGE_MAX_LIMIT } from "./config";
 export {
-  clearRadioStartupDatasetCacheForTest,
-  getRadioStartupDataset,
-  refreshRadioStartupDataset
+  getRadioStartupDataset
 } from "./startup";
 export { getRadioPlayableStream } from "./playback";

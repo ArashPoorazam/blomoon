@@ -1,4 +1,5 @@
 import "server-only";
+import { availabilityForStations } from "@/lib/modes/radio/health/query";
 
 import { and, eq, inArray, sql } from "drizzle-orm";
 import { getDb, schema, type BlomoonDb } from "@/db";
@@ -89,10 +90,11 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
 
     const rowById = new Map(rows.map((row) => [row.id, row]));
 
+    const availability = await availabilityForStations(pointIds);
     return pointIds
       .map((pointId) => rowById.get(pointId))
       .filter((row) => row !== undefined)
-      .map(stationRowToPoint);
+      .map(row => ({...stationRowToPoint(row),availability:availability.get(row.id)}));
   },
   async recordClick(userId, pointId) {
     return logger.measure("persistence.radio.click.record", {
@@ -146,6 +148,10 @@ export const radioPersistenceAdapter: ModePersistenceAdapter = {
 };
 
 async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersistenceSnapshot) {
+  const [curated] = await tx.select({id:schema.radioCuratedStations.stationId}).from(schema.radioCuratedStations)
+    .where(eq(schema.radioCuratedStations.stationId,snapshot.id));
+  const provider = curated ? {id:"blomoon-curated",name:"Blomoon curated radio",url:"https://blomoon.ir",attribution:"Blomoon curated stations"}
+    : {id:RADIO_BROWSER_PROVIDER_ID,name:RADIO_BROWSER_PROVIDER_NAME,url:RADIO_BROWSER_PROVIDER_URL,attribution:RADIO_BROWSER_ATTRIBUTION};
   await tx
     .insert(schema.mediaModes)
     .values({
@@ -158,11 +164,11 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
   await tx
     .insert(schema.mediaProviders)
     .values({
-      id: RADIO_BROWSER_PROVIDER_ID,
+      id: provider.id,
       modeId: RADIO_MODE_ID,
-      name: RADIO_BROWSER_PROVIDER_NAME,
-      url: RADIO_BROWSER_PROVIDER_URL,
-      attribution: RADIO_BROWSER_ATTRIBUTION,
+      name: provider.name,
+      url: provider.url,
+      attribution: provider.attribution,
       updatedAt: new Date()
     })
     .onConflictDoNothing();
@@ -172,7 +178,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
     .values({
       id: snapshot.id,
       modeId: RADIO_MODE_ID,
-      providerId: RADIO_BROWSER_PROVIDER_ID,
+      providerId: provider.id,
       providerItemId: snapshot.id,
       name: snapshot.name,
       summary: snapshot.summary,
@@ -190,7 +196,7 @@ async function upsertStation(tx: BlomoonTransaction, snapshot: RadioStationPersi
       target: schema.mediaItems.id,
       set: {
         modeId: RADIO_MODE_ID,
-        providerId: RADIO_BROWSER_PROVIDER_ID,
+        providerId: provider.id,
         providerItemId: snapshot.id,
         name: snapshot.name,
         summary: snapshot.summary,

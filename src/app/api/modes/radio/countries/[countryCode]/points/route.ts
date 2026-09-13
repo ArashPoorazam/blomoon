@@ -33,7 +33,7 @@ export const GET = withApiLogging("api.modes.radio.countries.points", async (
     points: dataset.points.slice(0, limit.value)
   }, {
     headers: {
-      "Cache-Control": "public, s-maxage=1800, stale-while-revalidate=3600"
+      "Cache-Control": "no-store"
     }
   });
 }, {

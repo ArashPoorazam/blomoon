@@ -14,7 +14,9 @@
     "catalog:identities": "node --conditions=react-server --import tsx scripts/radio-identities.ts",
     "check:prod": "node scripts/check-production.mjs",
     "db:generate": "drizzle-kit generate",
-    "db:migrate": "drizzle-kit migrate"
+    "db:migrate": "drizzle-kit migrate",
+    "health:worker": "node --conditions=react-server --import tsx scripts/radio-health.ts",
+    "health:backfill": "node --conditions=react-server --import tsx scripts/radio-health.ts --backfill"
   },
   "dependencies": {
     "@react-three/drei": "latest",

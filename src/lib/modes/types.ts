@@ -2,7 +2,13 @@ import type { MarkerColorMode, MarkerColorToken } from "@/lib/theme/globe";
 
 export type TerraModeId = "radio" | "podcasts" | "tv" | (string & {});
 
+export type TerraAvailability = {
+  status: "available" | "unavailable" | "unverified" | "disabled";
+  lastVerifiedAt: string | null;
+};
+
 export type TerraPoint = {
+  availability?: TerraAvailability;
   id: string;
   modeId: TerraModeId;
   name: string;

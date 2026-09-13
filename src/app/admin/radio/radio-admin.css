@@ -1,0 +1,91 @@
+.radio-admin {
+  max-width: 1200px;
+  margin: auto;
+  padding: 24px;
+  height: 100dvh;
+  overflow: auto;
+  color: var(--text);
+  background: var(--background);
+}
+.radio-admin header {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+}
+.radio-admin section {
+  padding: 16px;
+  border: 1px solid var(--panel-border);
+  border-radius: 12px;
+  margin-block: 16px;
+}
+.radio-admin-columns {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+}
+.radio-admin label {
+  display: block;
+  margin-block: 12px;
+}
+.radio-admin input:not([type="checkbox"]),
+.radio-admin textarea {
+  display: block;
+  width: 100%;
+  padding: 10px;
+  background: var(--panel-solid);
+  color: inherit;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+}
+.radio-admin button {
+  padding: 8px 12px;
+  border: 1px solid var(--panel-border);
+  border-radius: 6px;
+  background: var(--panel-solid);
+  color: inherit;
+  cursor: pointer;
+}
+.radio-admin button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+.radio-admin :focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+}
+.radio-admin ul {
+  list-style: none;
+  padding: 0;
+}
+.radio-admin li {
+  border-bottom: 1px solid var(--panel-border);
+  padding-block: 12px;
+  overflow-wrap: anywhere;
+}
+.radio-admin pre {
+  white-space: pre-wrap;
+}
+@media (max-width: 760px) {
+  .radio-admin-columns {
+    grid-template-columns: 1fr;
+  }
+}
+
+.radio-admin a {
+  color: var(--accent);
+}
+.radio-admin table {
+  width: 100%;
+  text-align: left;
+  border-collapse: collapse;
+  margin-block: 16px;
+}
+.radio-admin th,
+.radio-admin td {
+  padding: 8px;
+  border-bottom: 1px solid var(--line);
+}
+.radio-admin caption {
+  text-align: left;
+  color: var(--muted-strong);
+}

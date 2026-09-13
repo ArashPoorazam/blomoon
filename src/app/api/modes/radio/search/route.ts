@@ -45,7 +45,7 @@ export const GET = withApiLogging("api.modes.radio.search", async (request: Requ
 
   return Response.json(page, {
     headers: {
-      "Cache-Control": "public, s-maxage=60, stale-while-revalidate=120"
+      "Cache-Control": "no-store"
     }
   });
 });

@@ -51,6 +51,8 @@ export function PointDetailDrawer({
           ) : null}
         </div>
 
+        {detail?.availability && <p role="status">{detail.availability.status === "available" ? "Recently verified" : detail.availability.status === "unverified" ? "Awaiting verification" : detail.availability.status === "disabled" ? "Disabled" : "Currently unavailable"}{detail.availability.lastVerifiedAt ? ` · Last verified ${new Date(detail.availability.lastVerifiedAt).toLocaleString()}` : ""}</p>}
+
         {detailAccessory ? <div className="detail-accessory">{detailAccessory}</div> : null}
 
         <div className="detail-sections">

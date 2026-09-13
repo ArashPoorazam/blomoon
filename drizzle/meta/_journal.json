@@ -113,6 +113,20 @@
       "when": 1788912000006,
       "tag": "0015_favourite_folder_mode_guards",
       "breakpoints": true
+    },
+    {
+      "idx": 16,
+      "version": "7",
+      "when": 1789257600000,
+      "tag": "0016_radio_availability",
+      "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "7",
+      "when": 1789257600001,
+      "tag": "0017_radio_health_security",
+      "breakpoints": true
     }
   ]
 }

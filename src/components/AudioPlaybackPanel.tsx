@@ -1,6 +1,6 @@
 "use client";
 
-import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward } from "lucide-react";
+import { AudioLines, LoaderCircle, Pause, Play, Shuffle, SkipBack, SkipForward, Square } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import type { TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { AudioPlaybackController, AudioPlaybackStatus } from "@/lib/modes/useAudioPlayback";
@@ -184,6 +184,16 @@ function AudioPlaybackControls({
           <Play size={16} aria-hidden="true" />
         )}
         <span>{isBusy ? "Cancel" : primaryLabel}</span>
+      </button>
+      <button
+        aria-label={`Stop ${itemSingularLabel}`}
+        className="media-control icon-only"
+        disabled={!detail || status === "stopped" || status === "idle"}
+        title="Stop"
+        type="button"
+        onClick={() => playback.stop()}
+      >
+        <Square size={14} aria-hidden="true" />
       </button>
       {compact ? (
         <button

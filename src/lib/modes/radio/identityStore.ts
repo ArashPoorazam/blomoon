@@ -1,24 +1,11 @@
 import "server-only";
-import { eq, inArray, or, sql } from "drizzle-orm";
+import { eq, inArray, sql } from "drizzle-orm";
 import { getDb, isDatabaseConfigured, schema, type BlomoonDb } from "@/db";
 import { canonicalizeRadioRecords, stationIdentityKey, streamIdentity } from "./stationIdentity";
 import type { RadioStationRecord } from "./types";
-import { abortable } from "@/lib/abort";
 
 export type RadioTransaction = Parameters<Parameters<BlomoonDb["transaction"]>[0]>[0];
 const aliases = schema.radioStationAliases;
-
-/** Playback needs provider identities, never a catalog refresh or an account write. */
-export async function radioPlaybackIds(id: string, signal: AbortSignal): Promise<string[]> {
-  if (!isDatabaseConfigured()) return [id];
-  const [alias] = await abortable(getDb().select({ canonicalId: aliases.canonicalId })
-    .from(aliases).where(eq(aliases.stationId, id)), signal);
-  if (!alias) return [id];
-  signal.throwIfAborted();
-  const rows = await abortable(getDb().select({ id: aliases.stationId }).from(aliases)
-    .where(eq(aliases.canonicalId, alias.canonicalId)).orderBy(aliases.stationId).limit(3), signal);
-  return [alias.canonicalId, ...rows.map(row => row.id).filter(value => value !== alias.canonicalId)].slice(0, 3);
-}
 
 export async function lookupCanonicalRecord(id: string): Promise<RadioStationRecord | null> {
   if (!isDatabaseConfigured()) return null;
@@ -26,32 +13,6 @@ export async function lookupCanonicalRecord(id: string): Promise<RadioStationRec
   if (!alias) return null;
   const [canonical] = await getDb().select({ record: aliases.record }).from(aliases).where(eq(aliases.stationId, alias.canonicalId));
   return canonical?.record ?? null;
-}
-
-export async function canonicalizeAvailableRecords(records: RadioStationRecord[]) {
-  if (!isDatabaseConfigured() || !records.length) return canonicalizeRadioRecords(records).records;
-  const mapping = await canonicalizePointIds(records.map((record) => record.point.id));
-  const ids = [...new Set(mapping.values())];
-  const rows = ids.length ? await getDb().select().from(aliases).where(inArray(aliases.stationId, ids)) : [];
-  const byId = new Map(rows.map((row) => [row.stationId, row.record]));
-  return canonicalizeRadioRecords(records.map((record) => byId.get(mapping.get(record.point.id) ?? "") ?? record)).records;
-}
-
-export async function registerRadioRecord(record: RadioStationRecord) {
-  if (!isDatabaseConfigured()) return record;
-  return getDb().transaction(async (tx) => {
-    await tx.execute(sql`select pg_advisory_xact_lock(72409189)`);
-    const existing = await tx.select().from(aliases).where(or(eq(aliases.stationId, record.point.id),
-      eq(aliases.identityKey, stationIdentityKey(record)), eq(aliases.streamKey, streamIdentity(record.streamUrl))));
-    const id = existing[0]?.canonicalId ?? record.point.id;
-    const [canonical] = await tx.select().from(aliases).where(eq(aliases.stationId, id));
-    if (existing.length && !canonical) throw new Error("Canonical station alias is missing its representative");
-    const result = canonical?.record ?? record;
-    await tx.insert(aliases).values({ stationId: record.point.id, canonicalId: id,
-      identityKey: stationIdentityKey(record), streamKey: streamIdentity(record.streamUrl), record })
-      .onConflictDoNothing();
-    return result;
-  });
 }
 
 /** Publish aliases and canonical records under the same lock as account consolidation. */

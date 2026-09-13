@@ -11,6 +11,7 @@ vi.mock("@/db", async () => ({ schema: await import("@/db/schema"), getDb: () =>
 vi.mock("@/lib/persistence/favouriteFolders", () => ({ listFavouritePoints: async () => ({ points: [] }) }));
 vi.mock("@/lib/playback-history/repository", () => ({ listPlaybackHistory: async () => [] }));
 import { searchRadioDirectory } from "./directory";
+import { sourceInput } from "./health/sources";
 import { directoryEntry, syncRadioDirectory } from "./directorySync";
 import * as provider from "./provider";
 import { getRadioRecommendations, RecommendationPageExpired } from "./recommendations";
@@ -32,6 +33,7 @@ describe.skipIf(!enabled)("radio directory PostgreSQL integration (rolled back)"
     try {
       await drizzle(client!, { schema }).transaction(async (tx) => {
         holder.db = tx;
+        await tx.delete(schema.radioCuratedStations);
         const owner = "11111111-1111-4111-8111-111111111111";
         await tx.insert(schema.users).values({ id: owner, email: "radio-discovery-test@example.invalid" });
         await tx.update(schema.radioCatalogGenerations).set({ active: false });
@@ -47,6 +49,7 @@ describe.skipIf(!enabled)("radio directory PostgreSQL integration (rolled back)"
         for (let offset = 0; offset < records.length; offset += 250) {
           await tx.insert(schema.radioCatalogEntries).values(records.slice(offset, offset + 250).map((record) => directoryEntry(record, generation.id)));
         }
+        await tx.insert(schema.radioStreamSources).values(records.map(record=>({...sourceInput(record.point.id,record.streamUrl,"provider",record.point.id),lastSuccess:new Date()})));
         await tx.execute(sql`insert into radio_catalog_terms(generation_id, term)
           select distinct generation_id, term from radio_catalog_entries, unnest(string_to_array(search_text, ' ')) term
           where generation_id = ${generation.id} and length(term) between 1 and 120 on conflict do nothing`);
@@ -93,7 +96,7 @@ describe.skipIf(!enabled)("radio directory PostgreSQL integration (rolled back)"
         expect(published.id).not.toBe(generation.id);
         expect((await tx.select().from(schema.radioCatalogTerms).where(eq(schema.radioCatalogTerms.generationId, published.id))).length).toBeGreaterThan(1000);
         await tx.update(schema.radioCatalogGenerations).set({ active: false });
-        expect((await getRadioRecommendations(owner, 50, 0, first.pageToken)).points).toEqual(first.points);
+        expect((await getRadioRecommendations(owner, 50, 0, first.pageToken)).points).toEqual([]);
         await tx.update(schema.radioRecommendationSnapshots).set({ expiresAt: new Date(0) })
           .where(eq(schema.radioRecommendationSnapshots.id, first.pageToken!));
         await expect(getRadioRecommendations(owner, 50, 0, first.pageToken)).rejects.toBeInstanceOf(RecommendationPageExpired);

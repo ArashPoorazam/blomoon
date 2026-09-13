@@ -72,6 +72,7 @@ export function normalizeStation(station?: RadioBrowserStation): RadioStationRec
 
   return {
     clickCount,
+    providerStreamUrls: [...new Set([station.url, station.url_resolved].filter((url): url is string => Boolean(url && isSafeStreamUrl(url))))],
     point,
     detail: {
       ...point,

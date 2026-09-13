@@ -1,4 +1,5 @@
 import "server-only";
+import { publishProviderSources } from "./health/sources";
 import { and, eq, lt, sql } from "drizzle-orm";
 import { z } from "zod";
 import { getDb, schema } from "@/db";
@@ -35,7 +36,7 @@ export function parseDirectoryPage(payload: unknown) {
     if (record) records.push(record);
   }
   if (invalid > Math.max(5, payload.length * 0.05)) throw new Error("Malformed directory response");
-  return { records, rawCount: payload.length };
+  return { records, rawCount: payload.length, invalidCount: invalid, normalizationExcluded: payload.length - invalid - records.length };
 }
 
 export function validateDirectorySize(count: number, previous: number, providerCount: number) {
@@ -73,7 +74,9 @@ export async function syncRadioDirectory() {
       }
     }
     if (!records) throw new Error("Directory synchronization failed on all hosts");
+    const sourceRecords = records;
     records = await publishStationIdentities(tx, records);
+    await publishProviderSources(tx, sourceRecords);
     await tx.execute(sql`select consolidate_radio_accounts()`);
     const [generation] = await tx.insert(schema.radioCatalogGenerations).values({}).returning();
     const vocabulary = new Set<string>();
@@ -108,7 +111,7 @@ async function scanHost(host: string, previousCount: number) {
       limit: String(PAGE_SIZE), offset: String(offset), order: "name", reverse: "false", hidebroken: "true",
     }, { cache: "no-store", timeoutMs: 30_000 }));
     for (const record of page.records) records.set(record.point.id, record);
-    logger.info("radio.directory.page", { context: { offset, received: page.rawCount, usable: records.size }, message: "Directory scan progress" });
+    logger.info("radio.directory.page", { context: { offset, received: page.rawCount, usable: records.size, invalidCount: page.invalidCount, normalizationExcluded: page.normalizationExcluded }, message: "Directory scan progress" });
     if (page.rawCount < PAGE_SIZE) {
       validateDirectorySize(records.size, previousCount, stats.stations - stats.stations_broken);
       return [...records.values()];
