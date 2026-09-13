@@ -40,7 +40,9 @@ jobs:
         run: npm test
 
       - name: Build
-        run: npm run build
+        run: |
+          npm run build
+          node -e 'const m=require("./.next/prerender-manifest.json"); if(m.routes["/admin/radio"]) throw new Error("Admin authorization must render per request")'
 
       - name: Resolve image name
         id: image

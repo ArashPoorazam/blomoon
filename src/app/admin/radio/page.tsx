@@ -1,8 +1,11 @@
 import Link from "next/link";
+import { connection } from "next/server";
 import { requireRadioAdmin, RadioAdminError } from "@/lib/modes/radio/admin";
 import { RadioAdmin } from "./RadioAdmin";
 import "./radio-admin.css";
 export default async function RadioAdminPage() {
+  // Image builds have no database; authorization must wait for a real request.
+  await connection();
   try {
     await requireRadioAdmin();
   } catch (error) {
