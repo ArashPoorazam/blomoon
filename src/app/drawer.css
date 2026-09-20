@@ -527,3 +527,10 @@
 @media (prefers-reduced-motion: reduce) {
   .drawer-loading-panel { animation: none; }
 }
+
+@media (min-width: 761px) {
+  .drawer-header { padding: var(--desktop-header-padding); align-items: center; }
+  .drawer-list-toolbar { padding: var(--desktop-header-padding); }
+  .drawer-list-toolbar > .drawer-header { padding: 0; }
+  .drawer-directory-header .drawer-title { font-size: 22px; line-height: 1.1; }
+}

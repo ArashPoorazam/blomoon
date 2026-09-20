@@ -41,8 +41,11 @@
   --z-player: 65;
   --z-status: 70;
   --z-menu: 80;
-  --desktop-player-width: 680px;
-  --desktop-player-artwork: 48px;
+  --desktop-header-padding: 22px;
+  --desktop-player-radius: 16px;
+  --desktop-account-width: 600px;
+  --desktop-player-width: 544px;
+  --desktop-player-artwork: 40px;
   --desktop-player-control: 44px;
   --drawer-control-gap: 12px;
   --z-dialog: 90;

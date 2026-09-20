@@ -7,55 +7,42 @@ import type { TerraPoint } from "@/lib/modes/types";
 import { useDisplayedGlobePoints } from "./useDisplayedGlobePoints";
 
 const point = (id: string): TerraPoint => ({ id, modeId: "radio", name: id, summary: "test", latitude: 1, longitude: 2 });
-function displayed(listedPoints: TerraPoint[], showListedOnGlobe = true) {
+function displayed(listedPoints: TerraPoint[], showListedOnGlobe = true, modeGlobePoints = [point("default")]) {
   let result: ReturnType<typeof useDisplayedGlobePoints> | undefined;
   function Harness() {
     result = useDisplayedGlobePoints({ activeMode: radioMode, activeTheme: defaultTheme,
-      activePlaybackPoint: point("unrelated-playing"), modeSelectedPoint: point("unrelated-selected"),
-      modeGlobePoints: [point("default")], listedPoints, showListedOnGlobe,
-      globeProfile: { countryPointGuarantee: 0, markerBudget: 1, dpr: [1, 1], hoverEnabled: true,
-        motionEnabled: true, profile: "desktop" } });
+      activePlaybackPoint: point("playing"), modeSelectedPoint: point("selected"),
+      modeGlobePoints, listedPoints, showListedOnGlobe });
     return null;
   }
   renderToStaticMarkup(createElement(Harness));
   return result!;
 }
 
-describe("listed globe points", () => {
-  it("shows exactly the loaded list, even above the default marker budget", () => {
-    const result = displayed([point("folder-a"), point("folder-b"), point("folder-a")]);
-    expect(result.points.map((item) => item.id)).toEqual(["folder-a", "folder-b"]);
-    expect(result.selectedPoint).toBeNull();
-    expect(result.activePlaybackPoint).toBeNull();
+describe("persistent globe coverage (shared by desktop and mobile)", () => {
+  it("adds listed points and deduplicates overlaps", () => {
+    const result = displayed([point("folder-a"), point("default"), point("folder-a")]);
+    expect(result.points.map(p => p.id)).toEqual(["default", "folder-a"]);
+    expect(result.markerColorMode).toBe(radioMode.markerColorMode);
+    expect(result.markerColor).toBe(displayed([], false).markerColor);
   });
-  it("adds loaded pages and never substitutes another list for an empty folder", () => {
-    expect(displayed([]).points).toEqual([]);
-    expect(displayed([point("suggestion-1"), point("suggestion-2")]).points).toHaveLength(2);
+  it("retains defaults for empty lists, search changes, pagination and toggle off", () => {
+    for (const list of [[], [point("search")], [point("search"), point("next-page")]]) {
+      expect(displayed(list).points).toEqual([point("default"), ...list]);
+      expect(displayed(list, false).points).toEqual([point("default")]);
+    }
   });
-  it("keeps default-mode selection and playback in the separate highlight layer", () => {
-    const result = displayed([], false);
-    expect(result.points.map((item) => item.id)).toEqual(["default"]);
-    expect(result.selectedPoint?.id).toBe("unrelated-selected");
-    expect(result.activePlaybackPoint?.id).toBe("unrelated-playing");
+  it("preserves selection and playback in both toggle states", () => {
+    for (const enabled of [true, false]) {
+      expect(displayed([], enabled).selectedPoint?.id).toBe("selected");
+      expect(displayed([], enabled).activePlaybackPoint?.id).toBe("playing");
+    }
+  });
+  it("never recaps the baseline when country markers or listed points are added", () => {
+    const baseline = Array.from({ length: 1204 }, (_, i) => point(String(i)));
+    for (const country of [[], [point("fr")], [point("de")]]) {
+      const result = displayed([point("listed")], true, [...baseline, ...country]);
+      expect(result.points).toEqual([...baseline, ...country, point("listed")]);
+    }
   });
 });
-
-for (const profile of ["desktop", "mobile"] as const) {
-  it(`preserves all country leaders beneath a loaded list on ${profile}`, () => {
-    const leaders = ["840", "250", "276"].flatMap(countryCode =>
-      Array.from({ length: 4 }, (_, i) => ({ ...point(`${countryCode}-${i}`), countryCode })));
-    const listed = { ...point("lower-ranked"), countryCode: "840" };
-    let displayedPoints: TerraPoint[] = [];
-    function Harness() {
-      displayedPoints = useDisplayedGlobePoints({ activeMode: radioMode, activeTheme: defaultTheme,
-        activePlaybackPoint: null, modeSelectedPoint: null, modeGlobePoints: leaders,
-        listedPoints: [listed], showListedOnGlobe: false,
-        globeProfile: { countryPointGuarantee: 4, markerBudget: 10, dpr: [1, 1],
-          hoverEnabled: profile === "desktop", motionEnabled: true, profile } }).points;
-      return null;
-    }
-    renderToStaticMarkup(createElement(Harness));
-    expect(displayedPoints).toHaveLength(13);
-    expect(displayedPoints).toEqual(expect.arrayContaining(leaders));
-  });
-}

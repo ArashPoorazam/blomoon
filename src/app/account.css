@@ -916,3 +916,7 @@
   font-size: 12px;
   line-height: 1.5;
 }
+
+@media (min-width: 761px) {
+  .account-modal.account-info-modal { width: min(var(--desktop-account-width), 100%); }
+}

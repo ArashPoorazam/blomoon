@@ -419,8 +419,9 @@
 @media (min-width: 761px) and (not (pointer: coarse)) {
   .media-mini-player {
     max-width: var(--desktop-player-width);
-    padding: 14px 16px;
-    gap: 16px;
+    padding: 10px 12px;
+    gap: 12px;
+    border-radius: var(--desktop-player-radius);
   }
   .media-mini-player .station-artwork-player {
     width: var(--desktop-player-artwork);

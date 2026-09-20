@@ -12,7 +12,7 @@ describe("globe display budget", () => {
     expect(GLOBE_COUNTRY_POINT_GUARANTEE).toBe(4);
   });
 
-  it("caps displayed points while preserving selected and active playback points", () => {
+  it("adds highlights without displacing selected and active playback points", () => {
     const points = Array.from({ length: 10 }, (_, index) => point(String(index)));
     const limited = limitGlobePoints({
       activePlaybackPoint: points[9],
@@ -21,11 +21,11 @@ describe("globe display budget", () => {
       selectedPoint: points[8]
     });
 
-    expect(limited).toHaveLength(5);
-    expect(limited.map((item) => item.id)).toEqual(["8", "9", "0", "1", "2"]);
+    expect(limited).toHaveLength(7);
+    expect(limited.map((item) => item.id)).toEqual(["0", "1", "2", "3", "4", "8", "9"]);
   });
 
-  it("does not copy arrays when the point count is inside the budget", () => {
+  it("preserves small datasets", () => {
     const points = [point("one")];
 
     expect(limitGlobePoints({
@@ -33,10 +33,10 @@ describe("globe display budget", () => {
       budget: 5,
       points,
       selectedPoint: null
-    })).toBe(points);
+    })).toEqual(points);
   });
 
-  it("preserves required drawer points before filling the marker budget", () => {
+  it("adds required points beyond the global allowance", () => {
     const required = point("listed", "840");
     const limited = limitGlobePoints({
       activePlaybackPoint: null,
@@ -46,10 +46,10 @@ describe("globe display budget", () => {
       selectedPoint: null
     });
 
-    expect(limited.map((item) => item.id)).toEqual(["listed", "a", "b"]);
+    expect(limited.map((item) => item.id)).toEqual(["a", "b", "c", "listed"]);
   });
 
-  it("fills country guarantees before the remaining default points", () => {
+  it("retains the full global selection plus country guarantees", () => {
     const points = [
       point("us-1", "840"),
       point("us-2", "840"),
@@ -67,20 +67,20 @@ describe("globe display budget", () => {
       selectedPoint: null
     });
 
-    expect(limited.map((item) => item.id)).toEqual(["us-1", "us-2", "fr-1", "fr-2", "de-1", "de-2"]);
+    expect(limited.map((item) => item.id)).toEqual(["us-1", "us-2", "us-3", "fr-1", "fr-2", "de-1", "de-2"]);
   });
   it("does not let lower-ranked required points displace country leaders", () => {
     const points = [point("us-1", "840"), point("us-2", "840"), point("us-3", "840"),
       point("fr-1", "250"), point("fr-1", "250"), point("fr-2", "250")];
     const limited = limitGlobePoints({ points, budget: 4, countryPointGuarantee: 2,
       requiredPoints: [points[2]], activePlaybackPoint: null, selectedPoint: null });
-    expect(limited.map(p => p.id)).toEqual(["us-3", "us-1", "us-2", "fr-1", "fr-2"]);
+    expect(limited.map(p => p.id)).toEqual(["us-1", "us-2", "us-3", "fr-1", "fr-2"]);
   });
 
   it("includes selected points outside a small source dataset", () => {
     expect(limitGlobePoints({ points: [point("a")], budget: 5,
       selectedPoint: point("selected"), activePlaybackPoint: point("playing") }).map(p => p.id))
-      .toEqual(["selected", "playing", "a"]);
+      .toEqual(["a", "selected", "playing"]);
   });
 
 });

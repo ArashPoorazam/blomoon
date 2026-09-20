@@ -1,25 +1,16 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import {
-  GLOBE_COUNTRY_POINT_GUARANTEE,
-  GLOBE_DISPLAY_BUDGET
-} from "@/lib/modes/displayBudget";
-
 export type GlobeProfile = {
-  countryPointGuarantee: number;
   dpr: [number, number];
   hoverEnabled: boolean;
-  markerBudget: number;
   motionEnabled: boolean;
   profile: "desktop" | "mobile";
 };
 
 const DESKTOP_PROFILE: GlobeProfile = {
-  countryPointGuarantee: GLOBE_COUNTRY_POINT_GUARANTEE,
   dpr: [1, 2],
   hoverEnabled: true,
-  markerBudget: GLOBE_DISPLAY_BUDGET,
   motionEnabled: true,
   profile: "desktop"
 };
@@ -38,10 +29,8 @@ export function useGlobeProfile(): GlobeProfile {
       const reducedMotion = reducedMotionQuery.matches;
 
       setProfile({
-        countryPointGuarantee: GLOBE_COUNTRY_POINT_GUARANTEE,
         dpr: isMobile ? [1, 1.35] : [1, 2],
         hoverEnabled: !isCoarse,
-        markerBudget: GLOBE_DISPLAY_BUDGET,
         motionEnabled: !reducedMotion,
         profile: isMobile ? "mobile" : "desktop"
       });

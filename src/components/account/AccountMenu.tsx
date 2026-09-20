@@ -91,7 +91,7 @@ export function AccountMenu({
       {modalView === "account" ? (
         <AccountModalShell
           description="Manage your sign-in details and account security without leaving the globe."
-          kicker="Account"
+          className="account-info-modal"
           title="Account info"
           onClose={closeModal}
         >

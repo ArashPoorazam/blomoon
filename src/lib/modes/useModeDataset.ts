@@ -115,6 +115,8 @@ export function useModeDataset(
         return;
       }
 
+      setCountryMarkerPoints([]);
+      setCountrySource(null);
       setCountryMarkerLoading(true);
       setCountryRequestError(null);
 
@@ -158,11 +160,12 @@ export function useModeDataset(
 
   const globePoints = useMemo(
     () => selectedCountryCode && mode.countryCatalog
-      ? mergePoints(points, countryMarkerPoints, visiblePage.points)
-      : mergePoints(points, visiblePage.points),
-    [countryMarkerPoints, mode.countryCatalog, points, selectedCountryCode, visiblePage.points]
+      ? mergePoints(points, countryMarkerPoints)
+      : points,
+    [countryMarkerPoints, mode.countryCatalog, points, selectedCountryCode]
   );
   const providerError = requestError
+    ?? source?.notice
     ?? countryRequestError
     ?? list.error
     ?? visiblePage.source?.notice

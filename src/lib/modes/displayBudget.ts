@@ -19,45 +19,28 @@ export function limitGlobePoints({
   requiredPoints?: TerraPoint[];
   selectedPoint: TerraPoint | null;
 }) {
-  if (points.length <= budget && requiredPoints.length === 0 && !selectedPoint && !activePlaybackPoint) {
-    return points;
-  }
-
-  const pinnedPoints = [...requiredPoints, selectedPoint, activePlaybackPoint]
-    .filter((point): point is TerraPoint => Boolean(point));
+  // Global rank and country rank are independent allowances. Additions must
+  // never consume either allowance or displace a higher-ranked source point.
   const limitedPoints = new Map<string, TerraPoint>();
+  const seen = new Set<string>();
   const countryCounts = new Map<string, number>();
-
-  pinnedPoints.forEach((point) => {
-    limitedPoints.set(getPointKey(point), point);
-  });
-
-  // Count the ranked source independently: lower-ranked pinned points must not
-  // replace a country's top points. Mandatory coverage may exceed the budget.
-  if (countryPointGuarantee > 0) {
-    const seen = new Set<string>();
-    for (const point of points) {
-      const key = getPointKey(point);
-      if (seen.has(key)) continue;
-      seen.add(key);
-      const countryCode = point.countryCode;
-
-      if (!countryCode || (countryCounts.get(countryCode) ?? 0) >= countryPointGuarantee) {
-        continue;
-      }
-
-      limitedPoints.set(key, point);
-      countryCounts.set(countryCode, (countryCounts.get(countryCode) ?? 0) + 1);
-    }
-  }
+  let globalCount = 0;
 
   for (const point of points) {
-    if (limitedPoints.size >= budget) {
-      break;
+    const key = getPointKey(point);
+    if (seen.has(key)) continue;
+    seen.add(key);
+    const countryCode = point.countryCode;
+    const countryCount = countryCode ? (countryCounts.get(countryCode) ?? 0) : 0;
+    if (globalCount < budget || (countryCode && countryCount < countryPointGuarantee)) {
+      limitedPoints.set(key, point);
     }
-
-    limitedPoints.set(getPointKey(point), point);
+    globalCount += 1;
+    if (countryCode) countryCounts.set(countryCode, countryCount + 1);
   }
 
+  for (const point of [...requiredPoints, selectedPoint, activePlaybackPoint]) {
+    if (point) limitedPoints.set(getPointKey(point), point);
+  }
   return Array.from(limitedPoints.values());
 }

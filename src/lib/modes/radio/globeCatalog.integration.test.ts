@@ -52,12 +52,13 @@ describe.skipIf(!enabled)("default globe country coverage (rolled back)", () => 
             .map(r => ({ ...sourceInput(r.point.id, r.streamUrl, "provider", r.point.id), lastSuccess: new Date() })));
         }
         const dataset = await getRadioDataset();
-        expect(dataset.points).toHaveLength(1200);
-        expect(new Set(dataset.points.map(p => p.id)).size).toBe(1200);
+        expect(dataset.points).toHaveLength(1206);
+        expect(new Set(dataset.points.map(p => p.id)).size).toBe(1206);
         expect(dataset.points.filter(p => p.countryCode === "276").map(p => p.id))
           .toEqual([1301, 1302, 1303, 1300].map(i => records[i].point.id));
         expect(dataset.points.filter(p => p.countryCode === "250")).toHaveLength(2);
         expect(dataset.points.some(p => p.id === records[1310].point.id || p.id === records[1311].point.id)).toBe(false);
+        expect(dataset.points.slice(0, 1200).map(p => p.id)).toEqual(records.slice(0, 1200).map(r => r.point.id));
         expect(dataset.source.lastUpdated).toBeTruthy();
         throw rollback;
       });

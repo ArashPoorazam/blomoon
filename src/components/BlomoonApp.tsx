@@ -143,7 +143,6 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
     activeMode,
     activePlaybackPoint,
     activeTheme,
-    globeProfile,
     listedPoints,
     modeGlobePoints: modeState.globePoints,
     modeSelectedPoint: modeState.selectedPoint,
