@@ -47,6 +47,7 @@
   --desktop-player-width: 544px;
   --desktop-player-artwork: 40px;
   --desktop-player-control: 44px;
+  --drawer-status-gap: 18px;
   --drawer-control-gap: 12px;
   --z-dialog: 90;
   --drawer-width: min(390px, 88vw);

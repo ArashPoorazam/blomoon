@@ -11,7 +11,7 @@ const list = vi.hoisted(() => ({ page: { points: [] as TerraPoint[], total: 0, n
   loadingMore: false, error: null, settled: true, setQuery: vi.fn(), setSortId: vi.fn(), loadMore: vi.fn() }));
 vi.mock("./useModeList", () => ({ useModeList: () => list }));
 Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-afterEach(() => { vi.unstubAllGlobals(); list.page.points = []; });
+afterEach(() => { vi.useRealTimers(); vi.unstubAllGlobals(); list.page.points = []; });
 const point = (id: string): TerraPoint => ({ id, modeId: "radio", name: id, summary: "Test", latitude: 0, longitude: 0 });
 const source = { name: "Test catalog", url: "https://example.com", attribution: "Test", lastUpdated: new Date(0).toISOString() };
 const baseline: TerraDataset = { modeId: "radio", points: [point("global"), point("country-leader")], source };
@@ -49,4 +49,52 @@ it("surfaces catalog failure notices even when the drawer list succeeds", async 
     await act(async () => root.render(createElement(Harness)));
     expect(state!.providerError).toBe("Catalog unavailable");
   } finally { act(() => root.unmount()); }
+});
+
+for (const seeded of [true, false]) {
+  it(`recovers from a failed globe request without erasing ${seeded ? "seeded" : "unseeded"} points`, async () => {
+    vi.useFakeTimers();
+    const fetcher = vi.fn().mockResolvedValueOnce({ ok: false, status: 503 })
+      .mockResolvedValue({ ok: true, json: async () => baseline });
+    vi.stubGlobal("fetch", fetcher);
+    const root = createRoot(document.createElement("div"));
+    let state: ModeDatasetState;
+    function Harness() { state = useModeDataset(radioMode, null, seeded ? baseline : undefined); return null; }
+    try {
+      await act(async () => root.render(createElement(Harness)));
+      expect(state!.globePoints).toEqual(seeded ? baseline.points : []);
+      expect(state!.providerError).toContain("unavailable");
+      await act(async () => vi.advanceTimersByTimeAsync(1000));
+      expect(state!.globePoints).toEqual(baseline.points);
+      expect(state!.providerError).toBeNull();
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally { act(() => root.unmount()); }
+  });
+}
+
+it("bounds retries after repeated failures", async () => {
+  vi.useFakeTimers();
+  const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 503 });
+  vi.stubGlobal("fetch", fetcher);
+  const root = createRoot(document.createElement("div"));
+  function Harness() { useModeDataset(radioMode, null, baseline); return null; }
+  await act(async () => root.render(createElement(Harness)));
+  await act(async () => vi.advanceTimersByTimeAsync(20000));
+  expect(fetcher).toHaveBeenCalledTimes(3);
+  act(() => root.unmount());
+  await act(async () => vi.advanceTimersByTimeAsync(20000));
+  expect(fetcher).toHaveBeenCalledTimes(3);
+});
+
+it("cancels a scheduled retry when the globe unmounts", async () => {
+  vi.useFakeTimers();
+  const fetcher = vi.fn().mockResolvedValue({ ok: false, status: 503 });
+  vi.stubGlobal("fetch", fetcher);
+  const root = createRoot(document.createElement("div"));
+  function Harness() { useModeDataset(radioMode, null, baseline); return null; }
+  await act(async () => root.render(createElement(Harness)));
+  expect(fetcher).toHaveBeenCalledTimes(1);
+  act(() => root.unmount());
+  await act(async () => vi.advanceTimersByTimeAsync(20000));
+  expect(fetcher).toHaveBeenCalledTimes(1);
 });

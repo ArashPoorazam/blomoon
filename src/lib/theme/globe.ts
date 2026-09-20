@@ -1,3 +1,5 @@
+export const LISTED_MARKER_COLOR = "#facc15";
+
 export type MarkerColorMode = "prominence" | "single";
 export type MarkerColorToken = "radio";
 type MarkerColorPoint = {
@@ -38,7 +40,7 @@ export const defaultGlobeTheme = {
   selectedCountryOutlineWidth: 2.1,
   markers: {
     defaultSingle: "#ffffff",
-    listed: "#4ade80",
+    listed: LISTED_MARKER_COLOR,
     playback: "#9ece6a",
     playbackRing: "#9ece6a",
     selected: "#ff9e64",

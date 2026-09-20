@@ -57,35 +57,36 @@ export function useModeDataset(
   const [countryRequestError, setCountryRequestError] = useState<string | null>(null);
   useEffect(() => {
     let cancelled = false;
+    let retryTimer: ReturnType<typeof setTimeout> | undefined;
+    const controller = new AbortController();
+    const seededDataset = getInitialDataset(mode, initialDataset);
+    setLoading(!seededDataset);
+    setRequestError(null);
+    setSelectedPoint(null);
+    setPoints(seededDataset?.points ?? []);
+    setSource(seededDataset?.source ?? null);
+    setRefreshingLivePoints(Boolean(seededDataset));
 
-    async function loadPoints() {
-      const seededDataset = getInitialDataset(mode, initialDataset);
-
-      setLoading(!seededDataset);
-      setRequestError(null);
-      setSelectedPoint(null);
-      setPoints(seededDataset?.points ?? []);
-      setSource(seededDataset?.source ?? null);
-      setRefreshingLivePoints(Boolean(seededDataset));
-
+    async function loadPoints(attempt = 0) {
       try {
-        const response = await fetch(mode.dataEndpoint);
-
-        if (!response.ok) {
-          throw new Error(`Request failed with ${response.status}`);
-        }
-
+        const response = await fetch(mode.dataEndpoint, {
+          signal: AbortSignal.any([controller.signal, AbortSignal.timeout(10000)]),
+          cache: "no-store"
+        });
+        if (!response.ok) throw new Error(`Request failed with ${response.status}`);
         const dataset = (await response.json()) as TerraDataset;
-
         if (!cancelled) {
           setPoints(dataset.points);
           setSource(dataset.source);
+          setRequestError(null);
         }
       } catch {
-        if (!cancelled && !seededDataset) {
-          setPoints([]);
-          setSource(null);
-          setRequestError(`${mode.label} data is unavailable.`);
+        if (!cancelled) {
+          // A failed refresh must not erase a successful startup dataset.
+          setRequestError(`${mode.label} data is unavailable. Retrying may restore globe points.`);
+          if (attempt < 2) {
+            retryTimer = setTimeout(() => void loadPoints(attempt + 1), attempt === 0 ? 1000 : 3000);
+          }
         }
       } finally {
         if (!cancelled) {
@@ -94,11 +95,11 @@ export function useModeDataset(
         }
       }
     }
-
     void loadPoints();
-
     return () => {
       cancelled = true;
+      clearTimeout(retryTimer);
+      controller.abort();
     };
   }, [initialDataset, mode]);
 

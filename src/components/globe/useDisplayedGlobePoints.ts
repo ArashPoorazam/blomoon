@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
+import { getPointKey } from "@/lib/modes/pointKeys";
 import { uniquePoints } from "@/lib/modes/pointCollections";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { resolvePointMarkerColor } from "@/lib/theme/globe";
@@ -32,18 +33,22 @@ export function useDisplayedGlobePoints({
     ?? activeTheme.globe.markers.defaultSingle;
   // The mode dataset already owns baseline coverage; never cap it again here.
   const points = useMemo(
-    () => uniquePoints(showListedOnGlobe ? [...modeGlobePoints, ...listedPoints] : modeGlobePoints),
+    () => uniquePoints(showListedOnGlobe ? listedPoints : modeGlobePoints),
     [listedPoints, modeGlobePoints, showListedOnGlobe]
   );
-  const selectedPoint = modeSelectedPoint;
-  const markerColor = defaultMarkerColor;
-  const markerColorMode = activeMode.markerColorMode;
+  const listedKeys = useMemo(() => new Set(listedPoints.map(getPointKey)), [listedPoints]);
+  const selectedPoint = !showListedOnGlobe || (modeSelectedPoint && listedKeys.has(getPointKey(modeSelectedPoint)))
+    ? modeSelectedPoint : null;
+  const visiblePlaybackPoint = !showListedOnGlobe || (activePlaybackPoint && listedKeys.has(getPointKey(activePlaybackPoint)))
+    ? activePlaybackPoint : null;
+  const markerColor = showListedOnGlobe ? activeTheme.globe.markers.listed : defaultMarkerColor;
+  const markerColorMode = showListedOnGlobe ? "single" : activeMode.markerColorMode;
   const selectedCountryOutlineColor = selectedPoint
     ? resolvePointMarkerColor(selectedPoint, markerColorMode, markerColor, activeTheme.globe)
     : defaultMarkerColor;
 
   return {
-    activePlaybackPoint,
+    activePlaybackPoint: visiblePlaybackPoint,
     markerColor,
     markerColorMode,
     points,

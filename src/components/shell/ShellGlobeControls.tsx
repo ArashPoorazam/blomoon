@@ -30,10 +30,10 @@ export function ShellGlobeControls({
     <nav className={`shell-globe-controls shell-globe-controls-${placement}`} aria-label="Globe display controls">
       <button
         disabled={listedPointsDisabled}
-        aria-label={showListedOnGlobe ? "Hide additional listed points" : "Add listed points to globe"}
+        aria-label={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
         aria-pressed={showListedOnGlobe}
         className={`shell-square-control ${showListedOnGlobe ? "active" : ""}`}
-        title={showListedOnGlobe ? "Hide additional listed points" : "Add listed points to globe"}
+        title={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
         type="button"
         onClick={onToggleShowListedOnGlobe}
       >

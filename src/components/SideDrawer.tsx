@@ -35,7 +35,9 @@ export function SideDrawer(props: SideDrawerProps) {
     horizontal
   });
   return <>
-    <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
+    <div className="drawer-loading-anchor">
+      <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
+    </div>
     <aside ref={drawerRef} className={`drawer ${collapsed ? "collapsed" : ""}`}
       aria-label={`${activeMode.label} data`} data-mobile-position={mobilePosition}>
       {globeControls}

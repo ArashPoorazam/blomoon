@@ -1,4 +1,4 @@
-import { defaultGlobeTheme, type GlobeTheme, type MarkerColorToken } from "./globe";
+import { LISTED_MARKER_COLOR, defaultGlobeTheme, type GlobeTheme, type MarkerColorToken } from "./globe";
 import type { TerraThemeId } from "./ids";
 export { isTerraThemeId, terraThemeIdList, terraThemeIds, type TerraThemeId } from "./ids";
 
@@ -32,7 +32,7 @@ export const terraThemes = [
       selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#0f766e",
-        listed: "#127f7a",
+        listed: LISTED_MARKER_COLOR,
         playback: "#4f9472",
         playbackRing: "#4f9472",
         selected: "#b65f3a",
@@ -68,7 +68,7 @@ export const terraThemes = [
       selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#f6dcac",
-        listed: "#35a2a7",
+        listed: LISTED_MARKER_COLOR,
         playback: "#35a2a7",
         playbackRing: "#35a2a7",
         selected: "#f85525",
@@ -104,7 +104,7 @@ export const terraThemes = [
       selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#ddf7ff",
-        listed: "#4fe88f",
+        listed: LISTED_MARKER_COLOR,
         playback: "#82FB9C",
         playbackRing: "#82FB9C",
         selected: "#d1fffe",
@@ -140,7 +140,7 @@ export const terraThemes = [
       selectedCountryOutlineWidth: 2.1,
       markers: {
         defaultSingle: "#cba6f7",
-        listed: "#b4befe",
+        listed: LISTED_MARKER_COLOR,
         playback: "#a6e3a1",
         playbackRing: "#a6e3a1",
         selected: "#f5c2e7",
