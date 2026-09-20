@@ -19,7 +19,7 @@ export function limitGlobePoints({
   requiredPoints?: TerraPoint[];
   selectedPoint: TerraPoint | null;
 }) {
-  if (points.length <= budget && requiredPoints.length === 0) {
+  if (points.length <= budget && requiredPoints.length === 0 && !selectedPoint && !activePlaybackPoint) {
     return points;
   }
 
@@ -29,22 +29,25 @@ export function limitGlobePoints({
   const countryCounts = new Map<string, number>();
 
   pinnedPoints.forEach((point) => {
-    addLimitedPoint(limitedPoints, countryCounts, point);
+    limitedPoints.set(getPointKey(point), point);
   });
 
+  // Count the ranked source independently: lower-ranked pinned points must not
+  // replace a country's top points. Mandatory coverage may exceed the budget.
   if (countryPointGuarantee > 0) {
+    const seen = new Set<string>();
     for (const point of points) {
+      const key = getPointKey(point);
+      if (seen.has(key)) continue;
+      seen.add(key);
       const countryCode = point.countryCode;
 
       if (!countryCode || (countryCounts.get(countryCode) ?? 0) >= countryPointGuarantee) {
         continue;
       }
 
-      addLimitedPoint(limitedPoints, countryCounts, point);
-
-      if (limitedPoints.size >= budget && requiredPoints.length === 0) {
-        break;
-      }
+      limitedPoints.set(key, point);
+      countryCounts.set(countryCode, (countryCounts.get(countryCode) ?? 0) + 1);
     }
   }
 
@@ -53,26 +56,8 @@ export function limitGlobePoints({
       break;
     }
 
-    addLimitedPoint(limitedPoints, countryCounts, point);
+    limitedPoints.set(getPointKey(point), point);
   }
 
   return Array.from(limitedPoints.values());
-}
-
-function addLimitedPoint(
-  limitedPoints: Map<string, TerraPoint>,
-  countryCounts: Map<string, number>,
-  point: TerraPoint
-) {
-  const key = getPointKey(point);
-
-  if (limitedPoints.has(key)) {
-    return;
-  }
-
-  limitedPoints.set(key, point);
-
-  if (point.countryCode) {
-    countryCounts.set(point.countryCode, (countryCounts.get(point.countryCode) ?? 0) + 1);
-  }
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import type { MouseEvent } from "react";
+import { useState, type MouseEvent } from "react";
 import type { AppClientConfig } from "@/lib/app-config/types";
 import type { TerraMode, TerraModeId } from "@/lib/modes/types";
 import type { TerraThemeId } from "@/lib/theme/themes";
@@ -9,6 +9,8 @@ import { AccountMenu } from "../account/AccountMenu";
 import { ShellControlRail } from "../ShellControlRail";
 import type { ShellDrawerView } from "./drawerState";
 import { ShellGlobeControls } from "./ShellGlobeControls";
+import { ModalShell } from "../ui/ModalShell";
+import { ModeSwitcherOptions } from "./ModeSwitcherDrawer";
 import { ShellMobileNav } from "./ShellMobileNav";
 
 import type { MainDrawer } from "./mainDrawerNavigation";
@@ -69,6 +71,7 @@ export function ShellChrome({
   user,
   viewerLoading
 }: ShellChromeProps) {
+  const [modeSwitcherOpen, setModeSwitcherOpen] = useState(false);
   return (
     <>
       <AccountMenu
@@ -90,19 +93,20 @@ export function ShellChrome({
       />
 
       <ShellControlRail
-        listedPointsDisabled={listedPointsDisabled}
-        activeModeId={activeModeId}
+        activeMode={activeMode}
         activeView={drawerView}
-        earthSpinEnabled={earthSpinEnabled}
-        earthSpinDisabled={earthSpinDisabled}
-        modes={modes}
-        showListedOnGlobe={showListedOnGlobe}
+        modeSwitcherOpen={modeSwitcherOpen}
         onOpenFavourites={onFavouritesOpen}
         onOpenHistory={onHistoryOpen}
-        onModeSelect={onModeSelect}
-        onToggleEarthSpin={onToggleEarthSpin}
-        onToggleShowListedOnGlobe={onToggleShowListedOnGlobe}
+        onOpenModeSwitcher={() => setModeSwitcherOpen(true)}
       />
+      {modeSwitcherOpen ? <ModalShell title="Change mode" subtitle="Choose how you explore the world."
+        onClose={() => setModeSwitcherOpen(false)}>
+        <ModeSwitcherOptions activeModeId={activeModeId} modes={modes} onModeSelect={(modeId) => {
+          setModeSwitcherOpen(false);
+          onModeSelect(modeId);
+        }} />
+      </ModalShell> : null}
 
       <ShellGlobeControls
         crosshairEnabled={crosshairEnabled}

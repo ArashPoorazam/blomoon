@@ -1,6 +1,6 @@
 "use client";
 
-import { FolderHeart, Plus } from "lucide-react";
+import { ChevronLeft, FolderHeart, Plus } from "lucide-react";
 import { useState } from "react";
 import type { FavouriteFolderSummaryDto } from "@/lib/persistence/types";
 import { ModalShell } from "../ui/ModalShell";
@@ -8,14 +8,15 @@ import { DrawerHeader } from "../drawer/DrawerHeader";
 import { FolderSummary } from "./FolderSummary";
 import { FavouriteFolderForm } from "./FavouriteFolderForm";
 
-export function FavouriteFolderIndex({ modeId, folders, loading, onCreate, onOpen }: {
+export function FavouriteFolderIndex({ modeId, folders, loading, onBack, onCreate, onOpen }: {
   modeId: string; folders: FavouriteFolderSummaryDto[]; loading: boolean;
   onCreate: (name: string, description: string | null, modeId: string) => Promise<FavouriteFolderSummaryDto | null>;
   onOpen: (folderId: string) => void;
+  onBack: () => void;
 }) {
   const [creating, setCreating] = useState(false); const stations = folders.reduce((sum, folder) => sum + folder.itemCount, 0);
   return <div className="favourites-view" aria-label="Favourites folders">
-    <DrawerHeader className="favourites-header" title="Favourites" subtitle={loading ? "Loading folders" : `${folders.length} ${folders.length === 1 ? "folder" : "folders"} · ${stations} ${stations === 1 ? "station" : "stations"}`} />
+    <DrawerHeader actions={<button className="icon-button" type="button" aria-label="Back to stations" onClick={onBack}><ChevronLeft size={17} aria-hidden="true" /></button>} className="favourites-header" title="Favourites" subtitle={loading ? "Loading folders" : `${folders.length} ${folders.length === 1 ? "folder" : "folders"} · ${stations} ${stations === 1 ? "station" : "stations"}`} />
     <div className="favourites-actions"><button className="primary-action new-folder-action" type="button" onClick={() => setCreating(true)}><Plus size={16} aria-hidden="true" /> New folder</button></div>
     <div className="favourites-body">
       {loading ? <div className="empty-state">Loading favourites</div> : null}

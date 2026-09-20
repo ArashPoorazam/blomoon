@@ -38,7 +38,13 @@
   --radius-dialog: 24px;
   --space-row: 10px;
   --artwork-size: 40px;
+  --z-player: 65;
+  --z-status: 70;
   --z-menu: 80;
+  --desktop-player-width: 680px;
+  --desktop-player-artwork: 48px;
+  --desktop-player-control: 44px;
+  --drawer-control-gap: 12px;
   --z-dialog: 90;
   --drawer-width: min(390px, 88vw);
   --panel-blur: 20px;

@@ -39,3 +39,23 @@ describe("listed globe points", () => {
     expect(result.activePlaybackPoint?.id).toBe("unrelated-playing");
   });
 });
+
+for (const profile of ["desktop", "mobile"] as const) {
+  it(`preserves all country leaders beneath a loaded list on ${profile}`, () => {
+    const leaders = ["840", "250", "276"].flatMap(countryCode =>
+      Array.from({ length: 4 }, (_, i) => ({ ...point(`${countryCode}-${i}`), countryCode })));
+    const listed = { ...point("lower-ranked"), countryCode: "840" };
+    let displayedPoints: TerraPoint[] = [];
+    function Harness() {
+      displayedPoints = useDisplayedGlobePoints({ activeMode: radioMode, activeTheme: defaultTheme,
+        activePlaybackPoint: null, modeSelectedPoint: null, modeGlobePoints: leaders,
+        listedPoints: [listed], showListedOnGlobe: false,
+        globeProfile: { countryPointGuarantee: 4, markerBudget: 10, dpr: [1, 1],
+          hoverEnabled: profile === "desktop", motionEnabled: true, profile } }).points;
+      return null;
+    }
+    renderToStaticMarkup(createElement(Harness));
+    expect(displayedPoints).toHaveLength(13);
+    expect(displayedPoints).toEqual(expect.arrayContaining(leaders));
+  });
+}

@@ -162,9 +162,6 @@
     padding: 0;
   }
 
-  .drawer-list-toolbar > .drawer-heading-copy {
-    display: none;
-  }
 
   .drawer-list-toolbar > .drawer-directory-header {
     padding-right: max(14px, env(safe-area-inset-right, 0px));

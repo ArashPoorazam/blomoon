@@ -8,9 +8,8 @@ import { discoveryEligibility, stationAvailability } from "./health/query";
 import { lookupCanonicalRecord } from "./identityStore";
 import type { RadioStationRecord, RadioStationPersistenceSnapshot } from "./types";
 
-export async function getRadioDataset(): Promise<TerraDataset> {
-  return searchRadioDirectory({ countryCode: null, query: "", sort: "votes_desc", limit: 500, offset: 0 });
-}
+export { getRadioDataset } from "./globeCatalog";
+
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
   return searchRadioDirectory({ countryCode, query: "", sort: "votes_desc", limit: 50, offset: 0 });
 }

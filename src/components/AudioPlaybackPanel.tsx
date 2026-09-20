@@ -187,7 +187,7 @@ function AudioPlaybackControls({
       </button>
       <button
         aria-label={`Stop ${itemSingularLabel}`}
-        className="media-control icon-only"
+        className="media-control icon-only media-stop-control"
         disabled={!detail || status === "stopped" || status === "idle"}
         title="Stop"
         type="button"

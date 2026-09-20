@@ -58,10 +58,6 @@ export function DrawerListToolbar({
 
   return (
     <div className="drawer-list-toolbar">
-      <div className="drawer-heading-copy">
-        <h1 className="drawer-brand-title">Blomoon</h1>
-        <p className="drawer-subtitle">{activeMode.copy.listSubtitle}</p>
-      </div>
       <DrawerHeader
         className="drawer-directory-header"
         title={suggestionTitle ?? "Directory"}

@@ -1,7 +1,7 @@
 "use client";
 
 import { CheckCircle2, ChevronLeft, ChevronRight, LoaderCircle } from "lucide-react";
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useRef, useState, type ReactNode, type RefObject } from "react";
 import { DrawerContent, type DrawerContentProps } from "./DrawerContent";
 import { DrawerPages } from "./drawer/DrawerPages";
 import { MobileDrawerHandle } from "./drawer/MobileDrawerHandle";
@@ -11,6 +11,7 @@ import type { DrawerMotion, HorizontalDrawerGesture } from "./drawer/useDrawerTr
 import type { DrawerMobilePosition } from "./shell/drawerState";
 
 type SideDrawerProps = DrawerContentProps & {
+  globeControls: ReactNode;
   collapsed: boolean;
   isLoadingDrawerTask: boolean;
   loadingTaskLabel: string;
@@ -23,7 +24,7 @@ type SideDrawerProps = DrawerContentProps & {
 };
 
 export function SideDrawer(props: SideDrawerProps) {
-  const { collapsed, isLoadingDrawerTask, loadingTaskLabel,
+  const { globeControls, collapsed, isLoadingDrawerTask, loadingTaskLabel,
     mobilePosition, shellRef, onSetMobilePosition, onToggleCollapsed, motion, horizontal, ...content } = props;
   const { activeMode, activeModeId, entry } = content;
   const drawerRef = useRef<HTMLElement>(null);
@@ -37,6 +38,7 @@ export function SideDrawer(props: SideDrawerProps) {
     <DrawerLoadingStatus active={isLoadingDrawerTask} label={loadingTaskLabel} />
     <aside ref={drawerRef} className={`drawer ${collapsed ? "collapsed" : ""}`}
       aria-label={`${activeMode.label} data`} data-mobile-position={mobilePosition}>
+      {globeControls}
       <button aria-label={collapsed ? "Open drawer" : "Close drawer"} className="drawer-toggle" type="button" onClick={onToggleCollapsed}>
         {collapsed ? <ChevronLeft size={18} aria-hidden="true" /> : <ChevronRight size={18} aria-hidden="true" />}
       </button>

@@ -179,7 +179,7 @@
   right: 16px;
   bottom: calc(14px + env(safe-area-inset-bottom, 0px));
   left: 18px;
-  z-index: 65;
+  z-index: var(--z-player);
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
@@ -285,7 +285,7 @@
     right: 0;
     bottom: 0;
     left: 0;
-    z-index: 65;
+    z-index: var(--z-player);
     grid-template-columns: minmax(0, 1fr) auto;
     min-height: calc(60px + env(safe-area-inset-bottom, 0px));
     max-width: none;
@@ -414,4 +414,27 @@
 .media-player-detail .favourite-star.active {
   border-color: var(--accent);
   background: var(--info-surface);
+}
+
+@media (min-width: 761px) and (not (pointer: coarse)) {
+  .media-mini-player {
+    max-width: var(--desktop-player-width);
+    padding: 14px 16px;
+    gap: 16px;
+  }
+  .media-mini-player .station-artwork-player {
+    width: var(--desktop-player-artwork);
+    height: var(--desktop-player-artwork);
+    flex-basis: var(--desktop-player-artwork);
+  }
+  .media-mini-player .media-player-title { font-size: 16px; }
+  .media-mini-player .media-control {
+    min-width: var(--desktop-player-control);
+    width: var(--desktop-player-control);
+    min-height: var(--desktop-player-control);
+  }
+}
+
+@media (max-width: 760px), (pointer: coarse) {
+  .media-mini-player .media-stop-control { display: none; }
 }

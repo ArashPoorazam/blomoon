@@ -4,8 +4,9 @@ import { Crosshair, Earth, MapPin } from "lucide-react";
 import type { MouseEvent } from "react";
 
 type ShellGlobeControlsProps = {
-  crosshairEnabled: boolean;
-  onToggleCrosshair: () => void;
+  placement?: "mobile" | "drawer";
+  crosshairEnabled?: boolean;
+  onToggleCrosshair?: () => void;
   listedPointsDisabled: boolean;
   earthSpinDisabled: boolean;
   earthSpinEnabled: boolean;
@@ -15,6 +16,7 @@ type ShellGlobeControlsProps = {
 };
 
 export function ShellGlobeControls({
+  placement = "mobile",
   crosshairEnabled,
   onToggleCrosshair,
   listedPointsDisabled,
@@ -25,7 +27,7 @@ export function ShellGlobeControls({
   showListedOnGlobe
 }: ShellGlobeControlsProps) {
   return (
-    <nav className="shell-globe-controls" aria-label="Globe display controls">
+    <nav className={`shell-globe-controls shell-globe-controls-${placement}`} aria-label="Globe display controls">
       <button
         disabled={listedPointsDisabled}
         aria-label={showListedOnGlobe ? "Show default globe points" : "Display listed points on globe"}
@@ -49,11 +51,11 @@ export function ShellGlobeControls({
       >
         <Earth size={18} aria-hidden="true" />
       </button>
-      <button className={`shell-square-control ${crosshairEnabled ? "active" : ""}`} type="button"
+      {onToggleCrosshair ? <button className={`shell-square-control ${crosshairEnabled ? "active" : ""}`} type="button"
         aria-label={crosshairEnabled ? "Turn crosshair off" : "Turn crosshair on"}
         aria-pressed={crosshairEnabled} title="Crosshair" onClick={onToggleCrosshair}>
         <Crosshair size={18} aria-hidden="true" />
-      </button>
+      </button> : null}
     </nav>
   );
 }

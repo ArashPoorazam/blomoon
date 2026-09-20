@@ -32,6 +32,7 @@ import { useCameraFocusRequest } from "./globe/useCameraFocusRequest";
 import { useDisplayedGlobePoints } from "./globe/useDisplayedGlobePoints";
 import { useEarthSpinControls } from "./globe/useEarthSpinControls";
 import { useGlobeProfile } from "./globe/useGlobeProfile";
+import { ShellGlobeControls } from "./shell/ShellGlobeControls";
 import { ShellChrome } from "./shell/ShellChrome";
 import { useDrawerTransition } from "./drawer/useDrawerTransition";
 import type { MainDrawer } from "./shell/mainDrawerNavigation";
@@ -107,7 +108,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
   });
   const drawerOpen = !drawer.collapsed && drawer.mobilePosition !== "closed";
   const crosshairVisible = crosshair.enabled && globeProfile.profile === "mobile" && drawer.mobilePosition !== "full";
-  const hasMiniPlayer = Boolean(activeMode.playback);
+  const hasMiniPlayer = Boolean(activeMode.playback && (globeProfile.profile === "mobile" || audioPlayback.point));
   const favouritePoints = useFavouriteDrawerPoints({ activeFolder: favourites.activeFolder,
     entry: getListContextEntry(drawer.stack), points: favourites.points });
   const historyState = playbackHistory.getState(activeModeId);
@@ -265,8 +266,12 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
       clearCrosshairPoint();
     }
 
+    if (drawer.view === "history" || drawer.view === "favourites") {
+      restoreHomeDrawer();
+      return;
+    }
     drawer.goBack();
-  }, [clearCrosshairPoint, drawer.goBack, drawer.view, modeState.clearSelection]);
+  }, [clearCrosshairPoint, drawer.goBack, drawer.view, modeState.clearSelection, restoreHomeDrawer]);
 
   const playNextPoint = useCallback(() => {
     const nextPoint = getNextPlaybackPoint(playbackQueuePoints, audioPlayback.pointId);
@@ -383,6 +388,15 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
       ) : null}
 
       <SideDrawer
+        globeControls={<ShellGlobeControls
+          placement="drawer"
+          listedPointsDisabled={!drawerListsPoints}
+          earthSpinEnabled={earthSpin.earthSpinEnabled}
+          earthSpinDisabled={!globeProfile.motionEnabled}
+          showListedOnGlobe={showListedOnGlobe}
+          onToggleEarthSpin={toggleEarthSpin}
+          onToggleShowListedOnGlobe={() => setShowListedOnGlobe((value) => !value)}
+        />}
         motion={drawerTransition.motion}
         horizontal={drawerTransition.horizontal}
         activeMode={activeMode}
@@ -457,7 +471,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
         await authClient.signOut(); setMobileLogoutConfirmOpen(false); setThemeId(defaultTheme.id); await viewer.refresh(); router.replace("/login"); router.refresh();
       }} />
 
-      {activeMode.playback ? (
+      {activeMode.playback && hasMiniPlayer ? (
         <AudioMiniPlayer
           canPlayNext={playbackQueuePoints.length > 0}
           canShuffle={Boolean(activeMode.playback.randomPointEndpoint)}

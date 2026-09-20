@@ -56,17 +56,7 @@ export async function searchRadioDirectory({
   limit: number;
   offset: number;
 }): Promise<TerraPointPage> {
-  const generation = await activeRadioDirectory();
-  const modeSettings = await getModeSettings("radio");
-  const enforceHealth = (modeSettings.policy ?? (healthFilteringEnabled() ? "enforce" : "observe")) === "enforce";
-  const source = await directorySource(generation?.publishedAt);
-  const updatedAt = new Date(source.lastUpdated).getTime();
-  if (!generation && !updatedAt)
-    source.notice = "The station catalog is warming up. Verified stations appear as checks complete.";
-  else if (!enforceHealth)
-    source.notice = "Availability checks are in observation mode; stations may be unverified.";
-  else if (generation?.publishedAt && Date.now() - generation.publishedAt.getTime() > 12 * 60 * 60 * 1000)
-    source.notice = "Catalog refresh is delayed. Showing recently verified stations.";
+  const { generation, source, enforceHealth } = await radioDirectoryContext();
   const normalized = normalizeSearchText(query);
   const terms = searchTerms(query);
   const score = sql`(case when ${entries.nameText} = ${normalized} then 1000000
@@ -145,14 +135,8 @@ export async function searchRadioDirectory({
       .select({ total: sql<number>`count(*)::integer` })
       .from(entries)
       .where(where);
-    if (enforceHealth) {
-      const [worker] = await tx.select().from(schema.radioHealthWorker).limit(1);
-      if (!worker || Date.now() - worker.heartbeat.getTime() > 5 * 60_000 || worker.status !== "running")
-        source.notice =
-          "Station checks are delayed. Only stations verified within the last 24 hours are shown.";
-      else if (!count.total && !normalized && !countryCode)
-        source.notice = "No recently verified stations yet. Stations appear as checks complete.";
-    }
+    if (enforceHealth && !count.total && !normalized && !countryCode && !source.notice)
+      source.notice = "No recently verified stations yet. Stations appear as checks complete.";
     return {
       modeId: "radio",
       points: rows.map(({ record }) => record.point),
@@ -164,4 +148,25 @@ export async function searchRadioDirectory({
       nextOffset: offset + limit < count.total ? offset + limit : null,
     };
   });
+}
+
+/** Shared source freshness and health notices for radio discovery resources. */
+export async function radioDirectoryContext() {
+  const generation = await activeRadioDirectory();
+  const modeSettings = await getModeSettings("radio");
+  const enforceHealth = (modeSettings.policy ?? (healthFilteringEnabled() ? "enforce" : "observe")) === "enforce";
+  const source = await directorySource(generation?.publishedAt);
+  const updatedAt = new Date(source.lastUpdated).getTime();
+  if (!generation && !updatedAt)
+    source.notice = "The station catalog is warming up. Verified stations appear as checks complete.";
+  else if (!enforceHealth)
+    source.notice = "Availability checks are in observation mode; stations may be unverified.";
+  else if (generation?.publishedAt && Date.now() - generation.publishedAt.getTime() > 12 * 60 * 60 * 1000)
+    source.notice = "Catalog refresh is delayed. Showing recently verified stations.";
+  if (enforceHealth) {
+    const [worker] = await getDb().select().from(schema.radioHealthWorker).limit(1);
+    if (!worker || Date.now() - worker.heartbeat.getTime() > 5 * 60_000 || worker.status !== "running")
+      source.notice = "Station checks are delayed. Only stations verified within the last 24 hours are shown.";
+  }
+  return { generation, source, enforceHealth };
 }

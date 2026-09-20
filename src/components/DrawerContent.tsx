@@ -155,6 +155,7 @@ export const DrawerContent = memo(function DrawerContent({
       />
     ) : view === "favourites" ? (
       <FavouriteFolderIndex
+        onBack={onBack}
         modeId={activeModeId}
         folders={favouriteFolders}
         loading={favouritesLoading}
@@ -163,6 +164,7 @@ export const DrawerContent = memo(function DrawerContent({
       />
     ) : view === "history" ? (
       <PlaybackHistoryDrawer
+        onBack={onBack}
         activeMode={activeMode}
         activePlaybackPointKey={activePlaybackPointKey}
         favouritePointIds={favouritePointIds}

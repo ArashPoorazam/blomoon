@@ -111,10 +111,6 @@
   border-bottom: 1px solid var(--line);
 }
 
-.drawer-heading-copy {
-  min-width: 0;
-}
-
 .drawer-kicker {
   color: var(--accent);
   font-size: 11px;
@@ -129,16 +125,6 @@
   margin: 0;
   font-size: 22px;
   line-height: 1.1;
-}
-
-.drawer-brand-title {
-  margin: 0;
-  color: var(--accent);
-  font-size: 28px;
-  font-weight: 900;
-  letter-spacing: 0;
-  line-height: 0.95;
-  text-shadow: 0 0 18px color-mix(in srgb, var(--accent) 20%, transparent);
 }
 
 .drawer-list-toolbar > .drawer-header {
@@ -512,4 +498,32 @@
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+@media (min-width: 761px) {
+  .drawer > .shell-globe-controls-drawer {
+    position: absolute;
+    top: 18px;
+    right: calc(100% + var(--drawer-control-gap));
+    display: grid;
+    gap: 10px;
+  }
+  .drawer-loading-panel {
+    position: fixed;
+    left: 50%;
+    right: auto;
+    z-index: var(--z-status);
+    max-width: calc(100vw - 36px);
+    transform: translateX(-50%);
+    animation: desktop-loading-slide-down 240ms ease-out both;
+  }
+}
+
+@keyframes desktop-loading-slide-down {
+  from { opacity: 0; transform: translate(-50%, calc(-100% - 18px)); }
+  to { opacity: 1; transform: translate(-50%, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .drawer-loading-panel { animation: none; }
 }

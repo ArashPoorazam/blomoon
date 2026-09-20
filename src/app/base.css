@@ -435,7 +435,7 @@ button.press-feedback-active::after {
     display: none;
   }
 
-  .shell-globe-controls {
+  .shell-globe-controls-mobile {
     position: absolute;
     top: calc(max(10px, env(safe-area-inset-top, 0px)) + 68px);
     right: max(12px, env(safe-area-inset-right, 0px));

@@ -41,6 +41,13 @@ const plannedModes = [
 ] satisfies Array<Omit<ModeSwitcherItem, "available">>;
 
 export function ModeSwitcherDrawer({ activeModeId, modes, onModeSelect }: ModeSwitcherDrawerProps) {
+  return <div className="mode-switcher-view" aria-label="Change mode">
+    <DrawerHeader title="Change mode" subtitle="Choose how you explore the world." />
+    <ModeSwitcherOptions activeModeId={activeModeId} modes={modes} onModeSelect={onModeSelect} />
+  </div>;
+}
+
+export function ModeSwitcherOptions({ activeModeId, modes, onModeSelect }: ModeSwitcherDrawerProps) {
   const registeredModes = new Map(modes.map((mode) => [mode.id, mode]));
   const items = plannedModes.map((item) => ({
     ...item,
@@ -49,37 +56,31 @@ export function ModeSwitcherDrawer({ activeModeId, modes, onModeSelect }: ModeSw
   }));
 
   return (
-    <div className="mode-switcher-view" aria-label="Change mode">
-      <DrawerHeader
-        title="Change mode"
-        subtitle="Choose how you explore the world."
-      />
-      <div className="mode-switcher-list">
-        {items.map((item) => {
-          const Icon = modeIcons[item.icon];
-          const active = item.id === activeModeId;
+    <div className="mode-switcher-list">
+      {items.map((item) => {
+        const Icon = modeIcons[item.icon];
+        const active = item.id === activeModeId;
 
-          return (
-            <button
-              aria-current={active ? "page" : undefined}
-              className={`mode-switcher-option ${active ? "active" : ""}`}
-              disabled={!item.available}
-              key={item.id}
-              type="button"
-              onClick={() => onModeSelect(item.id)}
-            >
-              <span className="mode-switcher-icon">
-                <Icon size={18} aria-hidden="true" />
-              </span>
-              <span className="mode-switcher-copy">
-                <strong>{item.label}</strong>
-                <span>{item.description}</span>
-              </span>
-              <span className="mode-switcher-status">{active ? <Check size={13} aria-hidden="true" /> : null}{item.available ? active ? "Active" : "Open" : "Soon"}</span>
-            </button>
-          );
-        })}
-      </div>
+        return (
+          <button
+            aria-current={active ? "page" : undefined}
+            className={`mode-switcher-option ${active ? "active" : ""}`}
+            disabled={!item.available}
+            key={item.id}
+            type="button"
+            onClick={() => onModeSelect(item.id)}
+          >
+            <span className="mode-switcher-icon">
+              <Icon size={18} aria-hidden="true" />
+            </span>
+            <span className="mode-switcher-copy">
+              <strong>{item.label}</strong>
+              <span>{item.description}</span>
+            </span>
+            <span className="mode-switcher-status">{active ? <Check size={13} aria-hidden="true" /> : null}{item.available ? active ? "Active" : "Open" : "Soon"}</span>
+          </button>
+        );
+      })}
     </div>
   );
 }

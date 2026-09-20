@@ -67,8 +67,22 @@ describe("globe display budget", () => {
       selectedPoint: null
     });
 
-    expect(limited.map((item) => item.id)).toEqual(["us-1", "us-2", "fr-1", "fr-2", "de-1"]);
+    expect(limited.map((item) => item.id)).toEqual(["us-1", "us-2", "fr-1", "fr-2", "de-1", "de-2"]);
   });
+  it("does not let lower-ranked required points displace country leaders", () => {
+    const points = [point("us-1", "840"), point("us-2", "840"), point("us-3", "840"),
+      point("fr-1", "250"), point("fr-1", "250"), point("fr-2", "250")];
+    const limited = limitGlobePoints({ points, budget: 4, countryPointGuarantee: 2,
+      requiredPoints: [points[2]], activePlaybackPoint: null, selectedPoint: null });
+    expect(limited.map(p => p.id)).toEqual(["us-3", "us-1", "us-2", "fr-1", "fr-2"]);
+  });
+
+  it("includes selected points outside a small source dataset", () => {
+    expect(limitGlobePoints({ points: [point("a")], budget: 5,
+      selectedPoint: point("selected"), activePlaybackPoint: point("playing") }).map(p => p.id))
+      .toEqual(["selected", "playing", "a"]);
+  });
+
 });
 
 function point(id: string, countryCode?: string): TerraPoint {
