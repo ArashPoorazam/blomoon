@@ -2,7 +2,7 @@
 
 import { memo, type ReactNode } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
-import type { CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo/countries";
 import type { TerraMode, TerraModeId, TerraPoint, TerraPointDetail } from "@/lib/modes/types";
 import type { FavouriteFolderDto, FavouriteFolderSummaryDto } from "@/lib/persistence/types";
 import type { PlaybackHistoryModeState } from "./history/usePlaybackHistory";

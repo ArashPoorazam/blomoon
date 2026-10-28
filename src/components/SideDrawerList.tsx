@@ -1,6 +1,6 @@
 "use client";
 
-import type { CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo/countries";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { useProgressiveRows } from "./drawer/useProgressiveRows";
 import { DrawerListToolbar } from "./drawer/DrawerListToolbar";

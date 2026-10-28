@@ -2,16 +2,17 @@ import "server-only";
 import { and, eq, sql } from "drizzle-orm";
 import { getDb, schema } from "@/db";
 import type { TerraDataset, TerraRandomPoint } from "../types";
-import { RADIO_FIXTURE_RECORDS, RADIO_FIXTURE_SOURCE } from "../fixtures/radio";
 import { searchRadioDirectory, directorySource, activeRadioDirectory } from "./directory";
 import { discoveryEligibility, stationAvailability } from "./health/query";
 import { lookupCanonicalRecord } from "./identityStore";
 import type { RadioStationRecord, RadioStationPersistenceSnapshot } from "./types";
 
+import { COUNTRY_MARKER_LIMIT } from "./config";
+
 export { getRadioDataset } from "./globeCatalog";
 
 export async function getRadioCountryMarkerDataset(countryCode: string): Promise<TerraDataset> {
-  return searchRadioDirectory({ countryCode, query: "", sort: "votes_desc", limit: 50, offset: 0 });
+  return searchRadioDirectory({ countryCode, query: "", sort: "votes_desc", limit: COUNTRY_MARKER_LIMIT, offset: 0 });
 }
 export async function getRadioStationRecord(id: string): Promise<RadioStationRecord | null> {
   const canonical = await lookupCanonicalRecord(id);
@@ -53,15 +54,6 @@ export async function getRandomRadioPoint({
       }
     : null;
 }
-/** Explicit development fixture API; never used as a production fallback. */
-export function getRadioFixtureDataset(): TerraDataset {
-  return { modeId: "radio", points: RADIO_FIXTURE_RECORDS.map((r) => r.point), source: RADIO_FIXTURE_SOURCE };
-}
-function getNumericMetric(record: { metrics?: Record<string, string | number | null> }, key: string) {
-  const value = record.metrics?.[key];
-  return typeof value === "number" ? value : 0;
-}
-
 function getTextMetric(record: { metrics?: Record<string, string | number | null> }, key: string) {
   const value = record.metrics?.[key];
   return typeof value === "string" && value !== "Unknown" && value !== "Untagged" ? value : null;

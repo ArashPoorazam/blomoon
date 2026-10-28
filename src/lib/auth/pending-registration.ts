@@ -14,7 +14,6 @@ const OTP_DIGITS = 6;
 const OTP_EXPIRES_IN_MS = 10 * 60 * 1000;
 const MAX_OTP_ATTEMPTS = 5;
 const CREDENTIAL_PROVIDER_ID = "credential";
-const CREDENTIAL_ISSUER = "local:credential";
 
 export type PendingRegistrationStartResult =
   | { kind: "created"; email: string; expiresAt: Date }
@@ -165,7 +164,6 @@ export async function verifyPendingRegistration(email: string, otp: string): Pro
         .insert(schema.accounts)
         .values({
           accountId: user.id,
-          issuer: CREDENTIAL_ISSUER,
           password: pending.passwordHash,
           providerId: CREDENTIAL_PROVIDER_ID,
           userId: user.id

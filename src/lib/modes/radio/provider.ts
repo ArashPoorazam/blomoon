@@ -22,10 +22,6 @@ let serverCache: {
 let serverRefresh: Promise<string[]> | null = null;
 let lastHealthyHost: string | null = null;
 
-export async function fetchRadioBrowserJson<T>(path: string, params?: Record<string, string>): Promise<T> {
-  return fetchRadioBrowserJsonWithOptions(path, params);
-}
-
 export async function fetchRadioBrowserJsonWithOptions<T>(
   path: string,
   params?: Record<string, string>,
@@ -113,10 +109,6 @@ export async function getRadioBrowserHosts() {
     });
 
   return serverRefresh;
-}
-
-export function getLastHealthyRadioBrowserHost() {
-  return lastHealthyHost;
 }
 
 export function clearRadioBrowserHostCacheForTest() {
@@ -217,20 +209,6 @@ async function fetchJsonWithTimeout<T>(
       message: "Radio Browser fetch failed"
     });
     throw error;
-  } finally {
-    clearTimeout(timeout);
-  }
-}
-
-export async function fetchWithTimeout(input: URL | string, init: RequestInit = {}) {
-  const controller = new AbortController();
-  const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
-
-  try {
-    return await fetch(input, {
-      ...init,
-      signal: init.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal
-    });
   } finally {
     clearTimeout(timeout);
   }

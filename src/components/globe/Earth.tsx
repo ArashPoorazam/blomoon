@@ -4,13 +4,9 @@ import type { ThreeEvent } from "@react-three/fiber";
 import { geoEquirectangular, geoPath } from "d3-geo";
 import { useEffect, useMemo } from "react";
 import * as THREE from "three";
-import {
-  GLOBE_RADIUS,
-  getCountryAtCoordinates,
-  getCountryCollection,
-  getCountryFeatureByCode,
-  type CountryInfo
-} from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
+import { getCountryAtCoordinates, getCountryCollection, getCountryFeatureByCode } from "@/lib/geo/geometry";
+import { type CountryInfo } from "@/lib/geo/countries";
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { CountryOutlines } from "./CountryOutlines";
 import { vector3ToLatLon } from "./globeMath";

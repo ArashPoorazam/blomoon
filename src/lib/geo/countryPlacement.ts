@@ -1,6 +1,6 @@
 import { geoCentroid, geoContains } from "d3-geo";
 import type * as GeoJSON from "geojson";
-import type { CountryFeature } from "../geo";
+import type { CountryFeature } from "@/lib/geo/geometry";
 
 type Coordinates = {
   latitude: number;

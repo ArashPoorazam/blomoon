@@ -1,7 +1,7 @@
 "use client";
 
 import { memo } from "react";
-import { formatDateTime } from "@/lib/geo";
+import { formatDateTime } from "@/lib/format";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraMode, TerraPoint } from "@/lib/modes/types";
 import { FavouriteStarButton } from "../favourites/FavouriteStarButton";

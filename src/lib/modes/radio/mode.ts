@@ -1,5 +1,4 @@
 import type { TerraDetailSection, TerraMode, TerraPoint, TerraPointDetail } from "../types";
-import { matchesSearchText } from "@/lib/search/text";
 
 const radioSortOptions = [
   { id: "suggested", label: "Suggested" },
@@ -59,19 +58,7 @@ export const radioMode = {
   countryCatalog: {
     markerEndpoint: (countryCode: string) => (
       `/api/modes/radio/countries/${encodeURIComponent(countryCode)}/points`
-    ),
-    searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => {
-      const searchParams = new URLSearchParams({
-        limit: String(params.limit),
-        offset: String(params.offset)
-      });
-
-      if (params.query.trim()) {
-        searchParams.set("q", params.query.trim());
-      }
-
-      return `/api/modes/radio/countries/${encodeURIComponent(countryCode)}/search?${searchParams.toString()}`;
-    }
+    )
   },
   detailEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}`,
   clickEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/click`,
@@ -85,27 +72,8 @@ export const radioMode = {
   markerColorMode: "single",
   markerColorToken: "radio",
   formatDetailSections: formatRadioDetailSections,
-  formatPointMetric: formatRadioMetric,
-  matchCountry: matchCountryCode,
-  matchPoint: matchTextPoint,
-  sortPoints: sortRadioStations
+  formatPointMetric: formatRadioMetric
 } satisfies TerraMode;
-
-function matchTextPoint(point: TerraPoint, query: string) {
-  const value = query.trim().toLowerCase();
-
-  if (!value) {
-    return true;
-  }
-
-  const metricText = Object.values(point.metrics ?? {}).join(" ");
-  const haystack = `${point.name} ${point.summary} ${metricText}`.toLowerCase();
-  return matchesSearchText(haystack, value);
-}
-
-function matchCountryCode(point: TerraPoint, countryCode: string) {
-  return point.countryCode === countryCode;
-}
 
 function formatRadioMetric(point: TerraPoint) {
   const codec = point.metrics?.Codec;
@@ -116,24 +84,6 @@ function formatRadioMetric(point: TerraPoint) {
   }
 
   return bitrate === undefined || bitrate === null ? "Live" : String(bitrate);
-}
-
-function sortRadioStations(points: TerraPoint[]) {
-  return [...points].sort((a, b) => {
-    const voteDiff = getNumericMetric(b, "Votes") - getNumericMetric(a, "Votes");
-
-    if (voteDiff !== 0) {
-      return voteDiff;
-    }
-
-    const clickDiff = getNumericMetric(b, "Clicks") - getNumericMetric(a, "Clicks");
-
-    if (clickDiff !== 0) {
-      return clickDiff;
-    }
-
-    return a.name.localeCompare(b.name);
-  });
 }
 
 function formatRadioDetailSections(detail: TerraPointDetail | null): TerraDetailSection[] {
@@ -209,9 +159,4 @@ function formatCheckedDateTime(value?: string) {
     new Intl.DateTimeFormat("en", { dateStyle: "medium" }).format(date),
     new Intl.DateTimeFormat("en", { timeStyle: "short" }).format(date)
   ].join("\n");
-}
-
-function getNumericMetric(point: TerraPoint, key: string) {
-  const value = point.metrics?.[key];
-  return typeof value === "number" ? value : 0;
 }

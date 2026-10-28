@@ -1,4 +1,4 @@
-import { findCountryByCode, getAlphaCountryCode } from "../geo";
+import { findCountryByCode, getAlphaCountryCode } from "@/lib/geo/countries";
 import { matchesSearchText } from "../search/text";
 
 const aliases: Readonly<Record<string, string>> = {

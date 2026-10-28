@@ -2,7 +2,6 @@ export {
   getRadioCountryMarkerDataset,
   getRadioDataset,
   getRadioDetail,
-  getRadioFixtureDataset,
   getRandomRadioPoint,
   getRadioStationPersistenceSnapshot
 } from "./catalog";

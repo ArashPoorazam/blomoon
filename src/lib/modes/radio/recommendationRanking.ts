@@ -52,14 +52,15 @@ export function rankRadioRecommendations(records: RadioStationRecord[], signals:
   for (const item of enriched) for (const tag of item.features.tags) frequencies.set(tag, (frequencies.get(tag) ?? 0) + 1);
   for (const [tag, weight] of tags) tags.set(tag, weight * Math.log(1 + records.length / (1 + (frequencies.get(tag) ?? 0))));
   for (const map of [tags, languages, countries]) {
-    const maximum = Math.max(0, ...map.values());
+    let maximum = 0;
+    for (const value of map.values()) maximum = Math.max(maximum, value);
     if (maximum) for (const [key, value] of map) map.set(key, value / maximum);
   }
   const affinity = (map: Map<string, number>, values: string[]) => values.length
     ? values.reduce((sum, value) => sum + (map.get(value) ?? 0), 0) / values.length : 0;
   const personalized = [tags, languages, countries].some((map) => map.size > 0);
   const popularity = (record: RadioStationRecord) => Math.log1p(Math.max(0, record.votes) * 5 + Math.max(0, record.clickCount));
-  const maxPopularity = Math.max(1, ...records.map(popularity));
+  const maxPopularity = records.reduce((maximum, record) => Math.max(maximum, popularity(record)), 1);
   const day = new Date(now).toISOString().slice(0, 10);
   const candidates: Candidate[] = enriched.map(({ record, features: value }) => {
     const quality = popularity(record) / maxPopularity;

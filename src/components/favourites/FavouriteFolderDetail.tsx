@@ -5,7 +5,7 @@ import { useState } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 import { getPointRefKey } from "@/lib/modes/pointKeys";
 import { findTerraMode } from "@/lib/modes/registry";
-import { formatDateTime } from "@/lib/geo";
+import { formatDateTime } from "@/lib/format";
 import type { FavouriteFolderDto } from "@/lib/persistence/types";
 import { absoluteShareLink, folderSharePath } from "@/lib/sharing/links";
 import { useProgressiveRows } from "../drawer/useProgressiveRows";

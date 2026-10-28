@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { GLOBE_RADIUS } from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 import { getViewportFitDistance, GLOBE_CAMERA_FOV } from "./cameraFit";
 
 describe("mobile globe framing", () => {

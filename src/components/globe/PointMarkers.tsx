@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useLayoutEffect, useMemo, useRef } from "react";
 import type { RefObject } from "react";
 import * as THREE from "three";
-import { GLOBE_RADIUS } from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import type { TerraPoint } from "@/lib/modes/types";
 import { resolvePointMarkerColor, type GlobeTheme, type MarkerColorMode } from "@/lib/theme/globe";

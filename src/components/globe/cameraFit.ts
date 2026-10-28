@@ -1,4 +1,4 @@
-import { GLOBE_RADIUS } from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 
 export const GLOBE_CAMERA_FOV = 42;
 const FIT_RADIUS = GLOBE_RADIUS * 1.08;

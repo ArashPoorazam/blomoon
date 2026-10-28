@@ -1,9 +1,6 @@
-import {
-  getEstimatedCountryCoordinates,
-  isCoordinateInCountry,
-  isValidCoordinatePair,
-  normalizeCountryCode
-} from "@/lib/geo";
+import { getEstimatedCountryCoordinates, isCoordinateInCountry } from "@/lib/geo/geometry";
+import { isValidCoordinatePair } from "@/lib/geo/coordinates";
+import { normalizeCountryCode } from "@/lib/geo/countries";
 import type { RadioBrowserStation, RadioStationRecord } from "./types";
 
 export function normalizeStation(station?: RadioBrowserStation): RadioStationRecord | null {

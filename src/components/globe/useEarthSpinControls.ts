@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 
 const EARTH_SPIN_INTERRUPT_EVENTS = ["keydown", "mousedown", "pointerdown", "click"] as const;
 
@@ -40,7 +40,7 @@ export function useEarthSpinControls(motionEnabled: boolean) {
     };
   }, [earthSpinEnabled]);
 
-  const toggleEarthSpin = useCallback((event: MouseEvent<HTMLButtonElement>) => {
+  const toggleEarthSpin = useCallback(() => {
     if (!motionEnabled) {
       setEarthSpinEnabled(false);
       return;

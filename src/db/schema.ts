@@ -51,7 +51,8 @@ export const sessions = pgTable("sessions", {
 export const accounts = pgTable("accounts", {
   id: uuid("id").primaryKey().defaultRandom(),
   userId: uuid("user_id").notNull().references(() => users.id, { onDelete: "cascade" }),
-  issuer: text("issuer").notNull(),
+  // Historical values are retained; Better Auth 1.7.3+ keys accounts by provider.
+  issuer: text("issuer"),
   accountId: text("account_id").notNull(),
   providerId: text("provider_id").notNull(),
   accessToken: text("access_token"),
@@ -64,7 +65,7 @@ export const accounts = pgTable("accounts", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
-  uniqueIndex("accounts_issuer_account_id_unique").on(table.issuer, table.accountId),
+  uniqueIndex("accounts_provider_account_id_unique").on(table.providerId, table.accountId),
   index("accounts_user_id_idx").on(table.userId),
   index("accounts_provider_id_idx").on(table.providerId)
 ]);

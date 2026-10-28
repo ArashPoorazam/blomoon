@@ -10,7 +10,7 @@ const containers: HTMLElement[] = [];
 afterEach(() => { containers.forEach(c => c.remove()); vi.unstubAllGlobals(); });
 it("promotes the incoming DOM intact and removes the old page after a committed swipe", () => {
   Object.assign(globalThis, { IS_REACT_ACT_ENVIRONMENT: true });
-  vi.stubGlobal("matchMedia", (query: string) => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
+  vi.stubGlobal("matchMedia", (_query: string) => ({ matches: true, addEventListener() {}, removeEventListener() {} }));
   let controls: ReturnType<typeof useDrawerTransition>;
   function Harness() {
     const [view, setView] = useState<MainDrawer>("history");

@@ -3,8 +3,11 @@
 import { useCallback, useEffect, useImperativeHandle, useRef, useState, type ComponentProps, type Ref } from "react";
 import type { TerraPoint } from "@/lib/modes/types";
 import { getPointKey } from "@/lib/modes/pointKeys";
-import { GlobeScene } from "../GlobeScene";
+import dynamic from "next/dynamic";
+
 import { MobileCrosshair, type CrosshairPlaybackStatus } from "./MobileCrosshair";
+
+const GlobeScene = dynamic(() => import("../GlobeScene").then((module) => module.GlobeScene), { ssr: false });
 
 export type GlobeViewportHandle = { clearPreview: () => void };
 type GlobeViewportProps = Omit<ComponentProps<typeof GlobeScene>, "anchorPoint" | "anchorTarget" | "onCrosshairPoint" | "onGlobeInteractionStart"> & {

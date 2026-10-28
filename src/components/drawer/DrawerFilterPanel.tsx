@@ -3,7 +3,7 @@ import { matchesCountrySearch } from "@/lib/geo/countrySearch";
 
 import { ChevronDown, Search, X } from "lucide-react";
 import { useId, useMemo, useState } from "react";
-import { getKnownCountries, type CountryInfo } from "@/lib/geo";
+import { getKnownCountries, type CountryInfo } from "@/lib/geo/countries";
 import type { TerraMode } from "@/lib/modes/types";
 
 type DrawerFilterPanelProps = {

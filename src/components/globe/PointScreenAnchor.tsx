@@ -3,7 +3,7 @@
 import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type RefObject } from "react";
 import { Vector3, type Camera } from "three";
-import { GLOBE_RADIUS } from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 import type { TerraPoint } from "@/lib/modes/types";
 import { latLonToVector3, MARKER_ALTITUDE } from "./globeMath";
 

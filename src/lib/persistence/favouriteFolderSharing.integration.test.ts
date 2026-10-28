@@ -72,9 +72,12 @@ describe.skipIf(!enabled)("mode-specific folders PostgreSQL integration (rolled 
         await expect(tx.transaction((savepoint) => savepoint.insert(schema.userFavouriteFolders)
           .values({ userId: owner.id, modeId: "radio", name: "morning" })))
           .rejects.toMatchObject({ cause: { code: "23505" } });
-        const [station] = await tx.select({ id: schema.mediaItems.id }).from(schema.mediaItems)
-          .where(eq(schema.mediaItems.modeId, "radio")).limit(1);
-        expect(station).toBeDefined();
+        await tx.insert(schema.mediaProviders).values({ id: "folder-test", modeId: "radio", name: "Folder test" });
+        const [station] = await tx.insert(schema.mediaItems).values({
+          id: "88888888-8888-4888-8888-888888888888", modeId: "radio", providerId: "folder-test",
+          providerItemId: "folder-test", name: "Test station", summary: "Test", countryCode: "364",
+          country: "Iran", latitude: 35, longitude: 51, locationPrecision: "station"
+        }).returning({ id: schema.mediaItems.id });
         await expect(tx.transaction((savepoint) => savepoint.insert(schema.userFavouriteFolderItems)
           .values({ folderId: audio!.id, mediaItemId: station.id })))
           .rejects.toMatchObject({ cause: { code: "23514" } });

@@ -4,18 +4,6 @@ export type RadioBrowserServer = {
   name?: string;
 };
 
-export type RadioBrowserCountRecord = {
-  iso_3166_1?: string;
-  name?: string;
-  stationcount?: number | string;
-};
-
-export type RadioBrowserLanguage = {
-  iso_639?: string | null;
-  name?: string;
-  stationcount?: number | string;
-};
-
 export type RadioBrowserStation = {
   stationuuid?: string;
   name?: string;
@@ -38,21 +26,6 @@ export type RadioBrowserStation = {
   lastcheckoktime_iso8601?: string;
   geo_lat?: number | string | null;
   geo_long?: number | string | null;
-};
-
-export type RadioBrowserStats = {
-  stations?: number | string;
-  stations_broken?: number | string;
-};
-
-export type RadioBrowserTag = {
-  name?: string;
-  stationcount?: number | string;
-};
-
-export type RadioClickResponse = {
-  ok?: boolean;
-  url?: string;
 };
 
 export type RadioStationRecord = {

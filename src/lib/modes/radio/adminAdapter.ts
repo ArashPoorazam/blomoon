@@ -5,7 +5,7 @@ import { getDb, schema } from "@/db";
 import { AdminError } from "@/lib/admin/access";
 import type { AdminModeAdapter } from "@/lib/admin/mode-contract";
 import { enqueueJob } from "@/lib/admin/jobs";
-import { findCountryByCode } from "@/lib/geo";
+import { findCountryByCode } from "@/lib/geo/countries";
 import { saveCuratedStation, radioHealthMetrics } from "./admin";
 import { getRadioStationRecord } from "./catalog";
 import { availabilityForStations } from "./health/query";

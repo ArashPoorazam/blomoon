@@ -4,7 +4,7 @@ Discover and play live radio through an interactive globe. Blomoon includes mobi
 
 ## Development
 
-Use Node.js 24 and the committed package lock:
+Use Node.js 26.12.1 and the committed package lock:
 
 ```sh
 cp .env.example .env.local
@@ -17,7 +17,11 @@ npm run dev
 
 Open http://localhost:3000. Password accounts require email verification. Configure Resend with a verified sender in production; `onboarding@resend.dev` is only for local testing. Google sign-in is optional and requires both Google settings.
 
-Run `npm run typecheck`, `npm test`, and `npm run build` before a release. Database integration tests require their documented opt-in settings and a disposable database. Do not run migration or integration checks against production for routine local verification.
+Run `npm run geo:check`, `npm run typecheck`, `npm test`, and `npm run build` before a release. Database integration tests require their documented opt-in settings and a disposable database. Do not run migration or integration checks against production for routine local verification.
+
+## Architecture and dependency upgrades
+
+See [codebase refinement](docs/codebase-refinement.md) for module boundaries, performance changes, test coverage, and the required Better Auth migration. Apply migrations before starting the upgraded application.
 
 ## Home Screen installation
 
@@ -33,7 +37,7 @@ When changing the offline document, bump `OFFLINE_CACHE` in `public/sw.js`. Upda
 
 Production uses Docker Compose: Traefik with automatic Let's Encrypt HTTPS, PostgreSQL 17 with a persistent volume, a non-root Next.js standalone image, a migration/catalog image, and on-demand backups. The app is not publicly port-mapped; PostgreSQL remains bound to server loopback. Traefik negotiates its Docker API version; the obsolete forced `1.40` override was removed.
 
-The VPS needs Docker Engine, Docker Compose v2.20+ (or v5), **Node.js 24 on the host**, `flock` (util-linux), `tar`, and SSH. Node runs deployment validation and HTTP checks; no host `npm install` is needed. Node may be installed system-wide or as an app-owned distribution at `/opt/blomoon/tools/node` (relative to the configured app directory). The launcher adds that distribution’s `bin` directory to its own executable path. The deployment user needs Docker access and write access to `/opt/blomoon` (or the configured absolute directory). Current CI images target Linux amd64.
+The VPS needs Docker Engine, Docker Compose v2.20+ (or v5), **Node.js 26.12.1 on the host**, `flock` (util-linux), `tar`, and SSH. Node runs deployment validation and HTTP checks; no host `npm install` is needed. Node may be installed system-wide or as an app-owned distribution at `/opt/blomoon/tools/node` (relative to the configured app directory). The launcher adds that distribution’s `bin` directory to its own executable path. The deployment user needs Docker access and write access to `/opt/blomoon` (or the configured absolute directory). Current CI images target Linux amd64.
 
 Point `blomoon.ir` A records at the VPS. Publish AAAA only if IPv6 works. Allow inbound 80/443 for HTTP redirect and certificate issuance. Keep the canonical origin and `BETTER_AUTH_URL` at `https://blomoon.ir`. A different domain also requires updating the application canonical origin. Set `BLOMOON_WWW_DOMAIN` to the `www` hostname that redirects to the apex domain. Traefik preserves the path and query string when redirecting to the canonical HTTPS origin.
 

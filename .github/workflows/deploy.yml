@@ -27,11 +27,14 @@ jobs:
       - name: Set up Node
         uses: actions/setup-node@v4
         with:
-          node-version: 24
+          node-version-file: .node-version
           cache: npm
 
       - name: Install dependencies
         run: npm ci
+
+      - name: Verify country metadata
+        run: npm run geo:check
 
       - name: Typecheck
         run: npm run typecheck
@@ -42,7 +45,7 @@ jobs:
       - name: Build
         run: |
           npm run build
-          node -e 'const m=require("./.next/prerender-manifest.json"); if(m.routes["/admin/radio"]) throw new Error("Admin authorization must render per request")'
+          node -e 'const m=require("./.next/prerender-manifest.json"); if(Object.keys(m.routes).some(route => route === "/omnisire" || route.startsWith("/omnisire/"))) throw new Error("Admin authorization must render per request")'
 
       - name: Resolve image name
         id: image

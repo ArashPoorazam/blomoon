@@ -1,4 +1,4 @@
-import { findCountryByCode } from "@/lib/geo";
+import { findCountryByCode } from "@/lib/geo/countries";
 
 export const RADIO_SORT_OPTIONS = ["votes_desc", "votes_asc", "relevance"] as const;
 

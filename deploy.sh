@@ -8,7 +8,7 @@ if [ -x "$APP_DIR/tools/node/bin/node" ]; then
   export PATH
 fi
 if ! command -v node >/dev/null 2>&1; then
-  echo "Node.js 24 is required: install it system-wide or at $APP_DIR/tools/node." >&2
+  echo "Node.js 26.12.1 is required: install it system-wide or at $APP_DIR/tools/node." >&2
   exit 1
 fi
 # Lock across automatic and manual deployments, including migrations.

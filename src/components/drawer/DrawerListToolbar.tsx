@@ -2,7 +2,7 @@
 
 import { Search, SlidersHorizontal, X } from "lucide-react";
 import { useId, useState } from "react";
-import type { CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo/countries";
 import type { TerraMode } from "@/lib/modes/types";
 import { DrawerFilterPanel } from "./DrawerFilterPanel";
 import { DrawerHeader } from "./DrawerHeader";

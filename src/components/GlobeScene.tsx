@@ -2,7 +2,7 @@
 
 import { Canvas } from "@react-three/fiber";
 import { memo, type RefObject } from "react";
-import type { CountryInfo } from "@/lib/geo";
+import type { CountryInfo } from "@/lib/geo/countries";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
 import { GlobeCameraController } from "./globe/CameraControls";

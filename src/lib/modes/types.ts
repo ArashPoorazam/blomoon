@@ -137,7 +137,6 @@ export type TerraMode = {
   sortOptions: TerraModeSortOption[];
   countryCatalog?: {
     markerEndpoint: (countryCode: string) => string;
-    searchEndpoint: (countryCode: string, params: { limit: number; offset: number; query: string }) => string;
   };
   detailEndpoint: (id: string) => string;
   clickEndpoint?: (id: string) => string;
@@ -147,7 +146,4 @@ export type TerraMode = {
   markerColorToken?: MarkerColorToken;
   formatDetailSections: (detail: TerraPointDetail | null) => TerraDetailSection[];
   formatPointMetric: (point: TerraPoint) => string;
-  matchCountry: (point: TerraPoint, countryCode: string) => boolean;
-  matchPoint: (point: TerraPoint, query: string) => boolean;
-  sortPoints: (points: TerraPoint[]) => TerraPoint[];
 };

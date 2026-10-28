@@ -4,7 +4,8 @@ import { Line } from "@react-three/drei";
 import type * as GeoJSON from "geojson";
 import { useMemo } from "react";
 import * as THREE from "three";
-import { GLOBE_RADIUS, getCountryBorderMesh, getCountryOutlineLines, isValidCoordinatePair } from "@/lib/geo";
+import { GLOBE_RADIUS, isValidCoordinatePair } from "@/lib/geo/coordinates";
+import { getCountryBorderMesh, getCountryOutlineLines } from "@/lib/geo/geometry";
 import type { GlobeTheme } from "@/lib/theme/globe";
 import { latLonToVector3 } from "./globeMath";
 

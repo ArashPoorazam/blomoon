@@ -2,7 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
-import { formatCoordinate, type CountryInfo } from "@/lib/geo";
+import { formatCoordinate } from "@/lib/format";
+import { type CountryInfo } from "@/lib/geo/countries";
 import type { AppClientConfig } from "@/lib/app-config/types";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
@@ -135,9 +136,9 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
   const playInPlaceFromCurrentDrawer = useCallback((point: TerraPoint) => {
     playPointInPlace(point, drawerSource ?? "list");
   }, [drawerSource, playPointInPlace]);
-  const toggleEarthSpin = useCallback((event: ReactMouseEvent<HTMLButtonElement>) => {
+  const toggleEarthSpin = useCallback(() => {
     clearCrosshairPoint();
-    earthSpin.toggleEarthSpin(event);
+    earthSpin.toggleEarthSpin();
   }, [clearCrosshairPoint, earthSpin.toggleEarthSpin]);
   const displayedGlobe = useDisplayedGlobePoints({
     activeMode,

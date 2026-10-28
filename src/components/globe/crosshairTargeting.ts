@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { GLOBE_RADIUS } from "@/lib/geo";
+import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 import type { TerraPoint } from "@/lib/modes/types";
 import { MARKER_ALTITUDE, latLonToVector3 } from "./globeMath";
 

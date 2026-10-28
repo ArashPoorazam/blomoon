@@ -8,10 +8,3 @@ export function createRadioLiveSource(): DataSourceInfo {
     lastUpdated: new Date().toISOString()
   };
 }
-
-export function createRadioFallbackSource(source: DataSourceInfo): DataSourceInfo {
-  return {
-    ...source,
-    isFallback: true
-  };
-}

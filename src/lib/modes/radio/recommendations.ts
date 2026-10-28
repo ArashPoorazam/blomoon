@@ -19,7 +19,6 @@ export async function getRadioRecommendations(
   pageToken?: string,
 ): Promise<TerraPointPage> {
   const ownerKey = userId ?? "guest";
-  const generation = await activeRadioDirectory();
   if (pageToken) {
     const [snapshot] = await getDb()
       .select()
@@ -34,12 +33,13 @@ export async function getRadioRecommendations(
     if (!snapshot) throw new RecommendationPageExpired();
     return snapshotPage(snapshot, limit, offset);
   }
+  const generation = await activeRadioDirectory();
   const signals = await preferenceSignals(userId);
   const source = await directorySource(generation?.publishedAt);
   const profileKey = createHash("sha256")
     .update(JSON.stringify([generation?.id ?? "curated", new Date().toISOString().slice(0, 10), signals]))
     .digest("hex");
-  return getDb().transaction(async (tx) => {
+  const snapshot = await getDb().transaction(async (tx) => {
     await tx.execute(
       sql`select pg_advisory_xact_lock(hashtextextended(${`radio-recommendations:${ownerKey}`}, 0))`,
     );
@@ -54,7 +54,7 @@ export async function getRadioRecommendations(
         ),
       )
       .limit(1);
-    if (existing) return snapshotPage(existing, limit, offset);
+    if (existing) return existing;
     const rows = await tx
       .select({ record: schema.radioDirectory.record })
       .from(schema.radioDirectory)
@@ -81,8 +81,11 @@ export async function getRadioRecommendations(
         source,
       })
       .returning();
-    return snapshotPage(snapshot, limit, offset);
+    return snapshot;
   });
+  // Release the transaction connection before page hydration uses the pool.
+  // Otherwise concurrent requests can hold every connection while waiting for one.
+  return snapshotPage(snapshot, limit, offset);
 }
 
 async function preferenceSignals(userId: string | null): Promise<RadioPreferenceSignal[]> {

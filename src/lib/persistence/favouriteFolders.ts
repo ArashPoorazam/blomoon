@@ -1,7 +1,7 @@
 import "server-only";
 
 import { randomBytes } from "node:crypto";
-import { and, count, desc, eq, sql } from "drizzle-orm";
+import { and, count, desc, eq, inArray, notExists, sql } from "drizzle-orm";
 import { getDb, schema, type BlomoonDb } from "@/db";
 import { logger } from "@/lib/server/logging";
 import { getPointRefKey } from "@/lib/modes/pointKeys";
@@ -168,7 +168,7 @@ export async function addFavouriteFolderItem(userId: string, folderId: string, r
     if (folder.modeId !== ref.modeId) throw new FolderModeMismatchError();
     const [saved] = await tx.insert(schema.userSavedMediaItems).values({ mediaItemId: ref.pointId, userId, updatedAt: new Date() })
       .onConflictDoNothing().returning({ id: schema.userSavedMediaItems.mediaItemId });
-    if (saved) await incrementStarCount(tx, ref.pointId, 1);
+    if (saved) await incrementStarCount(tx, ref.pointId);
     const [item] = await tx.insert(schema.userFavouriteFolderItems).values({ folderId, mediaItemId: ref.pointId, updatedAt: new Date() })
       .onConflictDoUpdate({ target: [schema.userFavouriteFolderItems.folderId, schema.userFavouriteFolderItems.mediaItemId], set: { updatedAt: new Date() } })
       .returning({ createdAt: schema.userFavouriteFolderItems.createdAt });
@@ -220,10 +220,11 @@ export async function getSharedFolderPreview(token: string): Promise<SharedFolde
     name: schema.userFavouriteFolders.name
   }).from(schema.userFavouriteFolders).where(eq(schema.userFavouriteFolders.shareToken, token)).limit(1);
   if (!folder) return null;
-  const items = await getDb().select({ name: schema.mediaItems.name }).from(schema.userFavouriteFolderItems)
+  const items = await getDb().select({ name: schema.mediaItems.name, total: sql<number>`count(*) over()::integer` }).from(schema.userFavouriteFolderItems)
     .innerJoin(schema.mediaItems, eq(schema.mediaItems.id, schema.userFavouriteFolderItems.mediaItemId))
-    .where(eq(schema.userFavouriteFolderItems.folderId, folder.id)).orderBy(desc(schema.userFavouriteFolderItems.createdAt));
-  return { description: folder.description, itemCount: items.length, name: folder.name, sampleStationNames: items.slice(0, 3).map((item) => item.name) };
+    .where(eq(schema.userFavouriteFolderItems.folderId, folder.id))
+    .orderBy(desc(schema.userFavouriteFolderItems.createdAt), schema.userFavouriteFolderItems.mediaItemId).limit(3);
+  return { description: folder.description, itemCount: items[0]?.total ?? 0, name: folder.name, sampleStationNames: items.map((item) => item.name) };
 }
 
 export async function isFavouriteFolderShareOwner(userId: string, token: string) {
@@ -254,14 +255,24 @@ export async function importSharedFavouriteFolder(userId: string, token: string)
       userId,
       updatedAt: now
     }).returning({ id: schema.userFavouriteFolders.id });
-    const items = await tx.select({ mediaItemId: schema.userFavouriteFolderItems.mediaItemId })
-      .from(schema.userFavouriteFolderItems).where(eq(schema.userFavouriteFolderItems.folderId, source.id));
-    for (const item of items) {
-      await tx.insert(schema.userFavouriteFolderItems).values({ folderId: folder.id, mediaItemId: item.mediaItemId });
-      const [saved] = await tx.insert(schema.userSavedMediaItems).values({ userId, mediaItemId: item.mediaItemId })
-        .onConflictDoNothing().returning({ id: schema.userSavedMediaItems.mediaItemId });
-      if (saved) await incrementStarCount(tx, item.mediaItemId, 1);
-    }
+    // Copy and count in SQL: application memory and round trips stay bounded.
+    await tx.execute(sql`
+      insert into ${schema.userFavouriteFolderItems} (folder_id, media_item_id)
+      select ${folder.id}::uuid, media_item_id from ${schema.userFavouriteFolderItems}
+      where folder_id = ${source.id}::uuid
+    `);
+    await tx.execute(sql`
+      with saved as (
+        insert into ${schema.userSavedMediaItems} (user_id, media_item_id)
+        select ${userId}::uuid, media_item_id from ${schema.userFavouriteFolderItems}
+        where folder_id = ${folder.id}::uuid
+        order by media_item_id
+        on conflict do nothing
+        returning media_item_id
+      )
+      update ${schema.mediaItems} set star_count = star_count + 1, updated_at = now()
+      where id in (select media_item_id from saved)
+    `);
     return { folderId: folder.id, kind: "imported" };
   });
 }
@@ -284,19 +295,25 @@ async function touchFolder(tx: BlomoonTransaction, folderId: string) {
   await tx.update(schema.userFavouriteFolders).set({ updatedAt: new Date() }).where(eq(schema.userFavouriteFolders.id, folderId));
 }
 async function reconcileSavedItems(tx: BlomoonTransaction, userId: string, ids: string[]) {
-  for (const mediaItemId of [...new Set(ids)]) {
-    const [remaining] = await tx.select({ id: schema.userFavouriteFolderItems.mediaItemId }).from(schema.userFavouriteFolderItems)
+  if (!ids.length) return;
+  const saved = schema.userSavedMediaItems;
+  const remaining = tx.select({ id: schema.userFavouriteFolderItems.mediaItemId }).from(schema.userFavouriteFolderItems)
       .innerJoin(schema.userFavouriteFolders, eq(schema.userFavouriteFolders.id, schema.userFavouriteFolderItems.folderId))
-      .where(and(eq(schema.userFavouriteFolders.userId, userId), eq(schema.userFavouriteFolderItems.mediaItemId, mediaItemId))).limit(1);
-    if (remaining) continue;
-    const [deleted] = await tx.delete(schema.userSavedMediaItems).where(and(eq(schema.userSavedMediaItems.userId, userId), eq(schema.userSavedMediaItems.mediaItemId, mediaItemId)))
-      .returning({ id: schema.userSavedMediaItems.mediaItemId });
-    if (deleted) await incrementStarCount(tx, mediaItemId, -1);
+      .where(and(eq(schema.userFavouriteFolders.userId, userId), eq(schema.userFavouriteFolderItems.mediaItemId, saved.mediaItemId)));
+  // Bound parameter counts even for very large folders.
+  const uniqueIds = [...new Set(ids)].sort();
+  for (let offset = 0; offset < uniqueIds.length; offset += 1000) {
+    const deleted = await tx.delete(saved).where(and(eq(saved.userId, userId),
+      inArray(saved.mediaItemId, uniqueIds.slice(offset, offset + 1000)), notExists(remaining)))
+      .returning({ id: saved.mediaItemId });
+    if (deleted.length) await tx.update(schema.mediaItems).set({
+      starCount: sql`greatest(${schema.mediaItems.starCount} - 1, 0)`, updatedAt: new Date()
+    }).where(inArray(schema.mediaItems.id, deleted.map(({ id }) => id)));
   }
 }
-async function incrementStarCount(tx: BlomoonTransaction, mediaItemId: string, delta: 1 | -1) {
+async function incrementStarCount(tx: BlomoonTransaction, mediaItemId: string) {
   await tx.update(schema.mediaItems).set({
-    starCount: delta > 0 ? sql`${schema.mediaItems.starCount} + 1` : sql`greatest(${schema.mediaItems.starCount} - 1, 0)`,
+    starCount: sql`${schema.mediaItems.starCount} + 1`,
     updatedAt: new Date()
   }).where(eq(schema.mediaItems.id, mediaItemId));
 }
