@@ -1,7 +1,8 @@
 "use client";
 
+import { hasPointLocation } from "@/lib/modes/location";
 import { Canvas } from "@react-three/fiber";
-import { memo, type RefObject } from "react";
+import { memo, useMemo, type RefObject } from "react";
 import type { CountryInfo } from "@/lib/geo/countries";
 import type { TerraPoint } from "@/lib/modes/types";
 import type { GlobeTheme, MarkerColorMode } from "@/lib/theme/globe";
@@ -62,6 +63,7 @@ export const GlobeScene = memo(function GlobeScene({
   onPointHover,
   onPointSelect
 }: GlobeSceneProps) {
+  const locatedPoints = useMemo(() => points.filter(hasPointLocation), [points]);
   return (
     <Canvas camera={{ position: [0, 0.35, 5.2], fov: GLOBE_CAMERA_FOV }} dpr={dpr}>
       <color attach="background" args={[theme.ocean]} />
@@ -75,9 +77,9 @@ export const GlobeScene = memo(function GlobeScene({
       <PointMarkers
         markerColor={markerColor}
         markerColorMode={markerColorMode}
-        points={points}
-        activePlaybackPoint={activePlaybackPoint}
-        selectedPoint={selectedPoint}
+        points={locatedPoints}
+        activePlaybackPoint={hasPointLocation(activePlaybackPoint) ? activePlaybackPoint : null}
+        selectedPoint={hasPointLocation(selectedPoint) ? selectedPoint : null}
         theme={theme}
         hoverEnabled={hoverEnabled}
         onHover={onPointHover}
@@ -91,9 +93,9 @@ export const GlobeScene = memo(function GlobeScene({
         crosshairEnabled={crosshairEnabled}
         earthSpinEnabled={earthSpinEnabled}
         focusKey={focusKey}
-        focusPoint={focusPoint}
+        focusPoint={hasPointLocation(focusPoint) ? focusPoint : null}
         motionEnabled={motionEnabled}
-        points={points}
+        points={locatedPoints}
         onCrosshairPoint={onCrosshairPoint}
         onUserInteractionStart={onGlobeInteractionStart}
       />

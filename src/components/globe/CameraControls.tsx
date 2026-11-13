@@ -5,7 +5,7 @@ import { useFrame, useThree } from "@react-three/fiber";
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef } from "react";
 import * as THREE from "three";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
-import type { TerraPoint } from "@/lib/modes/types";
+import type { LocatedPoint as TerraPoint } from "@/lib/modes/location";
 import { getViewportFitDistance } from "./cameraFit";
 import { createCameraTransition } from "./cameraTransition";
 import {

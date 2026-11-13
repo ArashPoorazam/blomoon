@@ -9,7 +9,7 @@ import { getPointKey } from "@/lib/modes/pointKeys";
 import { defaultMode, getTerraMode, terraModes } from "@/lib/modes/registry";
 import { getNextPlaybackPoint, type PlaybackQueueSource } from "@/lib/modes/playbackNavigation";
 import type { TerraDataset, TerraModeId, TerraPoint } from "@/lib/modes/types";
-import { useAudioPlayback } from "@/lib/modes/useAudioPlayback";
+import { usePlaybackCoordinator } from "@/lib/modes/usePlaybackCoordinator";
 import { usePointDetail } from "@/lib/modes/usePointDetail";
 import { useModeDataset } from "@/lib/modes/useModeDataset";
 import { usePrefetchedRandomPoint } from "@/lib/modes/usePrefetchedRandomPoint";
@@ -72,7 +72,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
     viewer.loading ? "loading" : viewer.user?.id ?? "guest");
   const pointDetail = usePointDetail(activeMode, drawer.view === "point-detail" ? modeState.selectedPoint : null);
   const playbackHistory = usePlaybackHistory(viewer.user?.id ?? null);
-  const audioPlayback = useAudioPlayback(activeMode.playback ?? null, playbackHistory.record);
+  const audioPlayback = usePlaybackCoordinator(activeMode.playback ?? null, playbackHistory.record);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
     enabled: Boolean(activeMode.playback?.randomPointEndpoint),
     endpoint: activeMode.playback?.randomPointEndpoint,

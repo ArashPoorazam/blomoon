@@ -64,6 +64,8 @@ export const radioMode = {
   clickEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/click`,
   playback: {
     label: "Live audio",
+    modeId: "radio",
+    responseKind: "radio-audio",
     mediaKind: "audio",
     playableEndpoint: (id: string) => `/api/modes/radio/points/${encodeURIComponent(id)}/playable`,
     randomPointEndpoint: "/api/modes/radio/points/random"
@@ -128,8 +130,8 @@ function formatRadioDetailSections(detail: TerraPointDetail | null): TerraDetail
     {
       title: "Location",
       fields: [
-        { label: "Latitude", value: detail.latitude.toFixed(3) },
-        { label: "Longitude", value: detail.longitude.toFixed(3) }
+        { label: "Latitude", value: detail.latitude?.toFixed(3) ?? "Unknown" },
+        { label: "Longitude", value: detail.longitude?.toFixed(3) ?? "Unknown" }
       ]
     }
   ].map((section) => ({

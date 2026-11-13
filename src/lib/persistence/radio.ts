@@ -267,13 +267,13 @@ function stationProviderMetadata(snapshot: RadioStationPersistenceSnapshot) {
 function stationRowToPoint(row: {
   bitrate: number | null;
   codec: string | null;
-  country: string;
-  countryCode: string;
+  country: string | null;
+  countryCode: string | null;
   id: string;
   language: string | null;
-  latitude: number;
-  locationPrecision: "station" | "country";
-  longitude: number;
+  latitude: number | null;
+  locationPrecision: "station" | "country" | "verified" | null;
+  longitude: number | null;
   name: string;
   providerClicks: number;
   providerMetadata: Record<string, string | number | null>;
@@ -290,7 +290,7 @@ function stationRowToPoint(row: {
     latitude: row.latitude,
     longitude: row.longitude,
     locationPrecision: row.locationPrecision,
-    countryCode: row.countryCode,
+    countryCode: row.countryCode ?? undefined,
     artworkUrl: typeof row.providerMetadata.Artwork === "string" ? row.providerMetadata.Artwork : undefined,
     prominence: normalizeProminence(row.providerClicks, row.providerVotes),
     timestamp: row.providerUpdatedAt?.toISOString(),

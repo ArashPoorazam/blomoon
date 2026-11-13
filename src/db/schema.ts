@@ -121,13 +121,14 @@ export const mediaItems = pgTable("media_items", {
   modeId: text("mode_id").notNull().references(() => mediaModes.id, { onDelete: "restrict" }),
   providerId: text("provider_id").notNull(),
   providerItemId: text("provider_item_id").notNull(),
+  kind: text("kind", { enum: ["station", "show", "episode", "channel"] }).notNull().default("station"),
   name: text("name").notNull(),
   summary: text("summary").notNull(),
-  countryCode: text("country_code").notNull(),
-  country: text("country").notNull(),
-  latitude: doublePrecision("latitude").notNull(),
-  longitude: doublePrecision("longitude").notNull(),
-  locationPrecision: text("location_precision", { enum: ["station", "country"] }).notNull(),
+  countryCode: text("country_code"),
+  country: text("country"),
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
+  locationPrecision: text("location_precision", { enum: ["station", "country", "verified"] }),
   sourceUrl: text("source_url"),
   starCount: integer("star_count").notNull().default(0),
   clickCount: integer("click_count").notNull().default(0),
@@ -136,6 +137,10 @@ export const mediaItems = pgTable("media_items", {
   createdAt: timestamp("created_at", { withTimezone: true }).notNull().defaultNow(),
   updatedAt: timestamp("updated_at", { withTimezone: true }).notNull().defaultNow()
 }, (table) => [
+  uniqueIndex("media_items_id_mode_kind_unique").on(table.id, table.modeId, table.kind),
+  check("media_items_kind_mode", sql`(${table.modeId} = 'radio' AND ${table.kind} = 'station') OR (${table.modeId} = 'podcasts' AND ${table.kind} IN ('show', 'episode')) OR (${table.modeId} = 'tv' AND ${table.kind} = 'channel') OR (${table.modeId} NOT IN ('radio', 'podcasts', 'tv') AND ${table.kind} IN ('station', 'show', 'episode', 'channel'))`),
+  check("media_items_location_complete", sql`(${table.latitude} IS NULL AND ${table.longitude} IS NULL AND ${table.locationPrecision} IS NULL) OR (${table.latitude} IS NOT NULL AND ${table.longitude} IS NOT NULL AND ${table.locationPrecision} IS NOT NULL)`),
+  check("media_items_radio_location", sql`${table.modeId} <> 'radio' OR (${table.latitude} IS NOT NULL AND ${table.countryCode} IS NOT NULL AND ${table.country} IS NOT NULL AND ${table.locationPrecision} IN ('station', 'country'))`),
   foreignKey({
     columns: [table.providerId, table.modeId],
     foreignColumns: [mediaProviders.id, mediaProviders.modeId],
@@ -151,7 +156,7 @@ export const mediaItems = pgTable("media_items", {
   check("media_items_country_code_format", sql`${table.countryCode} ~ '^[0-9]{3}$' OR ${table.countryCode} LIKE 'X-%'`),
   check("media_items_latitude_range", sql`${table.latitude} >= -90 AND ${table.latitude} <= 90`),
   check("media_items_longitude_range", sql`${table.longitude} >= -180 AND ${table.longitude} <= 180`),
-  check("media_items_location_precision_valid", sql`${table.locationPrecision} IN ('station', 'country')`),
+  check("media_items_location_precision_valid", sql`${table.locationPrecision} IN ('station', 'country', 'verified')`),
   check("media_items_star_count_nonnegative", sql`${table.starCount} >= 0`),
   check("media_items_click_count_nonnegative", sql`${table.clickCount} >= 0`)
 ]);
@@ -357,3 +362,20 @@ export const userPlaybackHistoryRelations = relations(userPlaybackHistory, ({ on
 export * from "./radioHealthSchema";
 
 export * from "./adminSchema";
+
+// Provider aliases for new domains. Radio retains its existing canonical alias ledger.
+export const mediaIdentityAliases = pgTable("media_identity_aliases", {
+  modeId: text("mode_id").notNull(),
+  kind: text("kind", { enum: ["station", "show", "episode", "channel"] }).notNull(),
+  providerId: text("provider_id").notNull(),
+  providerItemId: text("provider_item_id").notNull(),
+  mediaItemId: uuid("media_item_id").notNull(),
+}, table => [
+  primaryKey({ columns: [table.modeId, table.kind, table.providerId, table.providerItemId] }),
+  foreignKey({ columns: [table.mediaItemId, table.modeId, table.kind], foreignColumns: [mediaItems.id, mediaItems.modeId, mediaItems.kind] }).onDelete("restrict"),
+  foreignKey({ columns: [table.providerId, table.modeId], foreignColumns: [mediaProviders.id, mediaProviders.modeId] }).onDelete("restrict"),
+  index("media_identity_aliases_item_idx").on(table.mediaItemId),
+]);
+
+export * from "./ingestionSchema";
+export * from "./podcastSchema";

@@ -23,6 +23,12 @@ Run `npm run geo:check`, `npm run typecheck`, `npm test`, and `npm run build` be
 
 See [codebase refinement](docs/codebase-refinement.md) for module boundaries, performance changes, test coverage, and the required Better Auth migration. Apply migrations before starting the upgraded application.
 
+Podcast and live TV development follows the [implementation plan](docs/media-expansion-plan.md). Check [current progress and agent handoff](docs/media-expansion-progress.md) before starting work; update that tracker with acceptance evidence as each step is completed. Agent entry-point guidance is in [AGENTS.md](AGENTS.md).
+
+## Media ingestion primitives
+
+Podcast/guide ingestion foundations have no approved sources or enabled modes yet. See the [ingestion worker contract and operations](docs/media-expansion/ingestion.md) for migration 0021, isolated fetching/parsing, restricted database credentials, build/run commands and disposable integration tests. This worker is separate from the radio workers and is not enabled by production Compose. Curated podcast catalog ingestion is implemented behind the worker’s `--podcasts` option; see [podcast ingestion](docs/media-expansion/podcasts.md) for migration 0022, scoped role setup, identity behavior and remaining source/directory gates.
+
 ## Home Screen installation
 
 On Android, choose **Install Blomoon** on the login page or account menu. Supported browsers show their native installation prompt; otherwise the button explains browser-menu installation. On iPhone/iPad, the button explains Safari → Share → Add to Home Screen, with Open as Web App enabled where shown. Controls disappear in standalone mode; there are no automatic promotional popups.

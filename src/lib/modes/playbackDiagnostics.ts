@@ -3,7 +3,7 @@ import { z } from "zod";
 export const playbackDiagnosticSchema = z.object({
   modeId: z.string().regex(/^[a-z0-9-]{1,40}$/),
   pointId: z.string().regex(/^[a-zA-Z0-9_.:-]{1,200}$/),
-  outcome: z.enum(["playing", "lookup", "timeout", "network", "unsupported", "permission", "unknown", "not_found", "provider_failure", "resolution_timeout", "no_source"]),
+  outcome: z.enum(["playing", "lookup", "timeout", "network", "unsupported", "permission", "unknown", "not_found", "provider_failure", "resolution_timeout", "no_source", "invalid_descriptor", "expired", "policy"]),
   sessionId: z.uuid().optional(),
   stage: z.enum(["resolution", "startup", "playback"]).optional(),
   sourceIndex: z.number().int().min(0).max(1).optional(),

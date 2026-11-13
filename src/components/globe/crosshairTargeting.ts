@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
+import { hasPointLocation, type LocatedPoint } from "@/lib/modes/location";
 import type { TerraPoint } from "@/lib/modes/types";
 import { MARKER_ALTITUDE, latLonToVector3 } from "./globeMath";
 
@@ -11,7 +12,7 @@ const MIN_CAMERA_FACING_DOT = 0.01;
 
 export type CrosshairCandidate = {
   distancePx: number;
-  point: TerraPoint;
+  point: LocatedPoint;
 };
 
 export function findNearestCrosshairPoint({
@@ -32,6 +33,7 @@ export function findNearestCrosshairPoint({
   let nearest: CrosshairCandidate | null = null;
 
   for (const point of points) {
+    if (!hasPointLocation(point)) continue;
     const normal = latLonToVector3(point.latitude, point.longitude, 1).normalize();
 
     if (!isSurfaceFacingCamera(normal, cameraNormal)) {

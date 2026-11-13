@@ -18,7 +18,9 @@
     "health:worker": "node --conditions=react-server --import tsx scripts/radio-health.ts",
     "health:backfill": "node --conditions=react-server --import tsx scripts/radio-health.ts --backfill",
     "geo:sync": "node scripts/sync-country-metadata.mjs",
-    "geo:check": "node scripts/sync-country-metadata.mjs --check"
+    "geo:check": "node scripts/sync-country-metadata.mjs --check",
+    "ingestion:build": "node scripts/build-ingestion.mjs",
+    "ingestion:worker": "node --conditions=react-server --import tsx scripts/media-ingestion.ts"
   },
   "dependencies": {
     "@react-three/drei": "10.7.9",
@@ -32,6 +34,8 @@
     "react": "19.3.1",
     "react-dom": "19.3.1",
     "resend": "6.35.0",
+    "sanitize-html": "2.18.2",
+    "sax": "1.6.1",
     "server-only": "0.0.1",
     "three": "0.186.1",
     "topojson-client": "3.1.0",
@@ -45,9 +49,12 @@
     "@types/node": "26.6.5",
     "@types/react": "19.3.0",
     "@types/react-dom": "19.3.0",
+    "@types/sanitize-html": "2.16.2",
+    "@types/sax": "1.2.7",
     "@types/three": "0.186.0",
     "@types/topojson-client": "3.1.5",
     "drizzle-kit": "0.31.11",
+    "esbuild": "0.28.2",
     "jsdom": "30.1.3",
     "tsx": "4.23.15",
     "typescript": "7.0.2",

@@ -63,6 +63,10 @@ export async function persistedIdentityRecords(tx: RadioTransaction): Promise<Ra
   const rows = await tx.select().from(schema.mediaItems)
     .innerJoin(schema.radioStations, eq(schema.radioStations.mediaItemId, schema.mediaItems.id));
   return rows.map(({ media_items: item, radio_stations: station }) => {
+    if (item.countryCode === null || item.latitude === null || item.longitude === null
+      || (item.locationPrecision !== "station" && item.locationPrecision !== "country")) {
+      throw new Error("Persisted radio location violates schema constraints");
+    }
     const point = { id: item.id, modeId: "radio" as const, name: item.name, summary: item.summary,
       countryCode: item.countryCode, latitude: item.latitude, longitude: item.longitude,
       locationPrecision: item.locationPrecision, prominence: 0.5, metrics: item.providerMetadata };

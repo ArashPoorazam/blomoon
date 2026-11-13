@@ -51,3 +51,13 @@ describe("persistent globe coverage (shared by desktop and mobile)", () => {
     }
   });
 });
+
+it("keeps unlocated discovery items out of both baseline and listed globe markers", () => {
+  const unknown = { ...point("unknown"), modeId: "tv", latitude: null, longitude: null };
+  const unverified = { ...point("unverified"), modeId: "podcasts" };
+  const verified = { ...point("verified"), modeId: "tv", locationPrecision: "verified" as const };
+  const list = [unknown, unverified, verified];
+  expect(displayed(list).points).toEqual([verified]);
+  expect(displayed([], false, list).points).toEqual([verified]);
+  expect(list).toHaveLength(3);
+});

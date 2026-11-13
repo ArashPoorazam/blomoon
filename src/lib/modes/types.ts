@@ -8,13 +8,15 @@ export type TerraAvailability = {
 };
 
 export type TerraPoint = {
+  /** Omitted only by legacy radio DTOs. Shows are discovery-only. */
+  kind?: "station" | "show" | "episode" | "channel";
   availability?: TerraAvailability;
   id: string;
   modeId: TerraModeId;
   name: string;
-  latitude: number;
-  longitude: number;
-  locationPrecision?: "station" | "country";
+  latitude: number | null;
+  longitude: number | null;
+  locationPrecision?: "station" | "country" | "verified" | null;
   /** ISO 3166-1 numeric country code, or a documented atlas-only X-* code. */
   countryCode?: string;
   artworkUrl?: string;
@@ -77,7 +79,9 @@ export type TerraRandomPoint = {
 
 export type TerraPlaybackConfig = {
   label: string;
-  mediaKind: "audio";
+  modeId: TerraModeId;
+  mediaKind: "audio" | "video";
+  responseKind: "radio-audio" | "descriptor";
   playableEndpoint: (id: string) => string;
   randomPointEndpoint?: string;
 };

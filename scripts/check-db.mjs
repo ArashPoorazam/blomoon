@@ -2,6 +2,11 @@ import nextEnv from "@next/env";
 import postgres from "postgres";
 
 const requiredTables = [
+  "podcast_shows", "podcast_feeds", "podcast_feed_aliases", "podcast_episodes", "podcast_enclosures",
+  "ingestion_sources",
+  "ingestion_jobs",
+  "ingestion_documents",
+  "ingestion_host_slots",
   "admin_settings", "admin_audit", "user_suspensions", "media_blocks", "admin_jobs", "monitor_samples", "admin_events",
   "accounts",
   "media_items",

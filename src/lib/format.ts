@@ -1,4 +1,5 @@
-export function formatCoordinate(value: number, directionA: string, directionB: string) {
+export function formatCoordinate(value: number | null, directionA: string, directionB: string) {
+  if (value === null || !Number.isFinite(value)) return "Unknown";
   const direction = value >= 0 ? directionA : directionB;
   return `${Math.abs(value).toFixed(2)} ${direction}`;
 }

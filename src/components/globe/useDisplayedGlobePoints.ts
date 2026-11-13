@@ -1,5 +1,6 @@
 "use client";
 
+import { hasPointLocation } from "@/lib/modes/location";
 import { useMemo } from "react";
 import { getPointKey } from "@/lib/modes/pointKeys";
 import { uniquePoints } from "@/lib/modes/pointCollections";
@@ -33,7 +34,7 @@ export function useDisplayedGlobePoints({
     ?? activeTheme.globe.markers.defaultSingle;
   // The mode dataset already owns baseline coverage; never cap it again here.
   const points = useMemo(
-    () => uniquePoints(showListedOnGlobe ? listedPoints : modeGlobePoints),
+    () => uniquePoints(showListedOnGlobe ? listedPoints : modeGlobePoints).filter(hasPointLocation),
     [listedPoints, modeGlobePoints, showListedOnGlobe]
   );
   const listedKeys = useMemo(() => new Set(listedPoints.map(getPointKey)), [listedPoints]);
@@ -48,11 +49,11 @@ export function useDisplayedGlobePoints({
     : defaultMarkerColor;
 
   return {
-    activePlaybackPoint: visiblePlaybackPoint,
+    activePlaybackPoint: hasPointLocation(visiblePlaybackPoint) ? visiblePlaybackPoint : null,
     markerColor,
     markerColorMode,
     points,
     selectedCountryOutlineColor,
-    selectedPoint
+    selectedPoint: hasPointLocation(selectedPoint) ? selectedPoint : null
   };
 }

@@ -33,7 +33,7 @@ export type RadioStationRecord = {
   providerStreamUrls?: string[];
   clickCount: number;
   detail: TerraPointDetail;
-  point: TerraPoint & { countryCode: string };
+  point: TerraPoint & { countryCode: string; latitude: number; longitude: number; locationPrecision?: "station" | "country" };
   searchText: string;
   streamUrl: string;
   votes: number;

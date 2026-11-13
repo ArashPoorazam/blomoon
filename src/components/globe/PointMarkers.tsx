@@ -7,7 +7,7 @@ import type { RefObject } from "react";
 import * as THREE from "three";
 import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
 import { getPointKey } from "@/lib/modes/pointKeys";
-import type { TerraPoint } from "@/lib/modes/types";
+import type { LocatedPoint as TerraPoint } from "@/lib/modes/location";
 import { resolvePointMarkerColor, type GlobeTheme, type MarkerColorMode } from "@/lib/theme/globe";
 import {
   DEFAULT_CAMERA_DISTANCE,

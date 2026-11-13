@@ -4,6 +4,7 @@ import { useFrame } from "@react-three/fiber";
 import { useMemo, useRef, type RefObject } from "react";
 import { Vector3, type Camera } from "three";
 import { GLOBE_RADIUS } from "@/lib/geo/coordinates";
+import { hasPointLocation } from "@/lib/modes/location";
 import type { TerraPoint } from "@/lib/modes/types";
 import { latLonToVector3, MARKER_ALTITUDE } from "./globeMath";
 
@@ -12,7 +13,7 @@ export function PointScreenAnchor({ point, target }: {
   point: TerraPoint | null;
   target: RefObject<HTMLElement | null>;
 }) {
-  const position = useMemo(() => point ? latLonToVector3(point.latitude, point.longitude, GLOBE_RADIUS * MARKER_ALTITUDE) : null, [point]);
+  const position = useMemo(() => hasPointLocation(point) ? latLonToVector3(point.latitude, point.longitude, GLOBE_RADIUS * MARKER_ALTITUDE) : null, [point]);
   const projected = useMemo(() => new Vector3(), []);
   const previous = useRef("");
   useFrame(({ camera, size }) => {

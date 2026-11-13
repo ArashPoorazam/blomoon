@@ -24,9 +24,9 @@ export const PointListRow = memo(function PointListRow({ activeMode, activePlayb
     selected={selected}
     playing={activePlaybackPointKey === getPointKey(point)}
     metadata={[point.summary, activeMode.formatPointMetric(point), formatDateTime(point.timestamp)].filter(Boolean).join(" · ")}
-    onPlay={onPlay}
+    onPlay={point.kind === "show" ? onInspect : onPlay}
     actions={<>
-      <FavouriteStarButton favourited={favouritePointIds.has(getPointKey(point))} point={point} onToggle={onToggleFavourite} />
+      {point.kind !== "show" && <FavouriteStarButton favourited={favouritePointIds.has(getPointKey(point))} point={point} onToggle={onToggleFavourite} />}
       <PointActionMenu point={point} onInfo={onInspect} onShare={onShare} />
     </>}
   />;
