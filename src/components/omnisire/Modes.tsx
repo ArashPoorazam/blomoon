@@ -1,4 +1,5 @@
 "use client";
+import { DiscoveryModeSettings } from "./DiscoveryModeSettings";
 import { useState } from "react";
 import type { modesOverview } from "@/lib/admin/queries";
 import { PageTitle } from "./OmnisireShell";
@@ -22,6 +23,7 @@ export function Modes() {
         title="Modes & providers"
         description="One platform. Independent media capabilities."
       />
+      <DiscoveryModeSettings />
       <Feedback error={error} />
       {data ? (
         data.map((m) => (

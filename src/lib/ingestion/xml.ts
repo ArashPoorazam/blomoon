@@ -10,8 +10,8 @@ export function sanitizeDisplayHtml(value: string) {
 }
 
 /** Strict UTF-8 XML only; DTDs, custom entities, processing instructions and XInclude are rejected. */
-export function parseXml(bytes: Buffer): XmlNode {
-  if (bytes.length > limits.decodedBytes) throw new IngestionError("too_large");
+export function parseXml(bytes: Buffer, largePodcastFeed = false): XmlNode {
+  if (bytes.length > (largePodcastFeed ? 12 * 1024 * 1024 : limits.decodedBytes)) throw new IngestionError("too_large");
   let text: string;
   try { text = new TextDecoder("utf-8", { fatal: true }).decode(bytes); } catch { throw new IngestionError("encoding"); }
   const encoding = text.match(/^\s*<\?xml\s[^?]*encoding\s*=\s*["']([^"']+)/i)?.[1];

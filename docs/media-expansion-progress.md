@@ -4,13 +4,13 @@ This is the authoritative status ledger for the [podcast and live TV implementat
 
 ## Current position
 
-- **Last updated:** 2026-11-13, Asia/Tehran.
-- **Current step:** P06 — Podcast catalog ingestion (blocked on external source/directory inputs).
-- **Current state:** P06a curated-feed implementation and disposable verification complete. Stable show/feed/episode/enclosure persistence, atomic RSS updates, feed aliases, scheduling and scoped worker access are implemented. Only radio is registered in the application.
-- **Last completed step:** P05; P06a is a completed child increment, not completion of parent P06. See [P06 evidence](media-expansion/evidence/P06.md).
-- **Active owner:** None. Codex `/root` completed the authorized fixture increment at base `bea4190328073bde42d205f59417b637ab6429da`; no commit created.
-- **Next action:** Resolve P06b directory selection/access and P06c approved source records, then implement the selected directory adapter and record real-feed checks. P07 remains pending.
-- **Known release dependencies:** User authorized curated-feed fixtures on 2026-11-13, with sources pending. No approved podcast/TV/guide lineup or directory; physical devices/regions and authorized staging remain unestablished. Existing server only, $0 new spending; upgrades unbudgeted. See B01–B05 in the decisions record.
+- **Last updated:** 2026-11-14, Asia/Tehran.
+- **Current step:** P08 — Podcast playback and user state (ready, unclaimed).
+- **Current state:** P07 implemented: registered podcast discovery, bounded catalog/search/detail APIs, canonical show pages, paginated episodes, attribution and freshness. Radio remains the default mode; podcast playback remains P08.
+- **Last completed step:** P07; [acceptance evidence](media-expansion/evidence/P07.md).
+- **Active owner:** None. Codex `/root` completed P07 at base `727448a2636d94a36d3e54d9703f6ef8d02d33d5`; pre-existing P06 work preserved. Reviewed follow-up is on `codex/podcast-discovery-review`.
+- **Next action:** Claim P08 and implement podcast playback/personal state with ownership, bounded progress updates and required device/source verification.
+- **Known release dependencies:** Broader approved lineup, playback/device/region evidence, load, staging and recovery remain pending. Existing server only, $0 new spending; no deployment or production seeding occurred.
 
 ## Status meanings
 
@@ -35,12 +35,12 @@ Do not infer completion from the existence of files, a passing unit suite, or a 
 | P03 | Discovery and playable identities | P02 | done | Codex `/root` | [P03 evidence](media-expansion/evidence/P03.md); fresh/upgrade/retry on PostgreSQL 17.11; 343 tests pass, none skipped. |
 | P04 | Playback coordinator | P03 | done | Codex `/root` | [P04 evidence](media-expansion/evidence/P04.md); 375 tests pass with all DB opt-ins; geography/typecheck/build pass on Node 26.12.1. |
 | P05 | Durable ingestion and safe fetching | P03 | done | Codex `/root` | [P05 evidence](media-expansion/evidence/P05.md); fresh/upgrade/retry PG17 migrations, 444 tests, typecheck/geography/build pass. |
-| P06 | Podcast ingestion | P03, P05 | blocked | — | P06a done; P06b/P06c pending external inputs. [Evidence](media-expansion/evidence/P06.md). |
-| P06a | Curated-feed catalog and fixtures | P03, P05 | done | Codex `/root` | Fresh/upgrade/retry migrations and 456 distinct tests pass across separate runs; [evidence](media-expansion/evidence/P06.md). |
-| P06b | Selected directory adapter | P06a | blocked | — | User left source/provider selection pending; need selected directory, current terms/access and any server credentials. |
-| P06c | Approved real-feed verification | P06a | blocked | — | Need approved source records and URLs; fixtures cannot satisfy real-provider acceptance. |
-| P07 | Podcast discovery | P04, P06 | pending | — | — |
-| P08 | Podcast playback and user state | P04, P07 | pending | — | — |
+| P06 | Podcast ingestion | P03, P05 | done | Codex `/root` | All child increments complete; [final evidence](media-expansion/evidence/P06.md). |
+| P06a | Curated-feed catalog and fixtures | P03, P05 | done | Codex `/root` | Fresh/upgrade/retry and saved-data preservation; [evidence](media-expansion/evidence/P06.md). |
+| P06b | Selected directory adapter | P06a | done | Codex `/root` | Free keyless Podcast Index search/lookup and verified stable aliases; [source/access records](media-expansion/podcast-sources.md). |
+| P06c | Approved real-feed verification | P06a | done | Codex `/root` | HPR 10 episodes and LINUX Unplugged 692 episodes, two successful ingestions each; distinct real-provider evidence and connectivity limitations recorded. |
+| P07 | Podcast discovery | P04, P06 | done | Codex `/root` | [P07 evidence](media-expansion/evidence/P07.md); 475 distinct tests, Node 26/PG17 query plans, geography/typecheck/build pass. |
+| P08 | Podcast playback and user state | P04, P07 | ready | — | — |
 | P09 | Podcast administration and release gate | P05, P08 | pending | — | — |
 | P10 | TV catalog and source policy | P03, P05, P09 | pending | — | — |
 | P11 | Adaptive TV playback | P04, P10 | pending | — | — |
@@ -81,21 +81,24 @@ The default sequence is podcast-first. Dependencies permit some independent work
 | 2026-11-12 | Preserve redundancy/recovery requirements despite the existing-server budget. | Release gate retained | D07/B03; no new provisioning authorized or feasibility demonstrated. |
 | 2026-11-12 | Keep radio's existing resolver wire format behind a strict descriptor adapter; represent unsupported video/embed engines without registering those modes. | P04 engineering decision | [Playback contract](media-expansion/playback.md); preserves saved aliases, scopes full TV to P11, and keeps source credentials out of diagnostics. |
 | 2026-11-13 | Separate publisher fetching/parsing from the credentialed DB coordinator; publish under lease/revision checks in one transaction. | P05 engineering decision | [Ingestion contract](media-expansion/ingestion.md); source approval stays privileged and production network isolation remains P15. |
-| 2026-11-13 | Proceed with curated-feed fixtures; sources and directory remain pending. | User confirmed | P06a completed independently; P06b/P06c and parent P06 remain blocked. |
+| 2026-11-13 | Proceed with curated-feed fixtures; sources and directory remain pending. | Superseded by later user approval below | Original P06a scope; retained as decision history. |
 | 2026-11-13 | Keep one stable source per show, scoped GUID/link episode identities, and explicit feed-URL aliases; reject ambiguous merges. | P06 engineering decision | [Podcast contract](media-expansion/podcasts.md); enclosure changes and rolling-feed omissions preserve references. |
+| 2026-11-13 | Approve Podcast Index, Hacker Public Radio and LINUX Unplugged; complete P06 without new costs. | User confirmed | Supersedes fixture-only scope. [Source records](media-expansion/podcast-sources.md); no deployment authorized. |
+| 2026-11-13 | Use keyless directory compatibility endpoints, verified feed aliases and one source-specific larger RSS profile. | P06 engineering decision | Real-feed evidence required the 12 MiB LINUX Unplugged profile; other source limits unchanged. DNS fallback preserves whole-set public-address validation and TLS. |
+| 2026-11-13 | Expose only approved local podcast catalog; use revision-checked pagination and normalized C-collation title order. | P07 engineering decision | [Discovery contract](media-expansion/podcasts.md); bounded pages/markers, no public directory proxy, local query-plan evidence. |
 
 Add new decisions with their owner and rationale. When superseding a decision, label the old row and link its replacement rather than silently rewriting history.
 
 ## Agent handoff
 
-- **Last task:** P06 curated-feed implementation under the user's explicit fixture-only direction.
-- **Working-tree state:** Prior P00–P05 changes preserved; no commit. P06 adds migration 0022, typed podcast tables, RSS normalization/catalog adapter, scoped role script, worker `--podcasts` option, migration checker, tests and [contract](media-expansion/podcasts.md). Inspect the cumulative dirty tree before further work.
-- **Verification:** Node 26.12.1/PostgreSQL 17.11: 450 regression tests passed with database files serialized, plus six podcast DB tests passed separately. All 456 distinct tests covered. Fresh/upgrade/repeated migrations and injected failure/retry preserved existing saved data. Geography/typecheck/build/worker bundle/schema-readiness pass. Initial sandbox listener failures and parallel DB timeouts are documented in [evidence](media-expansion/evidence/P06.md).
-- **Runtime:** Temporary Node `/tmp/node-v26.12.1-linux-x64`, PostgreSQL binaries `/tmp/blomoon-pg17` and disposable cluster `/tmp/blomoon-p06-cluster` were prepared for this turn. The test cluster is stopped after verification. These paths may disappear on environment reset; do not assume availability.
-- **Next smallest useful task:** Resolve the selected directory/access and approved publisher feed records, implement P06b, then run P06c. Do not mark P06 done or P07 ready from fixtures alone.
-- **Migration/rollback:** Apply 0022 after 0020/0021. Existing P05 role installations apply only the new podcast role script; new installations apply base then podcast role scripts once. Stop podcast workers on rollback; retain additive tables. Use `--podcasts` and its scoped DB role, not a competing generic worker.
-- **Pending external input:** Directory choice/access/terms and approved source URLs/provenance. User explicitly left these pending. Physical devices, regional coverage, staging and recovery resources remain later release gates.
-- **Scope:** No source approval, real publisher fetch, provisioning, deployment, publication or purchases performed.
+- **Last task:** Reviewed the prior commit and P06/P07 follow-up for GitHub publication; fixed missing discovery-mode controls, language matching and a migration fixture collision; [evidence](media-expansion/evidence/P07.md), [contract](media-expansion/podcasts.md).
+- **Working tree:** Base `727448a2636d94a36d3e54d9703f6ef8d02d33d5`; pre-existing P06 changes preserved. P07 adds `src/lib/modes/podcasts/discovery*`, `http.ts`, `mode.ts`, podcast API routes and tests, `/podcasts/[id]`, episode UI/tests, registry integration, detail/share handling, category ingestion and documentation. P06/P07 and review fixes are bundled on `codex/podcast-discovery-review`; see Git log for the resulting revision.
+- **Verification:** Node 26.12.1/PostgreSQL 17.11; 464 regression tests plus 11 podcast DB tests, 478 distinct passes after pre-push review (467 regression + 11 podcast DB tests). P03/P05/P06 fresh/upgrade/retry checks and geography/typecheck/build/worker-bundle/whitespace pass. Actual query plans recorded at 100 shows/20,300 episodes. No physical-device/full-browser/production evidence is implied.
+- **Runtime:** Node `/tmp/node-v26.12.1-linux-x64`; PostgreSQL `/tmp/blomoon-pg17`; disposable cluster `/tmp/blomoon-p06-cluster` review checks used port 55446, separate from the development database; stopped after checks. Temporary paths may disappear.
+- **Decisions:** Public discovery uses only approved ingested sources. Normalized deterministic title order, snapshot revision rejection on change, 50-row API page cap, 25-episode UI pages, 500 verified globe markers. No new index needed at measured local costs; concurrency remains P14/P16.
+- **Migration/rollback:** No P07 migration. Keep additive schema and saved references; disable podcast mode or revert UI/routes/registration. P06 worker-role grant requirements remain in its source records. Topic metadata arrives on the next successful feed refresh.
+- **Next task:** P08 playback and personal listening state. Maintain stable UUID links, publisher attribution, explicit availability and radio regressions.
+- **Remaining gates/scope:** Broader lineup, playback/devices/regions, staging/load/recovery; no purchases, provisioning, production seeding, deployment or publication performed.
 
 ## Completion and blocker record template
 

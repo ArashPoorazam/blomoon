@@ -13,8 +13,10 @@ function validator(value: unknown) {
   return typeof value === "string" && value.length <= 512 && !/[\x00-\x1f\x7f]/.test(value) ? value : null;
 }
 
-export async function fetchDocument(input: FetchInput, acquire: HostSlot, cancellation: AbortSignal): Promise<FetchedDocument> {
-  const deadline = AbortSignal.timeout(limits.timeoutMs);
+export async function fetchDocument(input: FetchInput, acquire: HostSlot, cancellation: AbortSignal, format: "xml" | "json" = "xml"): Promise<FetchedDocument> {
+  const large = input.largePodcastFeed === true && input.url === "https://feeds.jupiterbroadcasting.com/lup";
+  const byteLimits = large ? {wireBytes: 12 * 1024 * 1024, decodedBytes: 12 * 1024 * 1024} : limits;
+  const deadline = AbortSignal.timeout(large ? 25_000 : limits.timeoutMs);
   const signal = AbortSignal.any([cancellation, deadline]);
   try {
     let url = approvedUrl(input.url, input.origins);
@@ -25,16 +27,10 @@ export async function fetchDocument(input: FetchInput, acquire: HostSlot, cancel
       const release = await acquire(address.host, signal);
       try {
         const conditional = url.href === input.validatorUrl;
-        const headers: Record<string, string> = { Host: url.host, Accept: "application/rss+xml, application/atom+xml, application/xml, text/xml", "Accept-Encoding": "gzip, deflate, br", "User-Agent": "Blomoon ingestion/1.0" };
+        const headers: Record<string, string> = { Host: url.host, Accept: format === "json" ? "application/json" : "application/rss+xml, application/atom+xml, application/xml, text/xml", "Accept-Encoding": "gzip, deflate, br", "User-Agent": "Blomoon ingestion/1.0" };
         if (conditional && validator(input.etag)) headers["If-None-Match"] = input.etag!;
         if (conditional && validator(input.lastModified)) headers["If-Modified-Since"] = input.lastModified!;
-        const res = await new Promise<import("node:http").IncomingMessage>((resolve, reject) => {
-          const req = request({ hostname: address.address, family: address.family, port: 443,
-            servername: isIP(address.host) ? undefined : address.host, path: url.pathname + url.search,
-            method: "GET", agent: false, signal, headers, maxHeaderSize: 8192 }, resolve);
-          req.on("error", reject);
-          req.end();
-        });
+        const res = await requestPublicAddresses(address, url, headers, signal);
         try {
           if ([301, 302, 303, 307, 308].includes(res.statusCode ?? 0)) {
             if (redirects >= limits.redirects) throw new IngestionError("redirect_limit");
@@ -49,11 +45,12 @@ export async function fetchDocument(input: FetchInput, acquire: HostSlot, cancel
           }
           if (res.statusCode !== 200) throw new IngestionError("http_error");
           const type = res.headers["content-type"] ?? "";
-          if (type && !/^(?:application\/(?:[\w.+-]+\+)?xml|text\/xml)(?:\s*;|$)/i.test(type)) throw new IngestionError("http_error");
+          const validType = format === "json" ? /^application\/json(?:\s*;|$)/i.test(type) : /^(?:application\/(?:[\w.+-]+\+)?xml|text\/xml)(?:\s*;|$)/i.test(type);
+          if ((format === "json" || type) && !validType) throw new IngestionError("http_error");
           const charset = type.match(/charset\s*=\s*["']?([^;\s"']+)/i)?.[1];
           if (charset && !/^utf-?8$/i.test(charset)) throw new IngestionError("encoding");
-          if (Number(res.headers["content-length"]) > limits.wireBytes) throw new IngestionError("too_large");
-          const body = await readBody(res, res.headers["content-encoding"], signal);
+          if (Number(res.headers["content-length"]) > byteLimits.wireBytes) throw new IngestionError("too_large");
+          const body = await readBody(res, res.headers["content-encoding"], signal, byteLimits);
           return { status: "modified", finalUrl: url.href, etag, lastModified, body };
         } finally { res.destroy(); }
       } finally { await release(); }
@@ -66,16 +63,16 @@ export async function fetchDocument(input: FetchInput, acquire: HostSlot, cancel
   }
 }
 
-async function readBody(source: Readable, encoding: string | undefined, signal: AbortSignal) {
+async function readBody(source: Readable, encoding: string | undefined, signal: AbortSignal, byteLimits: {wireBytes:number;decodedBytes:number}) {
   let wire = 0, decoded = 0;
   const chunks: Buffer[] = [];
   const boundWire = new Transform({ transform(chunk: Buffer, _encoding, callback) {
     wire += chunk.length;
-    callback(wire > limits.wireBytes ? new IngestionError("too_large") : null, chunk);
+    callback(wire > byteLimits.wireBytes ? new IngestionError("too_large") : null, chunk);
   } });
   const sink = new Writable({ write(chunk: Buffer, _encoding, callback) {
     decoded += chunk.length;
-    if (decoded > limits.decodedBytes) return callback(new IngestionError("too_large"));
+    if (decoded > byteLimits.decodedBytes) return callback(new IngestionError("too_large"));
     chunks.push(chunk); callback();
   } });
   const normalized = encoding?.trim().toLowerCase();
@@ -83,4 +80,24 @@ async function readBody(source: Readable, encoding: string | undefined, signal: 
   if (decompress === undefined) throw new IngestionError("encoding");
   await pipeline(decompress ? [source, boundWire, decompress, sink] : [source, boundWire, sink], { signal });
   return Buffer.concat(chunks, decoded);
+}
+
+/** DNS is validated once as a complete set, then pinned on each bounded connection attempt.
+ * Retry only failures before response headers; never retry a publisher HTTP error or body.
+ */
+async function requestPublicAddresses(address: Awaited<ReturnType<typeof resolvePublicAddress>>, url: URL, headers: Record<string,string>, signal: AbortSignal) {
+  for (const candidate of address.alternatives) {
+    signal.throwIfAborted();
+    try {
+      return await new Promise<import("node:http").IncomingMessage>((resolve, reject) => {
+        const req = request({hostname:candidate.address,family:candidate.family,port:443,
+          servername:isIP(address.host) ? undefined : address.host,path:url.pathname+url.search,
+          method:"GET",agent:false,signal,headers,maxHeaderSize:8192}, res => {clearTimeout(timer);resolve(res);});
+        const timer=setTimeout(()=>req.destroy(new Error("Address connection timeout")),4000);
+        req.on("error",error=>{clearTimeout(timer);reject(error);});
+        req.end();
+      });
+    } catch { if (signal.aborted) signal.throwIfAborted(); }
+  }
+  throw new IngestionError("network");
 }

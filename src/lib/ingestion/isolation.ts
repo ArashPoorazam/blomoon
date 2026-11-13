@@ -5,15 +5,16 @@ import { INGESTION_LIMITS as limits, type FetchResult } from "./contracts";
 import type { IngestionSource, IngestionStore } from "./store";
 import { IngestionError, type IngestionFailure } from "./errors";
 
-export function isolatedOptions(bundle: string) {
-  return { execPath: process.execPath, execArgv: ["--permission", `--allow-fs-read=${bundle}`, "--allow-net", "--max-old-space-size=128", "--process-timeout=20s", "--disable-proto=throw", "--no-experimental-sqlite"], env: { NODE_ENV: "production" as const } };
+export function isolatedOptions(bundle: string, largePodcastFeed = false) {
+  return { execPath: process.execPath, execArgv: ["--permission", `--allow-fs-read=${bundle}`, "--allow-net", largePodcastFeed ? "--max-old-space-size=256" : "--max-old-space-size=128", largePodcastFeed ? "--process-timeout=45s" : "--process-timeout=20s", "--disable-proto=throw", "--no-experimental-sqlite"], env: { NODE_ENV: "production" as const } };
 }
 
 /** One bounded child per job; only the DB coordinator handles distributed host-slot leases. */
 export async function runIsolatedFetch(source: IngestionSource, store: Pick<IngestionStore, "acquireHost" | "releaseHost">, signal: AbortSignal): Promise<FetchResult> {
   signal.throwIfAborted();
   const bundle = resolve("dist/ingestion-child.cjs");
-  const child = fork(bundle, [], { ...isolatedOptions(bundle), stdio: ["ignore", "ignore", "ignore", "ipc"] });
+  const largePodcastFeed = source.id === "1a3bdc6f-598a-4ba6-b341-bc6a9df67a02" && source.url === "https://feeds.jupiterbroadcasting.com/lup";
+  const child = fork(bundle, [], { ...isolatedOptions(bundle, largePodcastFeed), stdio: ["ignore", "ignore", "ignore", "ipc"] });
   const allowedHosts = new Set(source.origins.map(origin => new URL(origin).hostname.replace(/^\[|\]$/g, "")));
   const held = new Map<string, string>();
   let handling = Promise.resolve();
@@ -25,7 +26,7 @@ export async function runIsolatedFetch(source: IngestionSource, store: Pick<Inge
       const fail = (code: IngestionFailure) => { finished = true; reject(new IngestionError(code)); };
       abort = () => fail("cancelled");
       signal.addEventListener("abort", abort, { once: true });
-      timer = setTimeout(() => fail("timeout"), limits.workerMs);
+      timer = setTimeout(() => fail("timeout"), largePodcastFeed ? 45_000 : limits.workerMs);
       child.on("error", () => fail("worker_failed"));
       child.on("exit", () => { if (!finished) fail("worker_failed"); });
       child.on("message", (message: { type?: string; id?: number; action?: string; host?: string; result?: FetchResult; code?: IngestionFailure }) => {
@@ -49,6 +50,7 @@ export async function runIsolatedFetch(source: IngestionSource, store: Pick<Inge
         }).catch(() => fail("worker_failed"));
       });
       child.send({ type: "start", kind: source.kind, input: { url: source.url, origins: source.origins,
+        largePodcastFeed,
         etag: source.etag, lastModified: source.last_modified, validatorUrl: source.validator_url } }, error => { if (error) fail("worker_failed"); });
       if (signal.aborted) abort();
     });

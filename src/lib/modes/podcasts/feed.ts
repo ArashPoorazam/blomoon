@@ -5,10 +5,11 @@ import { sanitizeDisplayHtml } from '../../ingestion/xml';
 
 export type PodcastEnclosure = { url: string; mime: string; bytes: number | null };
 export type PodcastEpisode = {
+  author: string | null; copyright: string | null;
   key: string; title: string; description: string; publishedAt: string | null;
   explicit: boolean | null; duration: number | null; enclosures: PodcastEnclosure[];
 };
-export type PodcastFeed = { title: string; description: string; language: string | null; explicit: boolean | null; episodes: PodcastEpisode[] };
+export type PodcastFeed = { topics: string; author: string | null; copyright: string | null; title: string; description: string; language: string | null; explicit: boolean | null; episodes: PodcastEpisode[] };
 const children = (node: XmlNode, name: string) => node.children.filter(child => child.name === name);
 const value = (node: XmlNode, name: string) => children(node, name)[0]?.text.trim() ?? '';
 const plain = (text: string) => sanitizeDisplayHtml(text).replace(/<[^>]*>/g, '').trim();
@@ -52,6 +53,8 @@ export function normalizePodcastFeed(root: XmlNode): PodcastFeed {
     const key = `${guid ? 'guid' : 'link'}:${digest(stable)}`;
     const date = Date.parse(value(item, 'pubDate'));
     const episode: PodcastEpisode = {
+      author: plain(value(item, 'itunes:author') || value(item, 'author') || value(channel, 'itunes:author')) || null,
+      copyright: plain(value(item, 'copyright') || value(item, 'podcast:license') || value(channel, 'copyright')) || null,
       key, title, description: sanitizeDisplayHtml(value(item, 'content:encoded') || value(item, 'description')),
       publishedAt: Number.isFinite(date) ? new Date(date).toISOString() : null,
       explicit: explicit(value(item, 'itunes:explicit')), duration: duration(value(item, 'itunes:duration')), enclosures,
@@ -60,7 +63,7 @@ export function normalizePodcastFeed(root: XmlNode): PodcastFeed {
     if (previous && JSON.stringify(previous) !== JSON.stringify(episode)) return invalid();
     episodes.set(key, episode);
   }
-  return { title, description: sanitizeDisplayHtml(value(channel, 'description')), language: value(channel, 'language') || null,
+  return { topics: [...new Set([...children(channel, 'category'), ...children(channel, 'itunes:category').flatMap(n => [n, ...children(n, 'itunes:category')])].map(n => plain(n.attributes.text || n.text)).filter(Boolean))].slice(0, 20).join(', '), author: plain(value(channel, 'itunes:author')) || null, copyright: plain(value(channel, 'copyright') || value(channel, 'podcast:license')) || null, title, description: sanitizeDisplayHtml(value(channel, 'description')), language: value(channel, 'language') || null,
     explicit: explicit(value(channel, 'itunes:explicit')), episodes: [...episodes.values()] };
 }
 

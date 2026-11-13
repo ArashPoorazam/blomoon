@@ -69,3 +69,6 @@ DATABASE_URL=postgres://user@127.0.0.1:55439/blomoon_p05_suite \
 ```
 
 See [P05 evidence](evidence/P05.md). HTTP/DNS fixtures contact no publishers. Primary references checked for implementation: [Node permissions](https://nodejs.org/api/permissions.html), [sax entity behavior](https://github.com/isaacs/sax-js#regarding-doctypes-and-entitys), [sanitize-html maintained package](https://github.com/apostrophecms/apostrophe/tree/main/packages/sanitize-html), and [OWASP SSRF guidance](https://cheatsheetseries.owasp.org/cheatsheets/Server_Side_Request_Forgery_Prevention_Cheat_Sheet.html). Dependencies are pinned to `sax` 1.6.1, `sanitize-html` 2.18.2 and bundler `esbuild` 0.28.2; integration behavior was tested on the required Node runtime.
+
+
+P06 continuation: [approved podcast source profiles](podcast-sources.md) add a source-specific larger-feed budget, fully validated DNS-address fallback and flushed child IPC output. Default P05 budgets remain in effect for other feeds/guides. See P06 evidence for live-provider and regression results.

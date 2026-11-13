@@ -50,3 +50,24 @@ it("drops network and filesystem privileges before successfully parsing and sani
   });
   expect(result).toEqual({name:'rss',html:'<p>ok</p>'});
 });
+
+it('delivers a large bounded document before disconnecting the isolated child', async()=>{
+  const path=resolve('dist/ingestion-large-check.cjs');
+  await build({entryPoints:['src/lib/ingestion/child.ts'],bundle:true,platform:'node',format:'cjs',outfile:path,
+    plugins:[{name:'controlled-feed',setup(builder){
+      builder.onResolve({filter:/^\.\/fetch$/},()=>({path:'fixture-fetch',namespace:'fixture'}));
+      builder.onLoad({filter:/.*/,namespace:'fixture'},()=>({loader:'js',contents:`
+        export async function fetchDocument(){return {status:'modified',finalUrl:'https://feeds.jupiterbroadcasting.com/lup',etag:null,lastModified:null,
+          body:Buffer.from('<rss>'+Array.from({length:200},()=>'<item><description>'+('x'.repeat(48000))+'</description></item>').join('')+'</rss>')};}
+      `}));
+    }}]});
+  const result=await new Promise<{document:{children:unknown[]};bytes:number}>((resolveResult,reject)=>{
+    let received=false;
+    const child=fork(path,[],{...isolatedOptions(path,true),stdio:['ignore','ignore','ignore','ipc']});
+    child.on('message',(message:{type:string;result:any;code?:string})=>{
+      if(message.type==='result'){received=true;resolveResult(message.result);}else reject(new Error(message.code));
+    });child.on('error',reject);child.on('exit',()=>{if(!received)reject(new Error('Child exited without complete document'));});
+    child.send({type:'start',kind:'feed',input:{url:'https://feeds.jupiterbroadcasting.com/lup',origins:['https://feeds.jupiterbroadcasting.com'],largePodcastFeed:true}});
+  });
+  expect(result.bytes).toBeGreaterThan(9_000_000);expect(result.document.children).toHaveLength(200);
+},10000);

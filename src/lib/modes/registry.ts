@@ -1,8 +1,9 @@
+import { podcastMode } from "./podcasts/mode";
 import { radioMode } from "./radio/mode";
 import type { TerraMode } from "./types";
 
 export const terraModes = [
-  radioMode
+  radioMode, podcastMode
 ] satisfies TerraMode[];
 
 export const defaultMode = terraModes[0];

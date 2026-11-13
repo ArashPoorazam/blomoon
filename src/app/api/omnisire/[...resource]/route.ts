@@ -1,9 +1,9 @@
+import { discoveryModeSettings, saveRegisteredModeSettings } from "@/lib/admin/mode-settings";
 import { z } from "zod";
 import { adminRequest, readAdminBody } from "@/lib/admin/http";
 import { AdminError } from "@/lib/admin/access";
 import {
   catalogQueryInput,
-  modeSettingsInput,
   settingsInput,
 } from "@/lib/admin/contracts";
 import { getSettings, saveSettings } from "@/lib/admin/settings";
@@ -36,6 +36,7 @@ async function handle(request: Request, context: Context) {
             database: Boolean(process.env.DATABASE_URL),
           },
         };
+      if (path === "mode-settings") return discoveryModeSettings();
       if (path === "modes") return modesOverview();
       if (path === "servers")
         return getMonitoring(
@@ -77,13 +78,9 @@ async function handle(request: Request, context: Context) {
       )
         return retryJob(actor, z.uuid().parse(parts[1]));
       if (parts[0] === "modes") {
-        const mode = requireAdminMode(parts[1]);
         if (parts.length === 2 && request.method === "PATCH")
-          return saveSettings(
-            actor,
-            `mode:${parts[1]}`,
-            modeSettingsInput.parse(await readAdminBody(request)),
-          );
+          return saveRegisteredModeSettings(actor, parts[1], await readAdminBody(request));
+        const mode = requireAdminMode(parts[1]);
         if (
           parts[2] === "sync" &&
           parts.length === 3 &&

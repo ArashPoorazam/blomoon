@@ -4,7 +4,7 @@ export const INGESTION_LIMITS = {
   outputBytes: 12 * 1024 * 1024, hostConcurrency: 2, concurrency: 4, leaseSeconds: 60, attempts: 3,
 } as const;
 export type XmlNode = { name: string; attributes: Record<string, string>; text: string; children: XmlNode[] };
-export type FetchInput = { url: string; origins: string[]; etag: string | null; lastModified: string | null; validatorUrl: string | null };
+export type FetchInput = { largePodcastFeed?: boolean; url: string; origins: string[]; etag: string | null; lastModified: string | null; validatorUrl: string | null };
 export type FetchResult = {
   status: "modified" | "not_modified"; finalUrl: string; etag: string | null; lastModified: string | null;
   bytes: number; document: XmlNode | null;

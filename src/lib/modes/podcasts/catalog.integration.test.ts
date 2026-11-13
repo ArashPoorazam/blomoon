@@ -7,6 +7,7 @@ import { assertIngestionRole } from '../../ingestion/role';
 import { parseXml } from '../../ingestion/xml';
 import { applyPodcastFeed, bindCuratedFeed, podcastIngestionStatus } from './catalog';
 import { rss, item } from './fixtures';
+import { linkDirectoryShow } from './directoryIdentity';
 const enabled = process.env.PODCAST_INTEGRATION === '1';
 const url = enabled ? new URL(process.env.DATABASE_URL!) : null;
 if (url && (!['localhost','127.0.0.1','[::1]'].includes(url.hostname) || !url.pathname.startsWith('/blomoon_p06_'))) throw new Error('Disposable local blomoon_p06_* database required');
@@ -84,6 +85,17 @@ describe.skipIf(!enabled)('podcast catalog on disposable PostgreSQL 17', () => {
     expect(await db!`select * from podcast_episodes`).toHaveLength(2);
     await expect(db!`insert into podcast_episodes(media_item_id,show_id,identity_key) values (${showId},${showId},'invalid')`).rejects.toMatchObject({code:'23514'});
     expect(first).not.toBe(sourceId);
+  });
+  it('links directory identity only to verified feed aliases without changing the canonical show',async()=>{
+    await publish();
+    const candidate={provider:'podcast-index' as const,providerKey:'apple:123',title:'Directory title',author:'Author',feedUrl:'https://feeds.example/a',attribution:'Podcast Index' as const};
+    expect(await linkDirectoryShow(db!,sourceId,candidate)).toBe(showId);
+    expect(await linkDirectoryShow(db!,sourceId,candidate)).toBe(showId);
+    await expect(linkDirectoryShow(db!,sourceId,{...candidate,feedUrl:'https://other.example/feed'})).rejects.toThrow('verified');
+    const other=await store!.configureSource({kind:'feed',url:'https://feeds.example/other',origins:['https://feeds.example']});
+    await bindCuratedFeed(db!,other,'fixture','fixture');
+    await expect(linkDirectoryShow(db!,other,{...candidate,feedUrl:'https://feeds.example/other'})).rejects.toThrow('another show');
+    expect((await db!`select name from media_items where id=${showId}`)[0].name).toBe('Show');
   });
   it('publishes under a scoped role while denying accounts, radio writes and source curation', async () => {
     const suffix=randomUUID().replaceAll('-','');const base=`p06_base_${suffix}`,group=`p06_group_${suffix}`,login=`p06_login_${suffix}`;

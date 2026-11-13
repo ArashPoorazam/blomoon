@@ -12,7 +12,8 @@ export function useShareEntry({ onStation }: { onStation: (point: TerraPointDeta
   const handledPath = useRef<string | null>(null);
   useEffect(() => {
     const path = window.location.pathname; if (handledPath.current === path) return; handledPath.current = path;
-    const stationMatch = path.match(/^\/share\/stations\/([^/]+)\/([^/]+)$/);
+    const showMatch = path.match(/^\/podcasts\/([^/]+)$/);
+    const stationMatch = showMatch ? [showMatch[0], 'podcasts', showMatch[1]] : path.match(/^\/share\/stations\/([^/]+)\/([^/]+)$/);
     if (stationMatch) {
       const modeId = decodeURIComponent(stationMatch[1]); const pointId = decodeURIComponent(stationMatch[2]); const mode = terraModes.find((candidate) => candidate.id === modeId);
       if (!mode) return;

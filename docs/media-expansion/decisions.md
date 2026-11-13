@@ -10,7 +10,7 @@ Decision date: 2026-11-12 (Asia/Tehran). Scope: P01 of the [roadmap](../media-ex
 | D02 | Use the existing server. New monthly spend is $0; upgrades remain unbudgeted. No paid content licences or additional paid services. | User clarified that the budget is for a good server only, then chose to use the existing server with upgrades unbudgeted. This supersedes the earlier ambiguous “zero” answer. Existing server cost is not assumed to be zero. |
 | D03 | Preserve radio; implement podcasts before TV; deliver audio/video from the publisher or an approved embedded player. | Roadmap default retained by Codex. Do not proxy, rehost, transcode, or operate a broadcast pipeline. |
 | D04 | Size the initial increment for 100 podcast shows, 20,000 retained episode records, and 10 curated TV channels with at most two variants each. | Codex engineering default, not a promised or approved lineup. Keep previously saved episode references when feeds roll over; these are sizing targets, not destructive retention limits. |
-| D05 | Start acquisition with a curated allowlist of publisher RSS feeds and official channel sources. Directory integration remains an explicit P06 selection gate. | No source list or directory credentials have been supplied. Do not infer approval from a URL or directory listing. Curated fixtures can proceed independently. |
+| D05 | Start acquisition with a curated allowlist of publisher RSS feeds and official channel sources. Directory integration remains an explicit P06 selection gate. | Updated 2026-11-13: owner approved Podcast Index keyless discovery and HPR/LINUX Unplugged ingestion. See [source records](podcast-sources.md). Other directory entries are not approved automatically. |
 | D06 | Keep 5,000 steady users and 10,000 burst users as capacity test targets. | Roadmap default retained. Existing server capacity is unknown; do not claim it meets these targets or silently lower them to fit the budget. |
 | D07 | Retain the roadmap's redundant-production and recovery requirements. | A single existing server does not demonstrate redundancy. P15–P17 remain gated if available infrastructure cannot meet the requirements without new spending. |
 
@@ -40,8 +40,8 @@ Permission need not mean a separately negotiated or paid agreement. Applicable p
 | Source class | First-release delivery | Current eligibility / exact blocker |
 | --- | --- | --- |
 | Existing radio | Existing Radio Browser/provider delivery and current controls | Preserve behavior; P01 adds no new radio source approvals and makes no retrospective rights certification. |
-| Podcast feeds | Browser requests publisher RSS enclosure URL directly, preserving publisher content/ad behavior | No approved shows yet. Owner must record a free applicable permission basis and required attribution for each chosen feed. |
-| Podcast directory | Metadata/identity discovery only; never a grant of media rights | No directory selected. P06 must record current terms, no-cost access/limits and account eligibility; otherwise retain its directory-adapter requirement as incomplete. |
+| Podcast feeds | Browser requests publisher RSS enclosure URL directly, preserving publisher content/ad behavior | HPR and LINUX Unplugged approved for the P06 pilot on 2026-11-13; [permission and attribution records](podcast-sources.md). Broader release lineup remains pending. |
+| Podcast directory | Metadata/identity discovery only; never a grant of media rights | Podcast Index selected; documented keyless endpoints verified without accounts/fees. [Terms, bounds and attribution](podcast-sources.md). |
 | Direct live TV | Official publisher HTTPS HLS; other transports only if a selected source requires them | No approved channels yet. Need permission for third-party direct playback, territories and expiry; an extracted `.m3u8` is not sufficient. |
 | Embedded live TV | Official publisher/platform player, only where terms and embedding settings permit | No approved channels yet. Preserve player controls, branding, ads and restrictions. An embed-only source does not authorize raw-stream extraction. |
 | Programme guides | Publisher/guide feed with permitted metadata use | No approved guide provider. Need no-cost rights, stable channel mapping, coverage and refresh limits before P12 real-guide acceptance. |
@@ -125,8 +125,8 @@ For M03/P17, use a 48-hour limited cohort of at most 100 opted-in accounts, then
 
 | Blocker | Unblocking evidence / owner | Affected gate |
 | --- | --- | --- |
-| B01 No approved podcast/TV/guide lineup | Per-source records above, with free usage basis, territories and delivery method; project owner | Real-source P06, P09–P13 and P17 |
-| B02 No selected podcast directory | Current access/terms/quota review and no-cost eligible account, or explicit documented change to P06; project owner and P06 agent | Directory portion of P06 |
+| B01 Broader podcast/TV/guide lineup pending; two P06 podcasts approved | Per-source records above, with free usage basis, territories and delivery method; project owner | P09–P13 and P17 |
+| B02 Resolved 2026-11-13: Podcast Index selected | Keyless search/lookup verified, no account or paid service needed; [source records](podcast-sources.md) | P06 directory gate cleared; public search scaling remains P07/P14 |
 | B03 Existing server capacity/cost unknown; redundancy not demonstrated | Authorized inventory, actual baseline bill, controlled measurements, off-server backup destination and redundant topology within D02; project owner and P15/P16 agents | P15–P17; not local fixtures |
 | B04 Physical devices, regional testers and staging not established | Named operator, available devices/networks, authorized running staging and measured results; project owner | Real matrix and P16 |
 | B05 Operating jurisdiction and source-specific conditions unreviewed | Record operator jurisdiction and applicable source/territory review before source publication; project owner | Source release, not fixture implementation |

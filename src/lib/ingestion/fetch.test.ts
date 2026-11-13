@@ -91,3 +91,32 @@ it("rejects truncated gzip and releases resources on body errors", async () => {
   response(200,gzipSync('<rss/>').subarray(0,12),{'content-encoding':'gzip'});
   await expect(fetchFeed()).rejects.toMatchObject({code:'network'});expect(release).toHaveBeenCalledTimes(1);
 });
+
+it("accepts bounded JSON only in explicit JSON mode", async () => {
+  response(200,'{"results":[]}',{"content-type":"application/json"});
+  expect((await fetchDocument(input,acquire,new AbortController().signal,"json")).body.toString()).toContain("results");
+  response(200,"<rss/>",{"content-type":"text/xml"});
+  await expect(fetchDocument(input,acquire,new AbortController().signal,"json")).rejects.toMatchObject({code:"http_error"});
+  response(200,"{}",{"content-type":"application/json"});
+  await expect(fetchFeed()).rejects.toMatchObject({code:"http_error"});
+});
+it('restricts the larger feed budget to the explicitly opted-in approved URL', async()=>{
+  const payload='x'.repeat(4*1024*1024+1);
+  response(200,gzipSync(payload),{'content-encoding':'gzip'});
+  expect((await fetchFeed({url:'https://feeds.jupiterbroadcasting.com/lup',origins:['https://feeds.jupiterbroadcasting.com'],largePodcastFeed:true})).body.length).toBe(payload.length);
+  response(200,gzipSync(payload),{'content-encoding':'gzip'});
+  await expect(fetchFeed({largePodcastFeed:true})).rejects.toMatchObject({code:'too_large'});
+  response(200,gzipSync('x'.repeat(12*1024*1024+1)),{'content-encoding':'gzip'});
+  await expect(fetchFeed({url:'https://feeds.jupiterbroadcasting.com/lup',origins:['https://feeds.jupiterbroadcasting.com'],largePodcastFeed:true})).rejects.toMatchObject({code:'too_large'});
+});
+it('falls back only to addresses from the fully validated DNS set',async()=>{
+  mocks.lookup.mockResolvedValue([{address:'1.1.1.1',family:4},{address:'8.8.8.8',family:4}]);
+  mocks.request.mockImplementationOnce((_options,_callback)=>{
+    const req=new EventEmitter() as EventEmitter & {end:()=>void};req.end=()=>req.emit('error',new Error('connection failed'));return req;
+  });
+  response(200,'<rss/>');await fetchFeed();
+  expect(mocks.request.mock.calls.map(call=>call[0].hostname)).toEqual(['1.1.1.1','8.8.8.8']);
+  expect(mocks.lookup).toHaveBeenCalledTimes(1);
+  mocks.lookup.mockResolvedValue([{address:'1.1.1.1',family:4},{address:'127.0.0.1',family:4}]);
+  await expect(fetchFeed()).rejects.toMatchObject({code:'unsafe_address'});
+});

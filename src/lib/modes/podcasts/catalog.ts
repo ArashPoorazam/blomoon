@@ -43,13 +43,13 @@ export const applyPodcastFeed: ApplyDocument = async (tx, result, source) => {
   const normalized = normalizePodcastFeed(result.document);
   await feedAlias(tx, source.url, source.id);
   await feedAlias(tx, finalUrl, source.id);
-  await tx`update media_items set name=${normalized.title}, summary=${normalized.description},provider_updated_at=clock_timestamp(),updated_at=clock_timestamp() where id=${feed.show_id}`;
+  await tx`update media_items set provider_metadata=${tx.json({author:normalized.author,copyright:normalized.copyright,topics:normalized.topics})},name=${normalized.title}, summary=${normalized.description},provider_updated_at=clock_timestamp(),updated_at=clock_timestamp() where id=${feed.show_id}`;
   await tx`update podcast_shows set description=${normalized.description},language=${normalized.language},explicit=${normalized.explicit},updated_at=clock_timestamp() where media_item_id=${feed.show_id}`;
   for (const episode of normalized.episodes) {
     const primary = `episode:${feed.show_id}:${episode.key}`;
-    const [media] = await tx`insert into media_items(id,mode_id,kind,provider_id,provider_item_id,name,summary,provider_updated_at)
-      values (${randomUUID()},'podcasts','episode','podcasts-curated',${primary},${episode.title},${episode.description},clock_timestamp())
-      on conflict(provider_id,provider_item_id) do update set name=excluded.name,summary=excluded.summary,provider_updated_at=excluded.provider_updated_at,updated_at=clock_timestamp() returning id`;
+    const [media] = await tx`insert into media_items(id,mode_id,kind,provider_id,provider_item_id,name,summary,provider_updated_at,provider_metadata)
+      values (${randomUUID()},'podcasts','episode','podcasts-curated',${primary},${episode.title},${episode.description},clock_timestamp(),${tx.json({author:episode.author,copyright:episode.copyright})})
+      on conflict(provider_id,provider_item_id) do update set provider_metadata=excluded.provider_metadata,name=excluded.name,summary=excluded.summary,provider_updated_at=excluded.provider_updated_at,updated_at=clock_timestamp() returning id`;
     await tx`insert into podcast_episodes(media_item_id,show_id,identity_key,description,published_at,explicit,duration_seconds)
       values (${media.id},${feed.show_id},${episode.key},${episode.description},${episode.publishedAt},${episode.explicit},${episode.duration})
       on conflict(media_item_id) do update set description=excluded.description,published_at=excluded.published_at,explicit=excluded.explicit,duration_seconds=excluded.duration_seconds,updated_at=clock_timestamp()`;

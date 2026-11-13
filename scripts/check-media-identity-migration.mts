@@ -43,7 +43,7 @@ async function snapshot(client: ReturnType<typeof postgres>) {
   return JSON.stringify(result);
 }
 async function contracts(client: ReturnType<typeof postgres>) {
-  await client`insert into media_modes(id,label) values ('podcasts','Podcasts'),('tv','TV')`;
+  await client`insert into media_modes(id,label) values ('podcasts','Podcasts'),('tv','TV') on conflict (id) do nothing`;
   await client`insert into media_providers(id,mode_id,name) values ('p03-podcast','podcasts','Fixture'),('p03-tv','tv','Fixture')`;
   const show = randomUUID(), episode = randomUUID(), channel = randomUUID();
   for (const [id, mode, kind, provider, key] of [[show,'podcasts','show','p03-podcast','show:1'],[episode,'podcasts','episode','p03-podcast','episode:1'],[channel,'tv','channel','p03-tv','1']]) {

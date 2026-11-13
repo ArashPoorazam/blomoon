@@ -18,5 +18,5 @@ export async function resolvePublicAddress(url: URL, signal: AbortSignal) {
   const addresses = isIP(host) ? [{ address: host, family: isIP(host) }] : await abortable(lookup(host, { all: true }), signal);
   if (!addresses.length || addresses.some(item => !isPublicAddress(item.address))) throw new IngestionError("unsafe_address");
   addresses.sort((a, b) => a.family - b.family);
-  return { host, ...addresses[0] };
+  return { host, ...addresses[0], alternatives: addresses.slice(0, 4) };
 }

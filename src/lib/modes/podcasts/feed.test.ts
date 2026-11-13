@@ -31,3 +31,8 @@ describe('curated RSS normalization', () => {
     expect(feedInterval(read(rss()),now)).toBe(86400);expect(read(rss('')).episodes).toEqual([]);
   });
 });
+
+it('retains publisher and episode attribution notices for later presentation',()=>{
+  const feed=normalizePodcastFeed(parseXml(Buffer.from(rss(item('one',undefined,'<itunes:author>Alice</itunes:author><copyright>CC BY 4.0</copyright>')))));
+  expect(feed.episodes[0].author).toBe('Alice');expect(feed.episodes[0].copyright).toBe('CC BY 4.0');
+});
