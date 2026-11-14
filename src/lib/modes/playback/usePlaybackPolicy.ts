@@ -15,7 +15,7 @@ export function usePlaybackPolicy(point: TerraPoint | null, enabled: boolean, re
       checking = true;
       const signal = AbortSignal.any([lifetime.signal, AbortSignal.timeout(10_000)]);
       try {
-        const response = await fetch(mode.detailEndpoint(point.id), { cache: "no-store", signal });
+        const response = await fetch(point.kind === "episode" && (mode.playback && "policyEndpoint" in mode.playback && mode.playback.policyEndpoint) ? mode.playback.policyEndpoint(point.id) : mode.detailEndpoint(point.id), { cache: "no-store", signal });
         if (signal.aborted) return;
         if ([401, 403, 404, 503].includes(response.status)) { revoke(); return; }
         if (response.ok) {

@@ -1,5 +1,6 @@
 "use client";
 
+import { PodcastLibrary } from "./podcasts/PodcastLibrary";
 import { memo, type ReactNode } from "react";
 import type { ContactLink } from "@/lib/app-config/types";
 import type { CountryInfo } from "@/lib/geo/countries";
@@ -153,6 +154,8 @@ export const DrawerContent = memo(function DrawerContent({
         modes={modes}
         onModeSelect={onModeSelect}
       />
+    ) : activeModeId === "podcasts" && (view === "favourites" || view === "history") ? (
+      <><button type="button" onClick={onBack}>Back</button><PodcastLibrary key={view} initialKind={view === "history" ? "recent" : "follow"} /></>
     ) : view === "favourites" ? (
       <FavouriteFolderIndex
         onBack={onBack}

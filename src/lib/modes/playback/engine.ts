@@ -1,5 +1,7 @@
 import type { PlaybackDescriptor, PlaybackSource } from "./descriptor";
 
+import type { PlaybackPosition } from "./listeningSession";
+
 export type EngineEvent = "playing" | "buffering" | "paused" | "ended" | "error";
 export type EngineSnapshot = { mediaErrorCode: number; readyState: number; networkState: number };
 
@@ -11,6 +13,8 @@ export interface PlaybackEngine {
   seek(seconds: number): boolean;
   setRate(rate: number): boolean;
   snapshot(): EngineSnapshot;
+  position?(): PlaybackPosition;
+  restore?(seconds: number): void;
   dispose(): void;
 }
 

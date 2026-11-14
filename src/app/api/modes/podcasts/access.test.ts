@@ -14,7 +14,14 @@ import { GET as search } from './search/route';
 import { GET as markers } from './points/route';
 import { GET as detail } from './points/[id]/route';
 import { GET as episodes } from './points/[id]/episodes/route';
-const routes=[search,markers,detail,episodes];
+vi.mock('@/lib/modes/podcasts/episode',()=>({episodeDetail:vi.fn(),resolveEpisode:vi.fn()}));
+vi.mock('@/lib/modes/podcasts/listening',()=>({readListening:vi.fn(),beginListening:vi.fn(),saveListening:vi.fn()}));
+vi.mock('@/lib/modes/podcasts/library',()=>({changeLibrary:vi.fn(),readLibrary:vi.fn(),showLibrary:vi.fn()}));
+import { GET as episode } from './episodes/[id]/route';
+import { POST as playable } from './episodes/[id]/playable/route';
+import { GET as listening,POST as begin,PUT as progress } from './episodes/[id]/listening/route';
+import { GET as library,PUT as save } from './library/route';
+const routes=[search,markers,detail,episodes,episode,playable,listening,begin,progress,library,save];
 const context={params:Promise.resolve({id:'22222222-2222-4222-8222-222222222222'})};
 const request=()=>new Request('http://localhost/api/modes/podcasts/search');
 beforeEach(()=>{
@@ -37,4 +44,11 @@ it('rejects invalid inputs and returns private no-store results',async()=>{
  expect((await detail(request(),{params:Promise.resolve({id:'invalid'})})).status).toBe(404);
  vi.mocked(podcastPage).mockResolvedValue({points:[]} as never);
  const response=await search(request(),context);expect(response.status).toBe(200);expect(response.headers.get('cache-control')).toBe('no-store');
+});
+
+it('rejects forged owners and malformed personal state before persistence',async()=>{
+ for(const handler of [begin,progress,save]) {
+  const response=await handler(new Request('http://localhost/api/modes/podcasts/library',{method:'PUT',body:JSON.stringify({userId:'other'})}),context);
+  expect(response.status).toBe(400);expect(response.headers.get('cache-control')).toBe('no-store');
+ }
 });

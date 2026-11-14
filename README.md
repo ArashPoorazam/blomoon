@@ -1,6 +1,6 @@
 # Blomoon
 
-Discover and play live radio through an interactive globe, and browse curated podcast shows and episode lists. Blomoon includes mobile and desktop layouts, station discovery, accounts, favourites, sharing, and playback history. Radio Browser is synchronized by a separate catalog worker; provider fallback is visibly identified. Future modes remain removable media plugins.
+Discover and play live radio through an interactive globe, and listen to curated podcasts with follows, episode saves and resume progress. Blomoon includes mobile and desktop layouts, station discovery, accounts, favourites, sharing, and playback history. Radio Browser is synchronized by a separate catalog worker; provider fallback is visibly identified. Future modes remain removable media plugins.
 
 ## Development
 
@@ -27,7 +27,7 @@ Podcast and live TV development follows the [implementation plan](docs/media-exp
 
 ## Media ingestion primitives
 
-Podcast ingestion has two approved pilot feeds (Hacker Public Radio and LINUX Unplugged) and free Podcast Index discovery; the podcast discovery mode and show pages are implemented, while production workers and podcast playback are not enabled. See the [ingestion worker contract and operations](docs/media-expansion/ingestion.md) for migration 0021, isolated fetching/parsing, restricted database credentials, build/run commands and disposable integration tests. This worker is separate from the radio workers and is not enabled by production Compose. Curated podcast catalog ingestion is implemented behind the worker’s `--podcasts` option; see [podcast ingestion](docs/media-expansion/podcasts.md) for migration 0022, scoped role setup, identity behavior and approved source records and verification evidence.
+Podcast ingestion has two approved pilot feeds (Hacker Public Radio and LINUX Unplugged) and free Podcast Index discovery; the podcast discovery mode and show pages are implemented, while production workers are not enabled. Podcast playback and personal state require migration 0023; see [listening behavior and verification](docs/media-expansion/podcast-listening.md). Physical-device and approved-provider playback release gates remain pending. See the [ingestion worker contract and operations](docs/media-expansion/ingestion.md) for migration 0021, isolated fetching/parsing, restricted database credentials, build/run commands and disposable integration tests. This worker is separate from the radio workers and is not enabled by production Compose. Curated podcast catalog ingestion is implemented behind the worker’s `--podcasts` option; see [podcast ingestion](docs/media-expansion/podcasts.md) for migration 0022, scoped role setup, identity behavior and approved source records and verification evidence.
 
 ## Home Screen installation
 

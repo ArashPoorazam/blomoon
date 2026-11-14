@@ -16,4 +16,5 @@ export function podcastId(id:string) {
 export async function requirePodcastUser() {
   const user=await requireUser();
   if(!await hasCompletedAuthentication(user))throw new AdminError(403,'Complete account verification to browse podcasts.');
+  return user;
 }

@@ -2,6 +2,7 @@
 import { act, createElement, StrictMode } from "react";
 import { createRoot, type Root } from "react-dom/client";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { PlaybackLifecycle } from "./playback/listeningSession";
 import type { TerraPlaybackConfig, TerraPoint } from "./types";
 import { reportPlaybackDiagnostic } from "./playbackDiagnostics";
 import type { PlaybackEngineFactory, EngineEvent } from "./playback/engine";
@@ -12,7 +13,7 @@ class FakeAudio extends EventTarget {
   static instances: FakeAudio[] = [];
   static behavior: (audio: FakeAudio) => Promise<void> = async () => {};
   error: { code: number } | null = null;
-  currentTime = 0; playbackRate = 1;
+  currentTime = 0; duration = 120; playbackRate = 1;
   seekable = { length: 1, start: () => 0, end: () => 120 };
   src = ""; preload = ""; readyState = 0; networkState = 0; paused = true; ended = false;
   constructor() { super(); FakeAudio.instances.push(this); }
@@ -30,8 +31,8 @@ let root: Root;
 let container: HTMLDivElement;
 let fetchMock: ReturnType<typeof vi.fn>;
 const started = vi.fn();
-function Harness({ playback = config, factory }: { playback?: TerraPlaybackConfig | null; factory?: PlaybackEngineFactory }) {
-  player = useAudioPlayback(playback, started, factory); return null;
+function Harness({ playback = config, factory, lifecycle }: { playback?: TerraPlaybackConfig | null; factory?: PlaybackEngineFactory; lifecycle?: PlaybackLifecycle }) {
+  player = useAudioPlayback(playback, started, factory, lifecycle); return null;
 }
 async function mount(playback: TerraPlaybackConfig | null = config, factory?: PlaybackEngineFactory) {
   await act(async () => root.render(createElement(StrictMode, null, createElement(Harness, { playback, factory }))));
@@ -383,4 +384,36 @@ it.each(["playing", "paused"])("stops %s radio at the next policy check when dis
   fetchMock.mockResolvedValue(Response.json({ availability: { status: "disabled" } }));
   await act(async () => { await vi.advanceTimersByTimeAsync(15_000); });
   expect(player.status).toBe("idle"); expect(FakeAudio.instances[0].src).toBe("");
+});
+
+it("restores progress and bounds writes independently of media events, flushing pause/end/cleanup", async () => {
+  vi.useFakeTimers();
+  const save=vi.fn();const prepare=vi.fn(async()=>({positionSeconds:40,save,error:()=>null}));
+  await act(async()=>root.render(createElement(Harness,{playback:podcastConfig,lifecycle:{prepare}})));
+  fetchMock.mockImplementation(async()=>Response.json(descriptor));
+  await act(async()=>player.play(episode));
+  const audio=FakeAudio.instances[0];expect(audio.currentTime).toBe(40);
+  for(let i=0;i<300;i++)audio.dispatchEvent(new Event("timeupdate"));
+  expect(save).not.toHaveBeenCalled();
+  audio.currentTime=50;
+  await act(async()=>vi.advanceTimersByTimeAsync(15000));
+  expect(save).toHaveBeenCalledTimes(1);expect(save.mock.calls[0][0].positionSeconds).toBe(50);
+  await act(async()=>player.pause());expect(save).toHaveBeenCalledTimes(2);
+  await act(async()=>player.resume());expect(prepare).toHaveBeenCalledTimes(1);
+  expect(player.seek(20)).toBe(true);audio.currentTime=120;
+  await act(async()=>audio.dispatchEvent(new Event("ended")));
+  expect(save.mock.calls.at(-1)?.[1]).toBe(true);
+  const count=save.mock.calls.length;
+  await act(async()=>player.stop());expect(save).toHaveBeenCalledTimes(count);
+});
+it("does not apply a late listening preparation after switching or pausing", async () => {
+  let finish!:(value:Awaited<ReturnType<PlaybackLifecycle['prepare']>>)=>void;
+  const save=vi.fn();
+  const lifecycle={prepare:()=>new Promise<Awaited<ReturnType<PlaybackLifecycle['prepare']>>>(resolve=>{finish=resolve;})};
+  await act(async()=>root.render(createElement(Harness,{playback:podcastConfig,lifecycle})));
+  let pending!:Promise<void>;
+  await act(async()=>{pending=player.play(episode);});
+  await act(async()=>player.pause());
+  await act(async()=>{finish({positionSeconds:90,save,error:()=>null});await pending;});
+  expect(FakeAudio.instances).toHaveLength(0);expect(save).not.toHaveBeenCalled();expect(player.status).toBe("paused");
 });

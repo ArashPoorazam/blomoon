@@ -1,6 +1,6 @@
 import { sql } from 'drizzle-orm';
-import { bigint, boolean, check, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
-import { mediaItems } from './schema';
+import { bigint, boolean, check, doublePrecision, index, integer, pgTable, primaryKey, text, timestamp, uniqueIndex, uuid } from 'drizzle-orm/pg-core';
+import { mediaItems, users } from './schema';
 import { ingestionSources } from './ingestionSchema';
 const time = (name: string) => timestamp(name, { withTimezone: true });
 export const podcastShows = pgTable('podcast_shows', {
@@ -23,3 +23,25 @@ export const podcastEpisodes = pgTable('podcast_episodes', {
 export const podcastEnclosures = pgTable('podcast_enclosures', {
   episodeId: uuid('episode_id').notNull().references(() => podcastEpisodes.mediaItemId, { onDelete: 'restrict' }), url: text('url').notNull(), mime: text('mime').notNull(), bytes: bigint('bytes',{mode:'number'}), active: boolean('active').notNull().default(true), updatedAt: time('updated_at').notNull().defaultNow(),
 }, t => [primaryKey({columns:[t.episodeId,t.url]}),check('podcast_enclosure_bytes',sql`${t.bytes} >= 0`)]).enableRLS();
+
+export const podcastFollows = pgTable('podcast_follows', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  showId: uuid('show_id').notNull().references(() => podcastShows.mediaItemId, { onDelete: 'restrict' }),
+  createdAt: time('created_at').notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.userId,t.showId]}), index('podcast_follows_show_idx').on(t.showId), index('podcast_follows_recent_idx').on(t.userId,t.createdAt.desc(),t.showId)]).enableRLS();
+export const podcastSaves = pgTable('podcast_saves', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  episodeId: uuid('episode_id').notNull().references(() => podcastEpisodes.mediaItemId, { onDelete: 'restrict' }),
+  createdAt: time('created_at').notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.userId,t.episodeId]}), index('podcast_saves_episode_idx').on(t.episodeId), index('podcast_saves_recent_idx').on(t.userId,t.createdAt.desc(),t.episodeId)]).enableRLS();
+export const podcastListening = pgTable('podcast_listening', {
+  userId: uuid('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  episodeId: uuid('episode_id').notNull().references(() => podcastEpisodes.mediaItemId, { onDelete: 'restrict' }),
+  version: integer('version').notNull().default(0), sessionId: uuid('session_id'), sequence: integer('sequence').notNull().default(0),
+  positionSeconds: doublePrecision('position_seconds').notNull().default(0), completed: boolean('completed').notNull().default(false),
+  updatedAt: time('updated_at').notNull().defaultNow(),
+}, t => [primaryKey({columns:[t.userId,t.episodeId]}), index('podcast_listening_episode_idx').on(t.episodeId),
+  index('podcast_listening_recent_idx').on(t.userId,t.updatedAt.desc(),t.episodeId),
+  check('podcast_listening_version_check',sql`${t.version} >= 0`),check('podcast_listening_sequence_check',sql`${t.sequence} >= 0`),
+  check('podcast_listening_position_seconds_check',sql`${t.positionSeconds} >= 0 and ${t.positionSeconds} <= 604800`),
+]).enableRLS();

@@ -1,5 +1,9 @@
 "use client";
 
+import { PodcastPlaybackContext } from './podcasts/PlaybackContext';
+import { PodcastPlayer } from './podcasts/PodcastPlayer';
+import { usePodcastControls } from './podcasts/usePodcastControls';
+import { podcastListeningLifecycle } from '@/lib/modes/podcasts/listeningClient';
 import { useRouter } from "next/navigation";
 import { useCallback, useEffect, useMemo, useRef, useState, type MouseEvent as ReactMouseEvent } from "react";
 import { formatCoordinate } from "@/lib/format";
@@ -72,7 +76,8 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
     viewer.loading ? "loading" : viewer.user?.id ?? "guest");
   const pointDetail = usePointDetail(activeMode, drawer.view === "point-detail" ? modeState.selectedPoint : null);
   const playbackHistory = usePlaybackHistory(viewer.user?.id ?? null);
-  const audioPlayback = usePlaybackCoordinator(activeMode.playback ?? null, playbackHistory.record);
+  const audioPlayback = usePlaybackCoordinator(activeMode.playback ?? null, point => { if (point.modeId === "radio") playbackHistory.record(point); }, undefined, podcastListeningLifecycle);
+  const podcastControls = usePodcastControls(audioPlayback, activeModeId);
   const randomPlaybackPoint = usePrefetchedRandomPoint({
     enabled: Boolean(activeMode.playback?.randomPointEndpoint),
     endpoint: activeMode.playback?.randomPointEndpoint,
@@ -159,7 +164,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
     void favourites.loadPoints();
   }, [favourites.loadPoints, viewer.user]);
   const detailAccessory =
-    activeMode.playback && pointDetail ? (
+    activeMode.playback && pointDetail && pointDetail.modeId !== "podcasts" ? (
       <AudioPlaybackPanel
         detail={pointDetail}
         favourited={favourites.favouriteIds.has(getPointKey(pointDetail))}
@@ -307,7 +312,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
     `${activeModeId}:${JSON.stringify(drawer.entry)}:${drawer.mobilePosition}`, navigateMainDrawer);
 
   return (
-    <main
+    <PodcastPlaybackContext.Provider value={podcastControls}><main
       ref={shellRef}
       className={`blomoon-shell ${drawerOpen ? "drawer-open" : "drawer-closed"} ${hasMiniPlayer ? "has-mini-player" : ""}`}
       data-mobile-drawer-position={drawer.mobilePosition}
@@ -471,7 +476,7 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
         await authClient.signOut(); setMobileLogoutConfirmOpen(false); setThemeId(defaultTheme.id); await viewer.refresh(); router.replace("/login"); router.refresh();
       }} />
 
-      {activeMode.playback && hasMiniPlayer ? (
+      {activeModeId === "podcasts" ? <PodcastPlayer /> : activeMode.playback && hasMiniPlayer ? (
         <AudioMiniPlayer
           canPlayNext={playbackQueuePoints.length > 0}
           canShuffle={Boolean(activeMode.playback.randomPointEndpoint)}
@@ -487,6 +492,6 @@ export function BlomoonApp({ appConfig, initialDatasets, enabledModeIds }: Blomo
           }}
         />
       ) : null}
-    </main>
+    </main></PodcastPlaybackContext.Provider>
   );
 }

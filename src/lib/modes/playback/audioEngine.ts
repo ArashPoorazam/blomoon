@@ -6,7 +6,14 @@ import type { PlaybackEngineFactory } from "./engine";
 export const createPlaybackEngine: PlaybackEngineFactory = (descriptor, source) => {
   if (descriptor.mediaKind !== "audio" || source.transport === "embed") throw new PlaybackError("unsupported");
   const audio = new Audio();
-  const dispose = () => { audio.pause(); audio.removeAttribute("src"); audio.load(); };
+  const lifetime = new AbortController();
+  let restorePosition: number | null = null;
+  const restore = () => {
+    if (restorePosition === null || !Number.isFinite(audio.duration) || audio.duration <= 0) return;
+    try { audio.currentTime = Math.min(restorePosition, Math.max(0, audio.duration - 0.1)); restorePosition = null; } catch { /* Retry when media becomes seekable. */ }
+  };
+  for (const event of ["loadedmetadata", "canplay", "durationchange"]) audio.addEventListener(event, restore, {signal:lifetime.signal});
+  const dispose = () => { lifetime.abort(); audio.pause(); audio.removeAttribute("src"); audio.load(); };
   try {
     audio.preload = "none";
     audio.src = validatePlayableAudio({ streamUrl: source.url, format: source.transport === "hls" ? "hls" : "audio", contentType: source.contentType }, audio);
@@ -38,6 +45,8 @@ export const createPlaybackEngine: PlaybackEngineFactory = (descriptor, source) 
       try { audio.playbackRate = rate; return true; } catch { return false; }
     },
     snapshot: () => ({ mediaErrorCode: audio.error?.code ?? 0, readyState: audio.readyState, networkState: audio.networkState }),
+    position: () => ({positionSeconds: Number.isFinite(audio.currentTime) ? audio.currentTime : 0, durationSeconds: Number.isFinite(audio.duration) && audio.duration > 0 ? audio.duration : null, rate: audio.playbackRate}),
+    restore(seconds) { if (descriptor.controls.seek && seconds > 0) { restorePosition = seconds; restore(); } },
     dispose,
   };
 };

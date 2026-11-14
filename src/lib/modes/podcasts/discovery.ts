@@ -48,7 +48,7 @@ export async function podcastMarkers(db:BlomoonDb=getDb()) {
   const rows=await db.execute(sql`select ${fields} ${joins} where ${allowed} and m.location_precision='verified' and m.latitude is not null and m.longitude is not null order by m.id limit 500`);
   return {modeId:'podcasts',source:podcastSource,points:rows.map(point)};
 }
-export async function podcastEpisodes(id:string,input:DiscoveryInput,db:BlomoonDb=getDb()) {
+export async function podcastEpisodes(id:string,input:DiscoveryInput,db:BlomoonDb=getDb(),userId?:string) {
   return db.transaction(async tx=>{
     await tx.execute(sql`set local statement_timeout = '1500ms'`);
     const [show]=await tx.execute(sql`select ${fields} ${joins} where m.id=${id}::uuid`);
@@ -58,7 +58,9 @@ export async function podcastEpisodes(id:string,input:DiscoveryInput,db:BlomoonD
     const from=sql`from podcast_episodes e join media_items m on m.id=e.media_item_id where ${where}`;
     const [state]=await tx.execute(sql`select count(*)::int as total,md5(coalesce(string_agg(m.id::text || m.updated_at::text || e.updated_at::text || coalesce(e.published_at::text,''),'' order by m.id),'')) as token ${from}`);
     if(input.offset && input.pageToken!==state.token) throw new AdminError(409,'Episodes changed. Reload the list.');
-    const episodes=await tx.execute(sql`select m.id,m.name,left(regexp_replace(e.description,'<[^>]*>','','g'),2000) as description,e.published_at as "publishedAt",e.duration_seconds as "durationSeconds",e.explicit,m.provider_metadata->>'author' as author,m.provider_metadata->>'copyright' as copyright ${from} order by e.published_at desc nulls last,e.media_item_id limit ${input.limit} offset ${input.offset}`);
+    const episodes=await tx.execute(sql`select ${userId?sql`exists(select 1 from podcast_saves ps where ps.user_id=${userId}::uuid and ps.episode_id=m.id) as saved,
+      (select position_seconds from podcast_listening pl where pl.user_id=${userId}::uuid and pl.episode_id=m.id) as "positionSeconds",
+      (select completed from podcast_listening pl where pl.user_id=${userId}::uuid and pl.episode_id=m.id) as completed,`:sql``} m.id,m.name,left(regexp_replace(e.description,'<[^>]*>','','g'),2000) as description,e.published_at as "publishedAt",e.duration_seconds as "durationSeconds",e.explicit,m.provider_metadata->>'author' as author,m.provider_metadata->>'copyright' as copyright ${from} order by e.published_at desc nulls last,e.media_item_id limit ${input.limit} offset ${input.offset}`);
     return {episodes,nextOffset:input.offset+episodes.length<Number(state.total)?input.offset+episodes.length:null,pageToken:String(state.token),unavailable:false};
   },{isolationLevel:'repeatable read',accessMode:'read only'});
 }

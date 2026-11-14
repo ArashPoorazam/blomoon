@@ -83,6 +83,7 @@ export type TerraPlaybackConfig = {
   mediaKind: "audio" | "video";
   responseKind: "radio-audio" | "descriptor";
   playableEndpoint: (id: string) => string;
+  policyEndpoint?: (id: string) => string;
   randomPointEndpoint?: string;
 };
 

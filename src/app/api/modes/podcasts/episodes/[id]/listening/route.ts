@@ -1,0 +1,10 @@
+import { requirePodcastUser,podcastId } from '@/lib/modes/podcasts/http';
+import { withApiLogging } from '@/lib/server/logging/api';
+export const dynamic='force-dynamic';
+type Context={params:Promise<{id:string}>};
+import { readListening,beginListening,saveListening } from '@/lib/modes/podcasts/listening';
+import { sessionInput,progressInput } from '@/lib/modes/podcasts/listeningInput';
+import { AdminError } from '@/lib/admin/access';
+export const GET=withApiLogging('api.podcasts.listening.read',async(_request:Request,{params}:Context)=>{const user=await requirePodcastUser();return Response.json(await readListening(user.id,podcastId((await params).id)));},{noStore:true});
+export const POST=withApiLogging('api.podcasts.listening.begin',async(request:Request,{params}:Context)=>{const user=await requirePodcastUser();const input=sessionInput.safeParse(await request.json().catch(()=>null));if(!input.success)throw new AdminError(400,'Invalid session.');return Response.json(await beginListening(user.id,podcastId((await params).id),input.data));},{noStore:true});
+export const PUT=withApiLogging('api.podcasts.listening.save',async(request:Request,{params}:Context)=>{const user=await requirePodcastUser();const input=progressInput.safeParse(await request.json().catch(()=>null));if(!input.success)throw new AdminError(400,'Invalid listening progress.');return Response.json(await saveListening(user.id,podcastId((await params).id),input.data));},{noStore:true});

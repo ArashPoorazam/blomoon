@@ -8,5 +8,5 @@ it('bounds user queries and pagination',()=>{
 it('exposes language and quoted topic filters without sending provider requests',()=>{
  const url=new URL(podcastMode.listEndpoint({query:'science language:fa topic:"social science"',countryCode:null,limit:25,offset:25,sortId:'title',pageToken:'snapshot'}),'http://localhost');
  expect(Object.fromEntries(url.searchParams)).toEqual({q:'science',language:'fa',topic:'social science',limit:'25',offset:'25',pageToken:'snapshot'});
- expect(podcastMode.playback).toBeUndefined();
+ expect(podcastMode.playback?.playableEndpoint("episode")).toBe("/api/modes/podcasts/episodes/episode/playable");
 });

@@ -12,8 +12,10 @@ import { scheduleExpiry } from "./playback/expiry";
 import { resolvePlayback } from "./playback/resolution";
 import { reportPlaybackDiagnostic } from "./playbackDiagnostics";
 
+import type { PlaybackLifecycle, ListeningSession, PlaybackPosition } from "./playback/listeningSession";
+
 export type PlaybackStatus = "idle" | "loading" | "playing" | "buffering" | "paused" | "stopped" | "error";
-export type PlaybackState = { error: string | null; point: TerraPoint | null; pointId: string | null; status: PlaybackStatus; controls: PlaybackControls };
+export type PlaybackState = { error: string | null; point: TerraPoint | null; pointId: string | null; status: PlaybackStatus; controls: PlaybackControls; position?: PlaybackPosition; progressError?: string | null };
 export type PlaybackController = PlaybackState & {
   resume: () => Promise<void>; seek: (seconds: number) => boolean; setRate: (rate: number) => boolean;
   canPlayPrevious: boolean; pause: () => void; play: (point: TerraPoint) => Promise<void>;
@@ -21,11 +23,11 @@ export type PlaybackController = PlaybackState & {
 };
 type Session = {
   id: string; point: TerraPoint; controller: AbortController; engine: PlaybackEngine | null;
-  descriptor: PlaybackDescriptor | null; clearExpiry: () => void; index: number; recorded: boolean;
+  listening: ListeningSession | null; prepared: boolean; restored: boolean; descriptor: PlaybackDescriptor | null; clearExpiry: () => void; index: number; recorded: boolean;
 };
 const empty: PlaybackState = { error: null, point: null, pointId: null, status: "idle", controls: NO_CONTROLS };
 
-export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onPlaybackStart?: (point: TerraPoint) => void, engineFactory: PlaybackEngineFactory = createPlaybackEngine): PlaybackController {
+export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onPlaybackStart?: (point: TerraPoint) => void, engineFactory: PlaybackEngineFactory = createPlaybackEngine, lifecycle?: PlaybackLifecycle): PlaybackController {
   const sessionRef = useRef<Session | null>(null);
   const historyRef = useRef<TerraPoint[]>([]);
   const stateRef = useRef<PlaybackState>(empty);
@@ -38,13 +40,14 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
   const cancel = useCallback(() => {
     const session = sessionRef.current;
     sessionRef.current = null;
-    if (session) { session.controller.abort(); session.clearExpiry(); session.engine?.dispose(); }
+    if (session) { flushListening(session); session.controller.abort(); session.clearExpiry(); session.engine?.dispose(); }
   }, []);
   const stop = useCallback(() => { cancel(); replaceHistory([]); update(empty); }, [cancel, replaceHistory, update]);
   const pause = useCallback(() => {
     const session = sessionRef.current;
     if (!session || !["loading", "playing", "buffering"].includes(stateRef.current.status) ||
         (session.descriptor && !session.descriptor.controls.pause)) return;
+    flushListening(session);
     // Pause can cancel startup as well as an established connection.
     session.controller.abort();
     session.engine?.pause();
@@ -60,7 +63,7 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
     if (!resume || !session) {
       if (recordHistory) replaceHistory(appendPlaybackHistory(historyRef.current, previous.point, point));
       cancel();
-      session = { id: crypto.randomUUID(), point, controller: new AbortController(), engine: null, descriptor: null, clearExpiry: () => {}, index: 0, recorded: false };
+      session = { id: crypto.randomUUID(), point, controller: new AbortController(), engine: null, descriptor: null, clearExpiry: () => {}, index: 0, recorded: false, listening: null, prepared: false, restored: false };
       sessionRef.current = session;
     } else {
       session.controller.abort();
@@ -85,12 +88,19 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
     const fail = (error: unknown, stage: "resolution" | "startup" | "playback") => {
       const reason = playbackFailure(error, { error: { code: active.engine?.snapshot().mediaErrorCode ?? 0 } });
       report(reason, stage);
+      flushListening(active);
       active.controller.abort();
       active.clearExpiry();
       active.engine?.dispose(); active.engine = null;
       update({ error: playbackMessage(reason, point.modeId), point, pointId: point.id, status: "error", controls: NO_CONTROLS });
     };
     try {
+      if (!active.prepared && lifecycle) {
+        const listening = await lifecycle.prepare(point, signal);
+        if (!isActive()) return;
+        active.listening = listening;
+        active.prepared = true;
+      }
       if (active.descriptor?.expiresAt && Date.parse(active.descriptor.expiresAt) <= Date.now()) {
         throw new PlaybackError("expired");
       }
@@ -115,6 +125,7 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
         try {
           const engine = active.engine ?? engineFactory(active.descriptor, active.descriptor.sources[active.index]);
           active.engine = engine;
+          if (!active.restored && active.listening) { engine.restore?.(active.listening.positionSeconds); active.restored = true; }
           const markPlaying = () => {
             if (!isActive() || attemptSignal.aborted) return;
             update({ error: null, point, pointId: point.id, status: "playing", controls: active.descriptor!.controls });
@@ -125,8 +136,9 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
             if (!isActive() || attemptSignal.aborted) return;
             if (event === "playing") markPlaying();
             if (event === "buffering" && !starting) update({ ...stateRef.current, status: "buffering" });
-            if (event === "paused" && !starting) update({ ...stateRef.current, status: "paused" });
+            if (event === "paused" && !starting) { flushListening(active); update({ ...stateRef.current, status: "paused" }); }
             if (event === "ended") {
+              flushListening(active, true);
               active.controller.abort(); active.clearExpiry(); engine.dispose(); active.engine = null;
               update({ error: null, point, pointId: point.id, status: "stopped", controls: NO_CONTROLS });
             }
@@ -151,15 +163,18 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
           }
           if (reason === "timeout" || active.index + 1 === active.descriptor.sources.length) throw error;
           report(reason, "startup");
-          active.engine?.dispose(); active.engine = null;
+          active.engine?.dispose(); active.engine = null; active.restored = false;
         }
       }
     } catch (error) {
       if (!isActive()) return;
       if (error instanceof PlaybackError && startupStarted === null) resolutionStatus = error.status;
+      if (!active.prepared && lifecycle && error instanceof Error) {
+        cancel(); update({error:error.message,point,pointId:point.id,status:"error",controls:NO_CONTROLS}); return;
+      }
       fail(error, startupStarted === null ? "resolution" : "startup");
     }
-  }, [playback, cancel, replaceHistory, update, engineFactory]);
+  }, [playback, cancel, replaceHistory, update, engineFactory, lifecycle]);
 
   const play = useCallback((point: TerraPoint) => playPoint(point), [playPoint]);
   const playPrevious = useCallback(async () => {
@@ -180,6 +195,21 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
     const session = sessionRef.current;
     return Boolean(session?.descriptor?.controls.rate && session.engine?.setRate(rate));
   }, []);
+  useEffect(() => {
+    let ticks = 0;
+    const timer = setInterval(() => {
+      const session = sessionRef.current;
+      if (session?.descriptor?.timeline !== "on-demand" || !session.engine) return;
+      const position = session.engine.position?.();
+      if (position) update({...stateRef.current, position, progressError:session.listening?.error() ?? null});
+      if (++ticks % 15 === 0 && stateRef.current.status === "playing") flushListening(session);
+    }, 1000);
+    const flush = () => { if (sessionRef.current) flushListening(sessionRef.current); };
+    const hidden = () => { if (document.visibilityState === "hidden") flush(); };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", hidden);
+    return () => { clearInterval(timer); window.removeEventListener("pagehide",flush); document.removeEventListener("visibilitychange",hidden); };
+  }, [update]);
   usePlaybackPolicy(state.point, Boolean(state.point && !["error", "stopped"].includes(state.status)), stop);
   useEffect(() => { stop(); }, [playback, engineFactory, stop]);
   useEffect(() => cancel, [cancel]);
@@ -189,4 +219,10 @@ export function usePlaybackCoordinator(playback: TerraPlaybackConfig | null, onP
 function playbackMessage(reason: Parameters<typeof playbackFailureMessage>[0], modeId: string) {
   const message = playbackFailureMessage(reason);
   return modeId === "radio" ? message : message.replaceAll("station", "item").replace("allow audio", "allow playback");
+}
+
+function flushListening(session:Session,completed=false) {
+  const position=session.engine?.position?.();
+  // Do not overwrite a saved resume position before metadata restoration/startup.
+  if(position && session.recorded)session.listening?.save(position,completed);
 }

@@ -439,3 +439,9 @@
 @media (max-width: 760px), (pointer: coarse) {
   .media-mini-player .media-stop-control { display: none; }
 }
+
+.podcast-player { max-height: 42vh; overflow: auto; display: flex; flex-direction: column; gap: 0.4rem; }
+.podcast-controls { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; }
+.podcast-player input[type="range"] { width: 100%; }
+.podcast-player p { margin: 0.25rem 0; }
+.podcast-player details { font-size: 0.85rem; }

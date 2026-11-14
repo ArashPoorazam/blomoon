@@ -5,12 +5,12 @@ This is the authoritative status ledger for the [podcast and live TV implementat
 ## Current position
 
 - **Last updated:** 2026-11-14, Asia/Tehran.
-- **Current step:** P08 — Podcast playback and user state (ready, unclaimed).
-- **Current state:** P07 implemented: registered podcast discovery, bounded catalog/search/detail APIs, canonical show pages, paginated episodes, attribution and freshness. Radio remains the default mode; podcast playback remains P08.
+- **Current step:** P08 — Podcast playback and user state (in progress).
+- **Current state:** P08 implementation and automated verification complete: episode playback, controls/queue/sleep timer, follows/saves and conflict-safe listening progress. Full P08 acceptance remains open for approved-source/device evidence.
 - **Last completed step:** P07; [acceptance evidence](media-expansion/evidence/P07.md).
-- **Active owner:** None. Codex `/root` completed P07 at base `727448a2636d94a36d3e54d9703f6ef8d02d33d5`; pre-existing P06 work preserved. Reviewed follow-up is on `codex/podcast-discovery-review`.
-- **Next action:** Claim P08 and implement podcast playback/personal state with ownership, bounded progress updates and required device/source verification.
-- **Known release dependencies:** Broader approved lineup, playback/device/region evidence, load, staging and recovery remain pending. Existing server only, $0 new spending; no deployment or production seeding occurred.
+- **Active owner:** Codex `/root`, P08 at base `c5046aa`; implementation handed off for device verification.
+- **Next action:** Run the [P08 device checklist](media-expansion/P08-device-checklist.md), complete approved-source/browser evidence, then close P08 before P09.
+- **Known release dependencies:** Physical devices, supported sources/regions, staging/load/recovery remain pending. Existing server only, $0 new spending; no deployment or production seeding.
 
 ## Status meanings
 
@@ -40,7 +40,7 @@ Do not infer completion from the existence of files, a passing unit suite, or a 
 | P06b | Selected directory adapter | P06a | done | Codex `/root` | Free keyless Podcast Index search/lookup and verified stable aliases; [source/access records](media-expansion/podcast-sources.md). |
 | P06c | Approved real-feed verification | P06a | done | Codex `/root` | HPR 10 episodes and LINUX Unplugged 692 episodes, two successful ingestions each; distinct real-provider evidence and connectivity limitations recorded. |
 | P07 | Podcast discovery | P04, P06 | done | Codex `/root` | [P07 evidence](media-expansion/evidence/P07.md); 475 distinct tests, Node 26/PG17 query plans, geography/typecheck/build pass. |
-| P08 | Podcast playback and user state | P04, P07 | ready | — | — |
+| P08 | Podcast playback and user state | P04, P07 | in_progress | Codex `/root` | [Implementation/evidence](media-expansion/evidence/P08.md): 489 distinct tests; PostgreSQL fresh/upgrade/retry; Chromium byte-range audio. Physical-device and approved-source matrix pending. |
 | P09 | Podcast administration and release gate | P05, P08 | pending | — | — |
 | P10 | TV catalog and source policy | P03, P05, P09 | pending | — | — |
 | P11 | Adaptive TV playback | P04, P10 | pending | — | — |
@@ -91,14 +91,13 @@ Add new decisions with their owner and rationale. When superseding a decision, l
 
 ## Agent handoff
 
-- **Last task:** Reviewed the prior commit and P06/P07 follow-up for GitHub publication; fixed missing discovery-mode controls, language matching and a migration fixture collision; [evidence](media-expansion/evidence/P07.md), [contract](media-expansion/podcasts.md).
-- **Working tree:** Base `727448a2636d94a36d3e54d9703f6ef8d02d33d5`; pre-existing P06 changes preserved. P07 adds `src/lib/modes/podcasts/discovery*`, `http.ts`, `mode.ts`, podcast API routes and tests, `/podcasts/[id]`, episode UI/tests, registry integration, detail/share handling, category ingestion and documentation. P06/P07 and review fixes are bundled on `codex/podcast-discovery-review`; see Git log for the resulting revision.
-- **Verification:** Node 26.12.1/PostgreSQL 17.11; 464 regression tests plus 11 podcast DB tests, 478 distinct passes after pre-push review (467 regression + 11 podcast DB tests). P03/P05/P06 fresh/upgrade/retry checks and geography/typecheck/build/worker-bundle/whitespace pass. Actual query plans recorded at 100 shows/20,300 episodes. No physical-device/full-browser/production evidence is implied.
-- **Runtime:** Node `/tmp/node-v26.12.1-linux-x64`; PostgreSQL `/tmp/blomoon-pg17`; disposable cluster `/tmp/blomoon-p06-cluster` review checks used port 55446, separate from the development database; stopped after checks. Temporary paths may disappear.
-- **Decisions:** Public discovery uses only approved ingested sources. Normalized deterministic title order, snapshot revision rejection on change, 50-row API page cap, 25-episode UI pages, 500 verified globe markers. No new index needed at measured local costs; concurrency remains P14/P16.
-- **Migration/rollback:** No P07 migration. Keep additive schema and saved references; disable podcast mode or revert UI/routes/registration. P06 worker-role grant requirements remain in its source records. Topic metadata arrives on the next successful feed refresh.
-- **Next task:** P08 playback and personal listening state. Maintain stable UUID links, publisher attribution, explicit availability and radio regressions.
-- **Remaining gates/scope:** Broader lineup, playback/devices/regions, staging/load/recovery; no purchases, provisioning, production seeding, deployment or publication performed.
+- **Last task:** Implemented P08 playback and personal state; user requested commit/push and agreed to run physical-device checks. [Evidence](media-expansion/evidence/P08.md), [contract](media-expansion/podcast-listening.md), [checklist](media-expansion/P08-device-checklist.md).
+- **Working tree/revision:** Base `c5046aa`; P08 changes on `codex/podcast-discovery-review`. See Git log for resulting commit.
+- **Verification:** Node 26.12.1/PostgreSQL 17.11; 489 distinct tests pass. Fresh/upgrade/interrupted/repeated migration preservation, geography/typecheck/build, and actual Chromium native byte-range playback pass. No physical-device or production evidence implied.
+- **Runtime:** `/tmp/node-v26.12.1-linux-x64`, `/tmp/blomoon-pg17`, disposable `/tmp/blomoon-p08-cluster` on 55446. Temporary paths can disappear.
+- **Decision:** Listening acquisition uses observed-version CAS; progress uses session UUID and increasing sequence. Rewinds are allowed. Queue is explicit, tab-local and capped at 100; completion advances only queued episodes. Writes every 15 seconds while playing plus lifecycle events; failures are visible.
+- **Migration/rollback:** Apply additive 0023 before application update; preserve all tables/data on disable or rollback. No ingestion-role personal-state grants. No production changes or main-branch push.
+- **Next task:** Execute approved-source and physical-device checklist and attach evidence. Keep P08 in_progress and P09 pending until all acceptance criteria pass.
 
 ## Completion and blocker record template
 

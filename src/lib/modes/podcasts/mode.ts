@@ -1,7 +1,7 @@
 import type { TerraMode } from '../types';
 export const podcastMode: TerraMode = {
   id:'podcasts',label:'Podcasts',controlIcon:'podcast',
-  copy:{countryLoadingLabel:'Loading shows',emptyLabel:'No matching podcasts. Try another language, topic or search.',fallbackNotice:'Podcast catalog unavailable.',itemPlural:'shows',itemSingular:'show',listSubtitle:'Search titles, language:fa or topic:technology',loadingLabel:'Loading podcasts',loadingMoreLabel:'Loading more shows',randomPlaybackError:'Podcast playback is not available yet.',searchPlaceholder:'Search shows · language:fa · topic:technology',searchingLabel:'Searching podcasts'},
+  copy:{countryLoadingLabel:'Loading shows',emptyLabel:'No matching podcasts. Try another language, topic or search.',fallbackNotice:'Podcast catalog unavailable.',itemPlural:'shows',itemSingular:'show',listSubtitle:'Search titles, language:fa or topic:technology',loadingLabel:'Loading podcasts',loadingMoreLabel:'Loading more shows',randomPlaybackError:'Choose an episode to play.',searchPlaceholder:'Search shows · language:fa · topic:technology',searchingLabel:'Searching podcasts'},
   dataEndpoint:'/api/modes/podcasts/points',defaultSortId:'title',sortOptions:[{id:'title',label:'Title (normalized)'}],
   listEndpoint:({query,countryCode,limit,offset,pageToken})=>{
     const params=new URLSearchParams({limit:String(limit),offset:String(offset)});
@@ -10,6 +10,7 @@ export const podcastMode: TerraMode = {
     return `/api/modes/podcasts/search?${params}`;
   },
   detailEndpoint:id=>`/api/modes/podcasts/points/${encodeURIComponent(id)}`,
+  playback:{label:'Podcast',modeId:'podcasts',mediaKind:'audio',responseKind:'descriptor',playableEndpoint:id=>`/api/modes/podcasts/episodes/${encodeURIComponent(id)}/playable`,policyEndpoint:id=>`/api/modes/podcasts/episodes/${encodeURIComponent(id)}`},
   markerMetricLabel:'Shows',markerColorMode:'single',
   formatPointMetric:()=> 'Podcast',formatDetailSections:detail=>detail ? [{title:'Show',fields:detail.fields}] : [],
 };
